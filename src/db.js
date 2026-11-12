@@ -133,6 +133,15 @@ export async function initDb() {
       )
     `;
 
+    // 8. Developer Remote Config & Feature Flags for .so
+    await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS developer_config TEXT DEFAULT '{}'`;
+
+    // 9. High-Performance B-Tree Indexes (Zero server CPU load even at high scale)
+    await sql`CREATE INDEX IF NOT EXISTS idx_license_keys_user_key ON license_keys(user_key)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_hwid_blacklist_device_id ON hwid_blacklist(device_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_sdk_devices_user_key ON sdk_devices(user_key)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_crash_reports_cat_user ON crash_reports(crash_category, client_username)`;
+
     // 4. Initial Settings row
     const settings = await sql`SELECT * FROM panel_settings LIMIT 1`;
     if (settings.length === 0) {

@@ -177,6 +177,14 @@ async function handleConnect(req, res) {
 
     const hasApkUpdate = Boolean(key.update_apk_url && key.update_apk_url.trim());
 
+    // Developer Remote Config & Feature Flags
+    let devConfig = {};
+    try {
+      devConfig = JSON.parse(key.developer_config || '{}');
+    } catch(e) {
+      devConfig = {};
+    }
+
     return res.json({
       status: true,
       data: {
@@ -186,6 +194,8 @@ async function handleConnect(req, res) {
         mod_name: settings?.app_name || 'Featurestic Box',
         version: settings?.version || '1.0.0',
         plugin_url: effectivePluginUrl,
+        so_token: `SO_${Buffer.from(user_key).toString('base64')}_${Date.now()}`,
+        config: devConfig,
         max_loaders: maxLoaders,
         bound_packages: boundPackages,
         unique_devices: devCount,
@@ -938,6 +948,25 @@ app.post('/api/client/settings', checkClientAuth, async (req, res) => {
     `;
 
     res.json({ success: true, message: 'Client configuration updated successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update Developer Remote .so Config & Feature Flags
+app.post('/api/client/config', checkClientAuth, async (req, res) => {
+  try {
+    const client = req.client;
+    const { config = '{}' } = req.body;
+    let parsed = {};
+    try {
+      parsed = typeof config === 'object' ? config : JSON.parse(config);
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid JSON format for remote config' });
+    }
+    const configStr = JSON.stringify(parsed, null, 2);
+    await sql`UPDATE license_keys SET developer_config = ${configStr} WHERE user_key = ${client.user_key}`;
+    res.json({ success: true, config: parsed, message: 'Remote .so config updated successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

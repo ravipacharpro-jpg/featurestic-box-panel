@@ -501,6 +501,17 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
   border: 1px solid rgba(255,59,48,0.25);
   font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700;
   padding: 2px 7px; border-radius: var(--r-xs);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.tag-offset:hover {
+  background: rgba(255,59,48,0.28);
+  border-color: #ff6b6b;
+  box-shadow: 0 0 8px rgba(255,59,48,0.35);
+  transform: translateY(-1px);
 }
 .tag-so {
   background: rgba(0,255,136,0.08); color: var(--neon);
@@ -1691,6 +1702,33 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
           </button>
         </div>
       </div>
+
+      <!-- Remote .so Feature Flags & Dynamic Runtime Config -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-head">
+          <div class="card-head-left">
+            <div class="card-title">Remote .so Feature Flags & Dynamic Runtime Config</div>
+            <div class="card-sub">Dynamic JSON payload pushed directly to your .so inside game RAM via <code>/connect</code> without recompiling .so</div>
+          </div>
+          <button class="btn btn-ghost" style="font-size:0.75rem;padding:6px 12px" onclick="insertDevConfigTemplate()">Insert Example Template</button>
+        </div>
+
+        <div style="background:var(--bg-elevated);border:1px solid var(--border-light);border-radius:var(--r-md);padding:14px;margin-bottom:14px;font-size:0.76rem;color:var(--t2);line-height:1.5">
+          <strong style="color:var(--neon)">Zero Recompilation / Instant RAM Control:</strong>
+          Any JSON key-value pairs configured here are sent live in <code>data.config</code> on loader handshake. Your C++ native code can query switches like aimbot speeds, ESP toggles, or memory bypasses instantly.
+        </div>
+
+        <div class="f-group">
+          <label class="f-label">Runtime Config JSON (Delivered to .so RAM)</label>
+          <textarea id="cl-dev-config" class="f-textarea" style="font-family:var(--font-mono);font-size:0.8rem;min-height:140px;line-height:1.4" placeholder="{&#10;  &quot;aim_fov&quot;: 90,&#10;  &quot;silent_aim&quot;: true,&#10;  &quot;esp_box&quot;: true,&#10;  &quot;memory_patch_ver&quot;: 4&#10;}"></textarea>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:12px">
+          <button class="btn btn-primary-neon" style="padding:10px 24px" onclick="saveDevConfig()">
+            Save Remote .so Config
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- ════════════════════════════════════════════
@@ -1895,6 +1933,73 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeRegenModal()">Cancel</button>
       <button class="btn btn-warning" onclick="executeRegenerateKey()">Yes, Revoke Old & Regenerate</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL: IDA PRO & GHIDRA CRASH INSPECTOR
+════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-ida">
+  <div class="modal" style="max-width:520px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="modal-title" style="color:var(--neon);font-size:1.15rem;margin:0">IDA Pro & Ghidra Crash Inspector</div>
+      <button class="btn btn-ghost" style="padding:4px 8px;font-size:0.8rem" onclick="closeIdaModal()">✕</button>
+    </div>
+    <div class="modal-sub" style="margin-bottom:16px;line-height:1.4">
+      Inspect fault PC relative offset, compute disassembler jump targets, and debug native memory crash signals.
+    </div>
+
+    <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border-light);border-radius:var(--r-md);padding:14px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:0.75rem;color:var(--t3)">Target Library:</span>
+        <span id="ida-so-name" class="tag-so" style="font-size:0.8rem">-</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:0.75rem;color:var(--t3)">Crash Type / Signal:</span>
+        <span id="ida-crash-type" style="color:var(--red);font-weight:700;font-size:0.8rem">-</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:0.75rem;color:var(--t3)">Fault PC Relative Offset:</span>
+        <span id="ida-offset-val" class="tag-offset" style="font-size:0.85rem">-</span>
+      </div>
+    </div>
+
+    <!-- Signal Explanation Box -->
+    <div id="ida-signal-explain" style="background:rgba(255,59,48,0.06);border:1px solid rgba(255,59,48,0.25);border-radius:var(--r-md);padding:12px;margin-bottom:14px;font-size:0.75rem;color:var(--t2);line-height:1.45">
+    </div>
+
+    <!-- Base Address Calculation -->
+    <div class="f-group" style="margin-bottom:12px">
+      <label class="f-label" style="display:flex;justify-content:space-between">
+        <span>Disassembler Image Base (Hex)</span>
+        <span style="font-size:0.68rem;color:var(--t3)">Default IDA/Ghidra base address</span>
+      </label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="ida-base-addr" class="f-input" style="font-family:var(--font-mono);font-size:0.85rem" value="0x0" placeholder="0x0 or 0x400000" oninput="calculateIdaAddress()">
+        <button class="btn btn-ghost" style="font-size:0.75rem;padding:6px 10px;white-space:nowrap" onclick="setIdaBase('0x0')">0x0 (ELF)</button>
+        <button class="btn btn-ghost" style="font-size:0.75rem;padding:6px 10px;white-space:nowrap" onclick="setIdaBase('0x400000')">0x400000</button>
+      </div>
+    </div>
+
+    <!-- Computed Jump Address -->
+    <div style="background:var(--bg-elevated);border:1px solid var(--border-neon);border-radius:var(--r-md);padding:14px;margin-bottom:14px">
+      <div style="font-size:0.7rem;color:var(--neon);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Target Jump Address in Disassembler:</div>
+      <div id="ida-calc-res" style="font-family:var(--font-mono);font-size:1.15rem;color:#fff;font-weight:800;letter-spacing:0.05em">0x0</div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px">
+      <button class="btn btn-ghost" style="font-size:0.78rem;padding:10px" onclick="copyIdaJump()">
+        Copy for IDA Pro (G Key)
+      </button>
+      <button class="btn btn-primary-neon" style="font-size:0.78rem;padding:10px" onclick="copyGhidraJump()">
+        Copy for Ghidra (G Key)
+      </button>
+    </div>
+
+    <div class="modal-foot" style="margin-top:12px;padding-top:10px">
+      <button class="btn btn-ghost" style="width:100%" onclick="closeIdaModal()">Close</button>
     </div>
   </div>
 </div>
@@ -2241,7 +2346,7 @@ async function loadDashboard() {
     ? rcrash.map(c => `<tr>
         <td><span class="brand-chip">${c.brand}</span> <span style="color:var(--t2);font-size:0.78rem">${c.model}</span></td>
         <td>${c.crash_category === 'native_so' ? '<span class="badge tag-native">Native .so</span>' : '<span class="badge tag-java">Java</span>'}</td>
-        <td>${c.fault_offset ? `<span class="tag-offset">PC: +${c.fault_offset}</span> ` : ''}${c.so_name ? `<span class="tag-so">${c.so_name}</span>` : `<span style="color:var(--red);font-weight:700">${c.crash_type}</span>`}</td>
+        <td>${c.fault_offset ? `<span class="tag-offset" title="Click to inspect in IDA Pro / Ghidra" onclick="openIdaModal('${esc(c.so_name || 'libclient.so')}', '${esc(c.fault_offset)}', '${esc(c.crash_type)}')">PC: +${c.fault_offset} 🔍</span> ` : ''}${c.so_name ? `<span class="tag-so">${c.so_name}</span>` : `<span style="color:var(--red);font-weight:700">${c.crash_type}</span>`}</td>
         <td style="color:var(--t3);font-size:0.72rem">${fmtDate(c.created_at)}</td>
       </tr>`).join('')
     : emptyRow(4, 'No crashes logged yet');
@@ -2361,7 +2466,7 @@ async function loadCrashes() {
           : '<span class="badge tag-java">Java</span>';
 
         const offsetBadge = c.fault_offset
-          ? `<span class="tag-offset">PC: +${c.fault_offset}</span>`
+          ? `<span class="tag-offset" title="Click to inspect in IDA Pro / Ghidra" onclick="openIdaModal('${esc(c.so_name || 'libclient.so')}', '${esc(c.fault_offset)}', '${esc(c.crash_type)}')">PC: +${c.fault_offset} 🔍</span>`
           : '';
 
         const soBadge = c.so_name
@@ -2444,6 +2549,15 @@ async function loadClientDashboard() {
   document.getElementById('cl-update-apk').value = k.update_apk_url || '';
   document.getElementById('cl-update-ver').value = k.update_version || '1.0.0';
   document.getElementById('cl-update-msg').value = k.update_changelog || '';
+
+  // Developer Remote Config & Feature Flags
+  try {
+    const rawCfg = k.developer_config || '{}';
+    const parsedCfg = typeof rawCfg === 'object' ? rawCfg : JSON.parse(rawCfg);
+    document.getElementById('cl-dev-config').value = JSON.stringify(parsedCfg, null, 2);
+  } catch(e) {
+    document.getElementById('cl-dev-config').value = k.developer_config || '{}';
+  }
 }
 
 async function copyClientKey() {
@@ -2512,6 +2626,42 @@ async function resetClientPackages() {
   }
 }
 
+function insertDevConfigTemplate() {
+  const template = {
+    aim_fov: 90.0,
+    aim_speed: 1.35,
+    silent_aim: true,
+    esp_box: true,
+    esp_line: false,
+    esp_distance: true,
+    bypass_memory_check: true,
+    feature_flags: {
+      anti_ban_v2: true,
+      safe_inject: true
+    }
+  };
+  document.getElementById('cl-dev-config').value = JSON.stringify(template, null, 2);
+  toast('Sample JSON template inserted');
+}
+
+async function saveDevConfig() {
+  const configText = document.getElementById('cl-dev-config').value.trim();
+  let parsed = {};
+  try {
+    parsed = JSON.parse(configText || '{}');
+  } catch(e) {
+    toast('Invalid JSON syntax in config', 'error');
+    return;
+  }
+  
+  const res = await api('/api/client/config', 'POST', { config: parsed });
+  if (res && res.success) {
+    toast('Remote .so config saved & active on next /connect');
+  } else {
+    toast(res?.error || 'Failed to save config', 'error');
+  }
+}
+
 /* ─── Client Scoped Crash Analytics ─── */
 function filterClientCrashes(category) {
   _clientActiveCategory = category;
@@ -2532,7 +2682,7 @@ async function loadClientCrashes() {
           : '<span class="badge tag-java">Java</span>';
 
         const offsetBadge = c.fault_offset
-          ? `<span class="tag-offset">PC: +${c.fault_offset}</span>`
+          ? `<span class="tag-offset" title="Click to inspect in IDA Pro / Ghidra" onclick="openIdaModal('${esc(c.so_name || 'libclient.so')}', '${esc(c.fault_offset)}', '${esc(c.crash_type)}')">PC: +${c.fault_offset} 🔍</span>`
           : '';
 
         const soBadge = c.so_name
@@ -2859,6 +3009,93 @@ document.getElementById('modal-create').addEventListener('click', function(e) {
 document.getElementById('modal-regen').addEventListener('click', function(e) {
   if (e.target === this) closeRegenModal();
 });
+document.getElementById('modal-ida').addEventListener('click', function(e) {
+  if (e.target === this) closeIdaModal();
+});
+
+/* ─── IDA Pro & Ghidra Crash Analyzer ─── */
+let _currentIdaOffset = '0';
+let _currentIdaSo = '';
+
+function openIdaModal(soName, offset, crashType) {
+  _currentIdaSo = soName || 'libclient.so';
+  _currentIdaOffset = (offset || '0').trim().replace(/^\+/, '').replace(/^0x/i, '');
+  
+  document.getElementById('ida-so-name').textContent = _currentIdaSo;
+  document.getElementById('ida-offset-val').textContent = '+' + _currentIdaOffset;
+  document.getElementById('ida-crash-type').textContent = crashType || 'SIGSEGV';
+  
+  let explain = '';
+  const ct = (crashType || '').toUpperCase();
+  if (ct.includes('SEGV') || ct.includes('SIGSEGV')) {
+    explain = '<strong style="color:var(--red)">SIGSEGV (Segmentation Fault):</strong> Attempted read/write at an unmapped or restricted memory address (e.g. null pointer dereference, invalid hook offset, or wrong structure alignment). Check the instruction at this PC offset.';
+  } else if (ct.includes('ABRT') || ct.includes('SIGABRT')) {
+    explain = '<strong style="color:var(--red)">SIGABRT (Abort Signal):</strong> The process terminated itself, usually by an explicit <code>abort()</code> call, a failed <code>assert()</code>, uncaught C++ exception, or stack protector canary check failure.';
+  } else if (ct.includes('BUS') || ct.includes('SIGBUS')) {
+    explain = '<strong style="color:var(--red)">SIGBUS (Bus Error):</strong> Invalid memory access such as unaligned memory access (common on ARM64) or accessing memory beyond mmap file bounds.';
+  } else if (ct.includes('FPE') || ct.includes('SIGFPE')) {
+    explain = '<strong style="color:var(--red)">SIGFPE (Floating Point / Arithmetic):</strong> Arithmetic exception such as division by zero or floating point overflow.';
+  } else if (ct.includes('ILL') || ct.includes('SIGILL')) {
+    explain = '<strong style="color:var(--red)">SIGILL (Illegal Instruction):</strong> The CPU attempted to execute an invalid or malformed instruction op-code (e.g. thumb/arm mode mismatch or bad inline hook rewrite).';
+  } else {
+    explain = `<strong style="color:var(--red)">Native Crash:</strong> Execution terminated at offset <code>+${_currentIdaOffset}</code> in <code>${_currentIdaSo}</code>.`;
+  }
+  document.getElementById('ida-signal-explain').innerHTML = explain;
+  
+  calculateIdaAddress();
+  document.getElementById('modal-ida').classList.add('open');
+}
+
+function closeIdaModal() {
+  document.getElementById('modal-ida').classList.remove('open');
+}
+
+function setIdaBase(val) {
+  document.getElementById('ida-base-addr').value = val;
+  calculateIdaAddress();
+}
+
+function calculateIdaAddress() {
+  let baseStr = (document.getElementById('ida-base-addr')?.value || '0').trim();
+  if (baseStr.startsWith('0x') || baseStr.startsWith('0X')) {
+    baseStr = baseStr.slice(2);
+  }
+  let baseNum = 0n;
+  let offsetNum = 0n;
+  try {
+    baseNum = BigInt('0x' + (baseStr || '0'));
+  } catch(e) {
+    baseNum = 0n;
+  }
+  try {
+    offsetNum = BigInt('0x' + (_currentIdaOffset || '0'));
+  } catch(e) {
+    offsetNum = 0n;
+  }
+  const sum = baseNum + offsetNum;
+  const hex = '0x' + sum.toString(16).toUpperCase();
+  const el = document.getElementById('ida-calc-res');
+  if (el) el.textContent = hex;
+  return hex;
+}
+
+function copyIdaJump() {
+  const addr = calculateIdaAddress();
+  navigator.clipboard.writeText(addr).then(() => {
+    toast(`Copied ${addr} for IDA Pro (Press G in IDA)`);
+  }).catch(() => {
+    toast(`Address: ${addr}`);
+  });
+}
+
+function copyGhidraJump() {
+  const addr = calculateIdaAddress();
+  navigator.clipboard.writeText(addr).then(() => {
+    toast(`Copied ${addr} for Ghidra (Press G in Ghidra)`);
+  }).catch(() => {
+    toast(`Address: ${addr}`);
+  });
+}
 </script>
 </body>
 </html>
