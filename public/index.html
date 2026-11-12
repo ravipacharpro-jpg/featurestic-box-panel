@@ -943,11 +943,11 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
         <div class="stat-card">
           <div class="stat-icon-wrap" style="background:rgba(10,132,255,0.1)">
             <svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+              <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
             </svg>
           </div>
-          <div class="stat-label">Total Issued</div>
-          <div class="stat-value" style="color:var(--blue)" id="d-total">—</div>
+          <div class="stat-label">Live Active Devices</div>
+          <div class="stat-value" style="color:var(--blue)" id="d-devices">—</div>
         </div>
         <div class="stat-card">
           <div class="stat-icon-wrap" style="background:var(--orange-dim)">
@@ -1018,10 +1018,11 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
           <table>
             <thead>
               <tr>
-                <th>License Key</th>
+                <th>SDK Key</th>
                 <th>Status</th>
-                <th>HWID</th>
-                <th>Duration</th>
+                <th>Loaders Quota</th>
+                <th>Bound Package(s)</th>
+                <th>Active Devices</th>
                 <th>Expires</th>
                 <th>Created</th>
                 <th>Actions</th>
@@ -1163,22 +1164,38 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
         <input type="number" id="m-count" class="f-input" value="1" min="1" max="50">
       </div>
     </div>
-    <div class="f-group">
-      <label class="f-label">Validity</label>
-      <select id="m-dur" class="f-select">
-        <option value="1">1 Day</option>
-        <option value="7">7 Days</option>
-        <option value="14">14 Days</option>
-        <option value="30" selected>30 Days</option>
-        <option value="90">3 Months</option>
-        <option value="180">6 Months</option>
-        <option value="365">1 Year</option>
-        <option value="9999">Lifetime</option>
-      </select>
+    <div class="form-row">
+      <div class="f-group">
+        <label class="f-label">Validity</label>
+        <select id="m-dur" class="f-select">
+          <option value="1">1 Day</option>
+          <option value="7">7 Days</option>
+          <option value="14">14 Days</option>
+          <option value="30" selected>30 Days</option>
+          <option value="90">3 Months</option>
+          <option value="180">6 Months</option>
+          <option value="365">1 Year</option>
+          <option value="9999">Lifetime</option>
+        </select>
+      </div>
+      <div class="f-group">
+        <label class="f-label">Loaders Allowed (Quota)</label>
+        <select id="m-loaders" class="f-select">
+          <option value="1" selected>1 Loader (Standard)</option>
+          <option value="2">2 Loaders</option>
+          <option value="3">3 Loaders</option>
+          <option value="5">5 Loaders</option>
+          <option value="0">Unlimited (VIP Enterprise)</option>
+        </select>
+      </div>
     </div>
     <div class="f-group">
-      <label class="f-label">Note (optional)</label>
-      <input type="text" id="m-note" class="f-input" placeholder="e.g. Beta Tester, Group A…">
+      <label class="f-label">Pre-bound Package Name (optional)</label>
+      <input type="text" id="m-pkg" class="f-input" placeholder="e.g. com.client.loader (leave empty for auto-bind on 1st run)">
+    </div>
+    <div class="f-group">
+      <label class="f-label">Note / Client Name (optional)</label>
+      <input type="text" id="m-note" class="f-input" placeholder="e.g. Client Rohit, Telegram @user…">
     </div>
     <div class="modal-result" id="modal-result">
       <div class="result-label">Generated Keys</div>
@@ -1311,7 +1328,8 @@ async function loadDashboard() {
   const stats = await api('/api/admin/stats');
   if (stats) {
     document.getElementById('d-active').textContent = stats.activeKeys ?? '—';
-    document.getElementById('d-total').textContent = stats.totalKeys ?? '—';
+    const devEl = document.getElementById('d-devices');
+    if (devEl) devEl.textContent = stats.totalDevices ?? '0';
     document.getElementById('d-today').textContent = stats.todayCrashes ?? '—';
     document.getElementById('d-tcrash').textContent = stats.totalCrashes ?? '—';
     if (+stats.todayCrashes > 0) {
@@ -1350,27 +1368,37 @@ async function loadDashboard() {
 async function loadKeys() {
   const keys = await api('/api/admin/keys');
   const list = keys || [];
-  document.getElementById('keys-sub').textContent = `${list.length} key${list.length !== 1 ? 's' : ''} total`;
+  document.getElementById('keys-sub').textContent = `${list.length} developer key${list.length !== 1 ? 's' : ''} total`;
   const tbody = document.getElementById('keys-body');
   tbody.innerHTML = list.length
-    ? list.map(k => `<tr>
-        <td><span class="key-pill">${k.user_key}</span></td>
-        <td>${badge(k.status)}</td>
-        <td style="font-size:0.72rem;color:var(--t3);max-width:120px;overflow:hidden;text-overflow:ellipsis">
-          ${k.device_id ? `<span style="font-family:monospace">${k.device_id.slice(0,16)}…</span>` : '<span style="color:var(--t4)">Not bound</span>'}
-        </td>
-        <td style="color:var(--t2)">${k.duration_days}d</td>
-        <td style="color:var(--t3);font-size:0.72rem">${k.expires_at ? fmtDate(k.expires_at) : '—'}</td>
-        <td style="color:var(--t3);font-size:0.72rem">${fmtDate(k.created_at)}</td>
-        <td>
-          <div class="acts">
-            ${k.device_id ? `<button class="act-btn act-orange" onclick="resetHwid(${k.id})">Reset HWID</button>` : ''}
-            <button class="act-btn act-ghost" onclick="toggleBan(${k.id})">${k.status === 'banned' ? 'Unban' : 'Ban'}</button>
-            <button class="act-btn act-red" onclick="delKey(${k.id})">Delete</button>
-          </div>
-        </td>
-      </tr>`).join('')
-    : emptyRow(7, 'No keys yet. Click "Generate Keys" to create one.', 'key');
+    ? list.map(k => {
+        let pkgs = [];
+        try { pkgs = JSON.parse(k.bound_packages || '[]'); } catch(e) { pkgs = []; }
+        const quotaLabel = k.max_loaders === 0 
+          ? '<span class="badge badge-active">Unlimited</span>' 
+          : `<strong>${k.max_loaders || 1}</strong> Loader(s)`;
+        const pkgsHtml = pkgs.length
+          ? pkgs.map(p => `<span class="key-pill" style="font-size:0.68rem;background:rgba(255,255,255,0.06);color:var(--t1)">${p}</span>`).join(' ')
+          : '<span style="color:var(--t4);font-size:0.75rem">Auto-bind on 1st run</span>';
+
+        return `<tr>
+          <td><span class="key-pill">${k.user_key}</span></td>
+          <td>${badge(k.status)}</td>
+          <td style="font-size:0.75rem">${quotaLabel}</td>
+          <td>${pkgsHtml}</td>
+          <td><span style="color:var(--neon);font-weight:700;font-size:0.82rem">${k.unique_devices || 0}</span> <span style="color:var(--t3);font-size:0.7rem">devices</span></td>
+          <td style="color:var(--t3);font-size:0.72rem">${k.expires_at ? fmtDate(k.expires_at) : '—'}</td>
+          <td style="color:var(--t3);font-size:0.72rem">${fmtDate(k.created_at)}</td>
+          <td>
+            <div class="acts">
+              ${pkgs.length ? `<button class="act-btn act-orange" onclick="resetPackages(${k.id})">Reset Pkg</button>` : ''}
+              <button class="act-btn act-ghost" onclick="toggleBan(${k.id})">${k.status === 'banned' ? 'Unban' : 'Ban'}</button>
+              <button class="act-btn act-red" onclick="delKey(${k.id})">Delete</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('')
+    : emptyRow(8, 'No developer keys yet. Click "Generate Keys" to create one.', 'key');
 }
 
 /* ─── Crashes ─── */
@@ -1397,10 +1425,17 @@ async function clearCrashes() {
 }
 
 /* ─── Key actions ─── */
+async function resetPackages(id) {
+  if (!confirm('Reset bound package name(s) for this key?')) return;
+  await api('/api/admin/keys/reset-packages', 'POST', { id });
+  toast('Package binding reset successfully');
+  loadKeys();
+}
+
 async function resetHwid(id) {
-  if (!confirm('Reset HWID binding for this key?')) return;
+  if (!confirm('Reset device binding for this key?')) return;
   await api('/api/admin/keys/reset-device', 'POST', { id });
-  toast('HWID reset successfully');
+  toast('Device reset successfully');
   loadKeys();
 }
 
@@ -1431,12 +1466,14 @@ async function createKeys() {
   const prefix = document.getElementById('m-prefix').value.trim() || 'FB';
   const count = parseInt(document.getElementById('m-count').value) || 1;
   const duration_days = parseInt(document.getElementById('m-dur').value);
+  const max_loaders = parseInt(document.getElementById('m-loaders').value);
+  const package_name = document.getElementById('m-pkg').value.trim();
   const note = document.getElementById('m-note').value;
-  const r = await api('/api/admin/keys/create', 'POST', { prefix, count, duration_days, note });
-  if (r.success) {
+  const r = await api('/api/admin/keys/create', 'POST', { prefix, count, duration_days, max_loaders, package_name, note });
+  if (r && r.success) {
     document.getElementById('modal-result').style.display = '';
     document.getElementById('result-keys').textContent = r.keys.join('\n');
-    toast(`${r.keys.length} key(s) generated`);
+    toast(`${r.keys.length} developer key(s) generated`);
     loadKeys(); loadDashboard();
   }
 }

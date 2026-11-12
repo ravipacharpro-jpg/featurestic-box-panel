@@ -44,43 +44,77 @@ async function handleConnect(req, res) {
 
     const keyRows = await sql`SELECT * FROM license_keys WHERE user_key = ${user_key} LIMIT 1`;
     if (keyRows.length === 0) {
-      return res.json({ status: false, reason: 'INVALID KEY', message: 'License key does not exist' });
+      return res.json({ status: false, reason: 'INVALID KEY', message: 'SDK license key does not exist' });
     }
 
     const key = keyRows[0];
 
     if (key.status === 'banned') {
-      return res.json({ status: false, reason: 'KEY BANNED', message: 'This key has been banned by admin' });
+      return res.json({ status: false, reason: 'KEY BANNED', message: 'This SDK license key has been banned by administrator' });
     }
 
     const now = new Date();
 
-    // First time use -> bind serial & set expiry
+    // 1. First time activation -> set expiry
     if (!key.first_used_at) {
       const exp = new Date(now.getTime() + (key.duration_days * 24 * 60 * 60 * 1000));
       await sql`
         UPDATE license_keys 
         SET first_used_at = ${now.toISOString()},
-            expires_at = ${exp.toISOString()},
-            device_id = ${serial}
+            expires_at = ${exp.toISOString()}
         WHERE id = ${key.id}
       `;
       key.expires_at = exp;
-      key.device_id = serial;
     } else {
-      // Check device bind
-      if (key.device_id && serial && key.device_id !== serial) {
-        return res.json({
-          status: false,
-          reason: 'DEVICE MISMATCH',
-          message: 'This key is bound to another device. Reset device from admin.'
-        });
-      }
-
       // Check expiry
       if (key.expires_at && new Date(key.expires_at) < now) {
         await sql`UPDATE license_keys SET status = 'expired' WHERE id = ${key.id}`;
-        return res.json({ status: false, reason: 'KEY EXPIRED', message: 'License key has expired' });
+        return res.json({ status: false, reason: 'KEY EXPIRED', message: 'SDK license key has expired' });
+      }
+    }
+
+    // 2. Package Binding & Multi-Loader Quota Check
+    const pkg = (params.pkg || params.package || params.package_name || '').trim();
+    let boundPackages = [];
+    try {
+      boundPackages = JSON.parse(key.bound_packages || '[]');
+    } catch (e) {
+      boundPackages = [];
+    }
+
+    const maxLoaders = key.max_loaders === undefined || key.max_loaders === null ? 1 : key.max_loaders;
+
+    if (pkg) {
+      if (!boundPackages.includes(pkg)) {
+        // 0 = unlimited loaders
+        if (maxLoaders === 0 || boundPackages.length < maxLoaders) {
+          boundPackages.push(pkg);
+          await sql`UPDATE license_keys SET bound_packages = ${JSON.stringify(boundPackages)} WHERE id = ${key.id}`;
+        } else {
+          return res.json({
+            status: false,
+            reason: 'LOADER LIMIT REACHED',
+            message: `SDK Key allows ${maxLoaders} loader(s). Already bound to: ${boundPackages.join(', ')}. Contact administrator.`
+          });
+        }
+      }
+    }
+
+    // 3. Track Unique Devices / Live Active Sessions
+    let devCount = key.unique_devices || 0;
+    if (serial) {
+      try {
+        await sql`
+          INSERT INTO sdk_devices (user_key, device_id, package_name, last_seen)
+          VALUES (${user_key}, ${serial}, ${pkg}, NOW())
+          ON CONFLICT (user_key, device_id)
+          DO UPDATE SET last_seen = NOW(), package_name = ${pkg}
+        `;
+        const resCount = await sql`SELECT COUNT(*)::int as c FROM sdk_devices WHERE user_key = ${user_key}`;
+        devCount = resCount[0]?.c || devCount;
+        await sql`UPDATE license_keys SET unique_devices = ${devCount} WHERE id = ${key.id}`;
+      } catch (err) {
+        console.error('[Device Track Error]', err);
       }
     }
 
@@ -88,17 +122,19 @@ async function handleConnect(req, res) {
       ? new Date(key.expires_at).toISOString().slice(0, 19).replace('T', ' ')
       : '2099-12-31 23:59:59';
 
-    // Standard ZeroX / Kuro / Zoro compatible JSON response
     return res.json({
       status: true,
       data: {
-        token: `ZX_${user_key}_${Date.now()}`,
+        token: `FB_${user_key}_${Date.now()}`,
         rng: Math.floor(Math.random() * 1000000000),
         exp: expStr,
         mod_name: settings?.app_name || 'Featurestic Box',
         version: settings?.version || '1.0.0',
         plugin_url: settings?.plugin_url || '',
-        message: 'Login successful'
+        max_loaders: maxLoaders,
+        bound_packages: boundPackages,
+        unique_devices: devCount,
+        message: 'SDK authenticated successfully'
       }
     });
 
@@ -179,8 +215,9 @@ app.get('/api/admin/stats', checkAdminAuth, async (req, res) => {
       SELECT COUNT(*) FROM crash_reports 
       WHERE created_at >= CURRENT_DATE
     `)[0].count;
+    const totalDevices = (await sql`SELECT COUNT(*) FROM sdk_devices`)[0]?.count || 0;
 
-    res.json({ totalKeys, activeKeys, totalCrashes, todayCrashes });
+    res.json({ totalKeys, activeKeys, totalCrashes, todayCrashes, totalDevices });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -194,15 +231,17 @@ app.get('/api/admin/keys', checkAdminAuth, async (req, res) => {
 
 app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
   try {
-    const { prefix = 'FB', duration_days = 30, note = '', count = 1 } = req.body;
+    const { prefix = 'FB', duration_days = 30, note = '', count = 1, max_loaders = 1, package_name = '' } = req.body;
     const generated = [];
+    const loadersQuota = parseInt(max_loaders);
+    const initialBound = package_name && package_name.trim() ? JSON.stringify([package_name.trim()]) : '[]';
 
     for (let i = 0; i < Math.min(count, 50); i++) {
       const rand = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
       const user_key = `${prefix}-${rand}`;
       await sql`
-        INSERT INTO license_keys (user_key, duration_days, note)
-        VALUES (${user_key}, ${duration_days}, ${note})
+        INSERT INTO license_keys (user_key, duration_days, note, max_loaders, bound_packages)
+        VALUES (${user_key}, ${duration_days}, ${note}, ${isNaN(loadersQuota) ? 1 : loadersQuota}, ${initialBound})
       `;
       generated.push(user_key);
     }
@@ -211,6 +250,12 @@ app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+app.post('/api/admin/keys/reset-packages', checkAdminAuth, async (req, res) => {
+  const { id } = req.body;
+  await sql`UPDATE license_keys SET bound_packages = '[]' WHERE id = ${id}`;
+  res.json({ success: true, message: 'Package binding reset' });
 });
 
 app.post('/api/admin/keys/reset-device', checkAdminAuth, async (req, res) => {
