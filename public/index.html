@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Featurestic Box — Control Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --card-bg: rgba(28, 28, 30, 0.7);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --accent: #0A84FF;
+      --accent-hover: #0071E3;
+      --success: #30D158;
+      --danger: #FF453A;
+      --warning: #FF9F0A;
+      --text: #FFFFFF;
+      --text-sec: #8E8E93;
+      --blur: blur(25px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+    /* Apple Frosted Glass Navigation */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(18, 18, 18, 0.75);
+      backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+      border-bottom: 1px solid var(--card-border);
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 24px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.15rem; letter-spacing: -0.02em; }
+    .brand-cube { width: 28px; height: 28px; background: linear-gradient(135deg, #0A84FF, #5E5CE6); border-radius: 8px; box-shadow: 0 4px 12px rgba(10, 132, 255, 0.35); }
+
+    .nav-tabs { display: flex; gap: 8px; background: rgba(255, 255, 255, 0.06); padding: 4px; border-radius: 12px; }
+    .nav-tab {
+      padding: 6px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 500; color: var(--text-sec);
+      cursor: pointer; transition: all 0.2s ease; border: none; background: transparent;
+    }
+    .nav-tab.active { background: rgba(255, 255, 255, 0.15); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 32px 20px; }
+
+    /* Login Modal Overlay */
+    #login-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: var(--blur);
+      display: flex; justify-content: center; align-items: center; z-index: 1000;
+    }
+    .login-card {
+      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 24px;
+      padding: 36px; width: 100%; max-width: 380px; text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+    .login-card h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.02em; }
+    .login-card p { color: var(--text-sec); font-size: 0.88rem; margin-bottom: 24px; }
+    .input-field {
+      width: 100%; background: rgba(255,255,255,0.06); border: 1px solid var(--card-border);
+      border-radius: 12px; padding: 12px 16px; color: #fff; font-size: 0.95rem; margin-bottom: 16px;
+      outline: none; transition: border-color 0.2s;
+    }
+    .input-field:focus { border-color: var(--accent); }
+    .apple-btn {
+      width: 100%; background: var(--accent); color: #fff; border: none; border-radius: 12px;
+      padding: 12px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.2s;
+    }
+    .apple-btn:hover { background: var(--accent-hover); }
+
+    /* Dashboard Metric Cards */
+    .grid-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .metric-card {
+      background: var(--card-bg); backdrop-filter: var(--blur); border: 1px solid var(--card-border);
+      border-radius: 20px; padding: 22px; position: relative; overflow: hidden;
+    }
+    .metric-label { font-size: 0.82rem; font-weight: 500; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .metric-value { font-size: 2.1rem; font-weight: 700; letter-spacing: -0.03em; }
+
+    /* Tables */
+    .table-container {
+      background: var(--card-bg); backdrop-filter: var(--blur); border: 1px solid var(--card-border);
+      border-radius: 20px; overflow: hidden; margin-top: 20px;
+    }
+    .table-header { padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); }
+    .table-header h3 { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.01em; }
+
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; }
+    th { padding: 14px 20px; color: var(--text-sec); font-weight: 500; border-bottom: 1px solid var(--card-border); }
+    td { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background: rgba(255,255,255,0.02); }
+
+    .badge {
+      display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px;
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    }
+    .badge-active { background: rgba(48, 209, 88, 0.15); color: var(--success); }
+    .badge-expired { background: rgba(255, 159, 10, 0.15); color: var(--warning); }
+    .badge-banned { background: rgba(255, 69, 58, 0.15); color: var(--danger); }
+
+    .action-btn {
+      background: rgba(255, 255, 255, 0.08); border: 1px solid var(--card-border);
+      color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 500;
+      cursor: pointer; transition: background 0.2s; margin-right: 6px;
+    }
+    .action-btn:hover { background: rgba(255, 255, 255, 0.16); }
+    .action-btn.danger { color: var(--danger); border-color: rgba(255,69,58,0.2); }
+    .action-btn.danger:hover { background: rgba(255, 69, 58, 0.15); }
+
+    /* Code Block / Stacktrace */
+    .stacktrace-box {
+      background: #0D1117; border: 1px solid #30363D; border-radius: 10px;
+      padding: 12px; font-family: monospace; font-size: 0.78rem; color: #E6EDF3;
+      max-height: 160px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+    }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+  <!-- Login Modal -->
+  <div id="login-overlay">
+    <div class="login-card">
+      <div style="display:flex;justify-content:center;margin-bottom:16px;">
+        <div class="brand-cube" style="width:40px;height:40px;border-radius:12px;"></div>
+      </div>
+      <h2>Featurestic Box</h2>
+      <p>Enter Master Admin Password</p>
+      <input type="password" id="admin-pass" class="input-field" placeholder="Admin Password" autofocus>
+      <button class="apple-btn" onclick="login()">Unlock Dashboard</button>
+      <p id="login-err" style="color:var(--danger);font-size:0.8rem;margin-top:12px;display:none;"></p>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="brand">
+      <div class="brand-cube"></div>
+      Featurestic Box
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="switchTab('keys')">License Keys</button>
+      <button class="nav-tab" onclick="switchTab('crashes')">Crash Telemetry</button>
+      <button class="nav-tab" onclick="switchTab('settings')">Settings</button>
+    </div>
+    <button class="action-btn danger" onclick="logout()" style="margin:0;">Lock</button>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="container">
+
+    <!-- Metrics Grid -->
+    <div class="grid-metrics">
+      <div class="metric-card">
+        <div class="metric-label">Active License Keys</div>
+        <div class="metric-value" id="stat-active-keys">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Total Keys Issued</div>
+        <div class="metric-value" id="stat-total-keys">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Today's Crashes</div>
+        <div class="metric-value" style="color:var(--warning);" id="stat-today-crashes">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Total Crash Reports</div>
+        <div class="metric-value" style="color:var(--danger);" id="stat-total-crashes">0</div>
+      </div>
+    </div>
+
+    <!-- TAB 1: License Keys -->
+    <div id="tab-keys" class="tab-content active">
+      <div class="table-container">
+        <div class="table-header">
+          <h3>Generated Keys</h3>
+          <button class="apple-btn" style="width:auto;padding:8px 18px;" onclick="promptCreateKeys()">+ Generate Key</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>License Key</th>
+              <th>Bound Device</th>
+              <th>Duration</th>
+              <th>Status</th>
+              <th>Expires At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="keys-tbody">
+            <tr><td colspan="6" style="text-align:center;color:var(--text-sec);padding:24px;">Loading keys...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: Crash Telemetry -->
+    <div id="tab-crashes" class="tab-content">
+      <div class="table-container">
+        <div class="table-header">
+          <h3>Live Auto-Crash Telemetry (Multi-Vendor Logs)</h3>
+          <button class="action-btn danger" onclick="clearCrashes()">Clear All Logs</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Device & Brand</th>
+              <th>Android / SDK</th>
+              <th>Crash Type</th>
+              <th>Logged At</th>
+              <th style="width:40%;">Stacktrace</th>
+            </tr>
+          </thead>
+          <tbody id="crashes-tbody">
+            <tr><td colspan="5" style="text-align:center;color:var(--text-sec);padding:24px;">No crash reports logged yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: Global Settings -->
+    <div id="tab-settings" class="tab-content">
+      <div class="table-container" style="padding:24px;">
+        <h3 style="margin-bottom:20px;">Global App Configuration</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div>
+            <label style="font-size:0.85rem;color:var(--text-sec);margin-bottom:6px;display:block;">App Display Name</label>
+            <input type="text" id="setting-app-name" class="input-field">
+          </div>
+          <div>
+            <label style="font-size:0.85rem;color:var(--text-sec);margin-bottom:6px;display:block;">Required Version</label>
+            <input type="text" id="setting-version" class="input-field">
+          </div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <label style="font-size:0.85rem;color:var(--text-sec);margin-bottom:6px;display:block;">Plugin .so Download URL</label>
+          <input type="text" id="setting-plugin-url" class="input-field">
+        </div>
+
+        <div style="margin-top:12px;display:flex;align-items:center;gap:12px;">
+          <input type="checkbox" id="setting-maintenance" style="width:20px;height:20px;accent-color:var(--accent);">
+          <label for="setting-maintenance" style="font-weight:600;">Enable Global Maintenance Mode (Blocks Logins)</label>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="font-size:0.85rem;color:var(--text-sec);margin-bottom:6px;display:block;">Maintenance Message</label>
+          <input type="text" id="setting-maintenance-msg" class="input-field">
+        </div>
+
+        <button class="apple-btn" style="margin-top:20px;width:200px;" onclick="saveSettings()">Save Settings</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let token = localStorage.getItem('fb_admin_token') || '';
+
+    if (token) {
+      document.getElementById('login-overlay').style.display = 'none';
+      loadDashboard();
+    }
+
+    async function login() {
+      const pass = document.getElementById('admin-pass').value;
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pass })
+      });
+      const data = await res.json();
+      if (data.success) {
+        token = data.token;
+        localStorage.setItem('fb_admin_token', token);
+        document.getElementById('login-overlay').style.display = 'none';
+        loadDashboard();
+      } else {
+        const err = document.getElementById('login-err');
+        err.innerText = data.message;
+        err.style.display = 'block';
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('fb_admin_token');
+      location.reload();
+    }
+
+    function authHeaders() {
+      return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.nav-tab').forEach((t, i) => {
+        t.classList.toggle('active', ['keys', 'crashes', 'settings'][i] === name);
+      });
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+    }
+
+    async function loadDashboard() {
+      loadStats();
+      loadKeys();
+      loadCrashes();
+      loadSettings();
+    }
+
+    async function loadStats() {
+      const res = await fetch('/api/admin/stats', { headers: authHeaders() });
+      if (res.status === 401 || res.status === 403) return logout();
+      const d = await res.json();
+      document.getElementById('stat-active-keys').innerText = d.activeKeys;
+      document.getElementById('stat-total-keys').innerText = d.totalKeys;
+      document.getElementById('stat-today-crashes').innerText = d.todayCrashes;
+      document.getElementById('stat-total-crashes').innerText = d.totalCrashes;
+    }
+
+    async function loadKeys() {
+      const res = await fetch('/api/admin/keys', { headers: authHeaders() });
+      const keys = await res.json();
+      const tbody = document.getElementById('keys-tbody');
+      if (!keys.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-sec);padding:24px;">No keys found. Click "+ Generate Key" to create one.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = keys.map(k => `
+        <tr>
+          <td style="font-family:monospace;font-weight:600;color:var(--accent);">${k.user_key}</td>
+          <td>${k.device_id ? `<span style="font-family:monospace;font-size:0.75rem;color:var(--text-sec);">${k.device_id.slice(0, 16)}...</span>` : '<span style="color:var(--text-sec);">Not Bound</span>'}</td>
+          <td>${k.duration_days} Days</td>
+          <td><span class="badge badge-${k.status}">${k.status}</span></td>
+          <td style="font-size:0.8rem;color:var(--text-sec);">${k.expires_at ? new Date(k.expires_at).toLocaleDateString() : 'Pending Activation'}</td>
+          <td>
+            ${k.device_id ? `<button class="action-btn" onclick="resetDevice(${k.id})">Reset HWID</button>` : ''}
+            <button class="action-btn" onclick="toggleBan(${k.id})">${k.status === 'banned' ? 'Unban' : 'Ban'}</button>
+            <button class="action-btn danger" onclick="deleteKey(${k.id})">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function promptCreateKeys() {
+      const days = prompt('Enter validity in DAYS (e.g. 1, 7, 30):', '30');
+      if (!days) return;
+      const count = prompt('How many keys to generate?', '1');
+      if (!count) return;
+
+      await fetch('/api/admin/keys/create', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ prefix: 'FB', duration_days: parseInt(days), count: parseInt(count) })
+      });
+      loadKeys();
+      loadStats();
+    }
+
+    async function resetDevice(id) {
+      if (!confirm('Reset hardware device ID for this key?')) return;
+      await fetch('/api/admin/keys/reset-device', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ id })
+      });
+      loadKeys();
+    }
+
+    async function toggleBan(id) {
+      await fetch('/api/admin/keys/toggle-ban', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ id })
+      });
+      loadKeys();
+      loadStats();
+    }
+
+    async function deleteKey(id) {
+      if (!confirm('Delete this key permanently?')) return;
+      await fetch('/api/admin/keys/' + id, { method: 'DELETE', headers: authHeaders() });
+      loadKeys();
+      loadStats();
+    }
+
+    async function loadCrashes() {
+      const res = await fetch('/api/admin/crashes', { headers: authHeaders() });
+      const crashes = await res.json();
+      const tbody = document.getElementById('crashes-tbody');
+      if (!crashes.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-sec);padding:24px;">No crash reports logged yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = crashes.map(c => `
+        <tr>
+          <td><strong>${c.brand}</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">${c.model}</span></td>
+          <td>Android ${c.android_version}<br><span style="font-size:0.75rem;color:var(--text-sec);">SDK ${c.sdk_int}</span></td>
+          <td style="color:var(--danger);font-weight:600;">${c.crash_type}</td>
+          <td style="font-size:0.75rem;color:var(--text-sec);">${new Date(c.created_at).toLocaleString()}</td>
+          <td><div class="stacktrace-box">${c.stacktrace.replace(/</g, '&lt;')}</div></td>
+        </tr>
+      `).join('');
+    }
+
+    async function clearCrashes() {
+      if (!confirm('Clear all logged crash reports?')) return;
+      await fetch('/api/admin/crashes/clear', { method: 'DELETE', headers: authHeaders() });
+      loadCrashes();
+      loadStats();
+    }
+
+    async function loadSettings() {
+      const res = await fetch('/api/admin/settings', { headers: authHeaders() });
+      const s = await res.json();
+      if (!s) return;
+      document.getElementById('setting-app-name').value = s.app_name || '';
+      document.getElementById('setting-version').value = s.version || '';
+      document.getElementById('setting-plugin-url').value = s.plugin_url || '';
+      document.getElementById('setting-maintenance').checked = !!s.maintenance;
+      document.getElementById('setting-maintenance-msg').value = s.maintenance_msg || '';
+    }
+
+    async function saveSettings() {
+      const payload = {
+        app_name: document.getElementById('setting-app-name').value,
+        version: document.getElementById('setting-version').value,
+        plugin_url: document.getElementById('setting-plugin-url').value,
+        maintenance: document.getElementById('setting-maintenance').checked,
+        maintenance_msg: document.getElementById('setting-maintenance-msg').value
+      };
+      await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(payload)
+      });
+      alert('Settings saved successfully!');
+    }
+  </script>
+</body>
+</html>

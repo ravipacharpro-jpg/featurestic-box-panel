@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: featurestic-box-panel
+    runtime: node
+    plan: free
+    buildCommand: pnpm install
+    startCommand: node server.js
+    envVars:
+      - key: DATABASE_URL
+        value: postgresql://neondb_owner:npg_ft9EdR7DaPsZ@ep-blue-forest-berzr4o5-pooler.c-9.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+      - key: ADMIN_PASSWORD
+        value: admin123
+      - key: SESSION_SECRET
+        generateValue: true
