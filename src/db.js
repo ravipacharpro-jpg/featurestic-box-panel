@@ -136,7 +136,21 @@ export async function initDb() {
     // 8. Developer Remote Config & Feature Flags for .so
     await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS developer_config TEXT DEFAULT '{}'`;
 
-    // 9. High-Performance B-Tree Indexes (Zero server CPU load even at high scale)
+    // 9. Personal Telegram Crash Alert for Developers
+    await sql`ALTER TABLE client_accounts ADD COLUMN IF NOT EXISTS telegram_bot_token TEXT DEFAULT ''`;
+    await sql`ALTER TABLE client_accounts ADD COLUMN IF NOT EXISTS telegram_chat_id TEXT DEFAULT ''`;
+    await sql`ALTER TABLE client_accounts ADD COLUMN IF NOT EXISTS telegram_alerts_enabled BOOLEAN DEFAULT FALSE`;
+
+    // 10. .so SHA-256 Anti-Tamper Checksum Verification
+    await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS so_sha256 TEXT DEFAULT ''`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS so_sha256 TEXT DEFAULT ''`;
+
+    // 11. Global Admin APK Auto-Update Settings
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS update_apk_url TEXT DEFAULT ''`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS update_version TEXT DEFAULT '1.0.1'`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS update_changelog TEXT DEFAULT 'Latest performance updates & bug fixes'`;
+
+    // 12. High-Performance B-Tree Indexes (Zero server CPU load even at high scale)
     await sql`CREATE INDEX IF NOT EXISTS idx_license_keys_user_key ON license_keys(user_key)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_hwid_blacklist_device_id ON hwid_blacklist(device_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_sdk_devices_user_key ON sdk_devices(user_key)`;

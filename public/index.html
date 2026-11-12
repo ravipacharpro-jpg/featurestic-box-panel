@@ -1410,6 +1410,24 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
             <label class="f-label">Fallback .so Plugin URL</label>
             <input type="text" id="s-url" class="f-input" placeholder="https://...">
           </div>
+          <div class="f-group">
+            <label class="f-label">Fallback .so SHA-256 Anti-Tamper Checksum</label>
+            <input type="text" id="s-so-sha" class="f-input" placeholder="e.g. 7d7a20095c57...">
+          </div>
+          <div class="f-group">
+            <label class="f-label">Global In-App Auto-Update APK Download URL</label>
+            <input type="text" id="s-update-apk" class="f-input" placeholder="https://github.com/.../Loader.apk">
+          </div>
+          <div class="form-row">
+            <div class="f-group">
+              <label class="f-label">Latest Version</label>
+              <input type="text" id="s-update-ver" class="f-input" placeholder="1.0.1">
+            </div>
+            <div class="f-group">
+              <label class="f-label">Changelog</label>
+              <input type="text" id="s-update-msg" class="f-input" placeholder="Bug fixes and improvements">
+            </div>
+          </div>
         </div>
 
         <div class="settings-card">
@@ -1695,11 +1713,15 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
               <label class="f-label">Update Changelog / Announcement</label>
               <input type="text" id="cl-update-msg" class="f-input" placeholder="e.g. Added bypass, fixed offsets for new game version">
             </div>
-          </div>
+            <div class="f-group" style="margin-top:4px">
+              <label class="f-label">Native .so SHA-256 Anti-Tamper Checksum (Optional)</label>
+              <input type="text" id="cl-so-sha" class="f-input" style="font-family:var(--font-mono);font-size:0.8rem" placeholder="e.g. 7d7a20095c5741649f46d30bcca57ebd6abe1e6224ee0cca691432010f9d84d9">
+              <div style="font-size:0.68rem;color:var(--t3);margin-top:4px">When provided, user loaders compute SHA-256 before loading. Any modified, cracked, or tampered .so will be immediately blocked and wiped.</div>
+            </div>
 
-          <button class="btn btn-primary-neon" style="padding:10px 24px;margin-top:8px" onclick="saveClientSettings()">
-            Save Loader Configuration
-          </button>
+            <button class="btn btn-primary-neon" style="padding:10px 24px;margin-top:12px" onclick="saveClientSettings()">
+              Save Loader Configuration
+            </button>
         </div>
       </div>
 
@@ -1726,6 +1748,45 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
         <div style="display:flex;justify-content:flex-end;margin-top:12px">
           <button class="btn btn-primary-neon" style="padding:10px 24px" onclick="saveDevConfig()">
             Save Remote .so Config
+          </button>
+        </div>
+      </div>
+
+      <!-- Personal Telegram Crash Alert Bot for Developers -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-head">
+          <div class="card-head-left">
+            <div class="card-title">Developer Personal Telegram Crash Alerts</div>
+            <div class="card-sub">Receive instant Telegram notifications directly on your phone when your native .so crashes</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:0.75rem;color:var(--t2)">Alerts</span>
+            <div class="toggle-pill" id="cl-tg-toggle" onclick="toggleClientTelegram()"></div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-elevated);border:1px solid var(--border-light);border-radius:var(--r-md);padding:14px;margin-bottom:14px;font-size:0.76rem;color:var(--t2);line-height:1.5">
+          <strong style="color:var(--neon)">Real-Time Telemetry to Your Phone:</strong>
+          Create a Telegram bot via <code>@BotFather</code> and get your Chat ID from <code>@userinfobot</code>. Whenever a player crashes inside your .so, your bot sends the relative offset, faulting library, and device specs to your Telegram.
+        </div>
+
+        <div class="form-row">
+          <div class="f-group">
+            <label class="f-label">Telegram Bot Token</label>
+            <input type="password" id="cl-tg-token" class="f-input" placeholder="e.g. 7123456789:AAH..." style="font-family:var(--font-mono)">
+          </div>
+          <div class="f-group">
+            <label class="f-label">Your Telegram Chat ID</label>
+            <input type="text" id="cl-tg-chat" class="f-input" placeholder="e.g. 123456789" style="font-family:var(--font-mono)">
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn btn-ghost" style="padding:10px 18px" onclick="saveClientTelegram(true)">
+            Send Test Notification
+          </button>
+          <button class="btn btn-primary-neon" style="padding:10px 22px" onclick="saveClientTelegram(false)">
+            Save Telegram Alert Settings
           </button>
         </div>
       </div>
@@ -2549,6 +2610,16 @@ async function loadClientDashboard() {
   document.getElementById('cl-update-apk').value = k.update_apk_url || '';
   document.getElementById('cl-update-ver').value = k.update_version || '1.0.0';
   document.getElementById('cl-update-msg').value = k.update_changelog || '';
+  document.getElementById('cl-so-sha').value = k.so_sha256 || '';
+
+  // Developer Personal Telegram Alerts
+  const clAcc = data.client || {};
+  document.getElementById('cl-tg-token').value = clAcc.telegram_bot_token || '';
+  document.getElementById('cl-tg-chat').value = clAcc.telegram_chat_id || '';
+  const tgTog = document.getElementById('cl-tg-toggle');
+  if (tgTog) {
+    clAcc.telegram_alerts_enabled ? tgTog.classList.add('on') : tgTog.classList.remove('on');
+  }
 
   // Developer Remote Config & Feature Flags
   try {
@@ -2602,18 +2673,47 @@ async function saveClientSettings() {
   const update_apk_url = document.getElementById('cl-update-apk').value;
   const update_version = document.getElementById('cl-update-ver').value;
   const update_changelog = document.getElementById('cl-update-msg').value;
+  const so_sha256 = document.getElementById('cl-so-sha').value.trim();
 
   const r = await api('/api/client/settings', 'POST', {
     plugin_url,
     update_apk_url,
     update_version,
-    update_changelog
+    update_changelog,
+    so_sha256
   });
 
   if (r && r.success) {
     toast('Loader configuration updated successfully');
   } else {
     toast('Failed to save settings', 'error');
+  }
+}
+
+function toggleClientTelegram() {
+  document.getElementById('cl-tg-toggle').classList.toggle('on');
+}
+
+async function saveClientTelegram(sendTest = false) {
+  const bot_token = document.getElementById('cl-tg-token').value.trim();
+  const chat_id = document.getElementById('cl-tg-chat').value.trim();
+  const enabled = document.getElementById('cl-tg-toggle').classList.contains('on');
+
+  if (sendTest && (!bot_token || !chat_id)) {
+    return toast('Enter bot token and chat ID to test', 'error');
+  }
+
+  const res = await api('/api/client/telegram', 'POST', {
+    bot_token,
+    chat_id,
+    enabled,
+    send_test: sendTest
+  });
+
+  if (res && res.success) {
+    toast(res.message);
+  } else {
+    toast(res?.error || 'Failed to save Telegram settings', 'error');
   }
 }
 
@@ -2750,6 +2850,13 @@ let _currentCreateType = 'own';
 
 function openCreateModal(forClient = false) {
   document.getElementById('modal-result').style.display = 'none';
+  if (document.getElementById('m-client-user')) document.getElementById('m-client-user').value = '';
+  if (document.getElementById('m-client-pass')) document.getElementById('m-client-pass').value = '';
+  if (document.getElementById('m-client-so')) document.getElementById('m-client-so').value = '';
+  if (document.getElementById('m-client-apk')) document.getElementById('m-client-apk').value = '';
+  if (document.getElementById('m-pkg')) document.getElementById('m-pkg').value = '';
+  if (document.getElementById('m-note')) document.getElementById('m-note').value = '';
+
   document.getElementById('modal-create').classList.add('open');
   if (forClient) {
     switchCreateType('client');
@@ -2838,6 +2945,11 @@ async function loadSettings() {
   document.getElementById('s-url').value = s.plugin_url || '';
   document.getElementById('s-msg').value = s.maintenance_msg || '';
 
+  if (document.getElementById('s-so-sha')) document.getElementById('s-so-sha').value = s.so_sha256 || '';
+  if (document.getElementById('s-update-apk')) document.getElementById('s-update-apk').value = s.update_apk_url || '';
+  if (document.getElementById('s-update-ver')) document.getElementById('s-update-ver').value = s.update_version || '1.0.1';
+  if (document.getElementById('s-update-msg')) document.getElementById('s-update-msg').value = s.update_changelog || '';
+
   const togMaint = document.getElementById('s-maintenance');
   s.maintenance ? togMaint.classList.add('on') : togMaint.classList.remove('on');
 
@@ -2881,6 +2993,10 @@ async function saveSettings() {
     app_name: document.getElementById('s-name').value,
     version: document.getElementById('s-ver').value,
     plugin_url: document.getElementById('s-url').value,
+    so_sha256: document.getElementById('s-so-sha')?.value || '',
+    update_apk_url: document.getElementById('s-update-apk')?.value || '',
+    update_version: document.getElementById('s-update-ver')?.value || '1.0.1',
+    update_changelog: document.getElementById('s-update-msg')?.value || '',
     maintenance: togMaint.classList.contains('on'),
     maintenance_msg: document.getElementById('s-msg').value,
     free_access_enabled: togFree.classList.contains('on'),

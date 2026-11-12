@@ -19,14 +19,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Helper: Non-blocking Telegram Alerts
-async function sendTelegramAlert(text) {
+async function sendTelegramAlert(text, customBotToken = null, customChatId = null) {
   try {
-    const settings = (await sql`SELECT telegram_alerts_enabled, telegram_bot_token, telegram_chat_id FROM panel_settings LIMIT 1`)[0];
-    if (!settings || !settings.telegram_alerts_enabled || !settings.telegram_bot_token || !settings.telegram_chat_id) {
-      return;
+    let token = '';
+    let chat_id = '';
+    if (customBotToken && customChatId) {
+      token = customBotToken.trim();
+      chat_id = customChatId.trim();
+    } else {
+      const settings = (await sql`SELECT telegram_alerts_enabled, telegram_bot_token, telegram_chat_id FROM panel_settings LIMIT 1`)[0];
+      if (!settings || !settings.telegram_alerts_enabled || !settings.telegram_bot_token || !settings.telegram_chat_id) {
+        return;
+      }
+      token = settings.telegram_bot_token.trim();
+      chat_id = settings.telegram_chat_id.trim();
     }
-    const token = settings.telegram_bot_token.trim();
-    const chat_id = settings.telegram_chat_id.trim();
     if (!token || !chat_id) return;
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
     fetch(url, {
@@ -181,7 +188,25 @@ async function handleConnect(req, res) {
       effectivePluginUrl = settings.plugin_url.trim();
     }
 
-    const hasApkUpdate = Boolean(key.update_apk_url && key.update_apk_url.trim());
+    // Determine effective APK update URL & version (fallback to admin global settings)
+    const effectiveApkUrl = (key.update_apk_url && key.update_apk_url.trim())
+      ? key.update_apk_url.trim()
+      : (settings?.update_apk_url || '');
+
+    const effectiveApkVer = (key.update_version && key.update_version.trim())
+      ? key.update_version.trim()
+      : (settings?.update_version || '1.0.1');
+
+    const effectiveChangelog = (key.update_changelog && key.update_changelog.trim())
+      ? key.update_changelog.trim()
+      : (settings?.update_changelog || 'Latest performance updates & bug fixes');
+
+    const hasApkUpdate = Boolean(effectiveApkUrl);
+
+    // Determine .so SHA-256 Anti-Tamper Checksum
+    const effectiveSoSha256 = (key.so_sha256 && key.so_sha256.trim())
+      ? key.so_sha256.trim()
+      : (key.account_type === 'own' ? (settings?.so_sha256 || '') : '');
 
     // Developer Remote Config & Feature Flags
     let devConfig = {};
@@ -200,6 +225,7 @@ async function handleConnect(req, res) {
         mod_name: settings?.app_name || 'Featurestic Box',
         version: settings?.version || '1.0.0',
         plugin_url: effectivePluginUrl,
+        so_sha256: effectiveSoSha256,
         so_token: `SO_${Buffer.from(user_key).toString('base64')}_${Date.now()}`,
         config: devConfig,
         max_loaders: maxLoaders,
@@ -207,9 +233,9 @@ async function handleConnect(req, res) {
         unique_devices: devCount,
         update: {
           has_update: hasApkUpdate,
-          latest_version: key.update_version || settings?.version || '1.0.0',
-          apk_url: key.update_apk_url || '',
-          changelog: key.update_changelog || 'Latest performance updates & bug fixes',
+          latest_version: effectiveApkVer,
+          apk_url: effectiveApkUrl,
+          changelog: effectiveChangelog,
           force_update: false
         },
         notice: {
@@ -305,6 +331,33 @@ app.post('/api/telemetry/crash', async (req, res) => {
         `<b>Device:</b> ${brand || ''} ${model || ''} (SDK ${sdk_int || 'N/A'})\n\n` +
         `<b>Stacktrace:</b>\n<pre>${st.slice(0, 350)}</pre>`
       );
+    }
+
+    // Personal Telegram Alert for Developer/Client
+    if (client_username && (crash_category === 'native_so' || isNativeSignal)) {
+      try {
+        const clientAcc = (await sql`
+          SELECT telegram_bot_token, telegram_chat_id, telegram_alerts_enabled 
+          FROM client_accounts 
+          WHERE username = ${client_username} LIMIT 1
+        `)[0];
+        if (clientAcc && clientAcc.telegram_alerts_enabled && clientAcc.telegram_bot_token && clientAcc.telegram_chat_id) {
+          sendTelegramAlert(
+            `🚨 <b>Developer .so Crash Alert</b> 🚨\n━━━━━━━━━━━━━━━━━━━━\n` +
+            `📦 <b>Library:</b> <code>${so_name || 'libFeaturesticBox.so'}</code>\n` +
+            `⚡ <b>Offset:</b> <code>+${fault_offset || 'N/A'}</code> (Press G in IDA/Ghidra)\n` +
+            `🛑 <b>Signal:</b> ${crash_type || 'SIGSEGV'}\n` +
+            `📱 <b>Device:</b> ${brand || ''} ${model || ''} (Android ${android_version || '?'})\n` +
+            `🔑 <b>Key:</b> <code>${finalKey || 'N/A'}</code>\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `<pre>${st.slice(0, 300)}</pre>`,
+            clientAcc.telegram_bot_token,
+            clientAcc.telegram_chat_id
+          );
+        }
+      } catch (err) {
+        console.error('[Developer Telegram Alert Error]', err);
+      }
     }
 
     return res.json({ 
@@ -711,7 +764,8 @@ app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
     app_name, version, maintenance, maintenance_msg, plugin_url,
     free_access_enabled, free_access_duration, free_access_max_loaders,
     emergency_safe_mode, emergency_safe_msg, broadcast_notice,
-    telegram_bot_token, telegram_chat_id, telegram_alerts_enabled
+    telegram_bot_token, telegram_chat_id, telegram_alerts_enabled,
+    so_sha256 = '', update_apk_url = '', update_version = '1.0.1', update_changelog = ''
   } = req.body;
   await sql`
     UPDATE panel_settings 
@@ -720,6 +774,10 @@ app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
         maintenance = ${Boolean(maintenance)},
         maintenance_msg = ${maintenance_msg},
         plugin_url = ${plugin_url},
+        so_sha256 = ${so_sha256.trim()},
+        update_apk_url = ${update_apk_url.trim()},
+        update_version = ${update_version.trim()},
+        update_changelog = ${update_changelog.trim()},
         free_access_enabled = ${Boolean(free_access_enabled)},
         free_access_duration = ${parseInt(free_access_duration) || 3},
         free_access_max_loaders = ${parseInt(free_access_max_loaders) || 1},
@@ -852,6 +910,11 @@ app.post('/api/admin/telegram-test', checkAdminAuth, async (req, res) => {
 app.get('/api/client/me', checkClientAuth, async (req, res) => {
   try {
     const client = req.client;
+    const clientAccount = (await sql`
+      SELECT id, username, note, telegram_bot_token, telegram_chat_id, telegram_alerts_enabled 
+      FROM client_accounts WHERE id = ${client.id} LIMIT 1
+    `)[0] || client;
+
     const key = (await sql`SELECT * FROM license_keys WHERE user_key = ${client.user_key} LIMIT 1`)[0];
     const totalCrashes = (await sql`
       SELECT COUNT(*)::int as c FROM crash_reports 
@@ -865,7 +928,14 @@ app.get('/api/client/me', checkClientAuth, async (req, res) => {
     `)[0]?.c || 0;
 
     res.json({
-      client: { id: client.id, username: client.username, note: client.note },
+      client: { 
+        id: clientAccount.id, 
+        username: clientAccount.username, 
+        note: clientAccount.note,
+        telegram_bot_token: clientAccount.telegram_bot_token || '',
+        telegram_chat_id: clientAccount.telegram_chat_id || '',
+        telegram_alerts_enabled: Boolean(clientAccount.telegram_alerts_enabled)
+      },
       key: key || null,
       stats: {
         totalCrashes,
@@ -933,7 +1003,7 @@ app.post('/api/client/regenerate-key', checkClientAuth, async (req, res) => {
   }
 });
 
-// Update Client Settings (.so URL & In-App APK Auto Update config)
+// Update Client Settings (.so URL, SHA-256 Checksum & In-App APK Auto Update config)
 app.post('/api/client/settings', checkClientAuth, async (req, res) => {
   try {
     const client = req.client;
@@ -941,7 +1011,8 @@ app.post('/api/client/settings', checkClientAuth, async (req, res) => {
       plugin_url = '', 
       update_apk_url = '', 
       update_version = '1.0.0', 
-      update_changelog = '' 
+      update_changelog = '',
+      so_sha256 = ''
     } = req.body;
 
     await sql`
@@ -949,11 +1020,49 @@ app.post('/api/client/settings', checkClientAuth, async (req, res) => {
       SET plugin_url = ${plugin_url.trim()},
           update_apk_url = ${update_apk_url.trim()},
           update_version = ${update_version.trim()},
-          update_changelog = ${update_changelog.trim()}
+          update_changelog = ${update_changelog.trim()},
+          so_sha256 = ${so_sha256.trim()}
       WHERE user_key = ${client.user_key}
     `;
 
     res.json({ success: true, message: 'Client configuration updated successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update Developer Personal Telegram Crash Alert Settings
+app.post('/api/client/telegram', checkClientAuth, async (req, res) => {
+  try {
+    const client = req.client;
+    const { bot_token = '', chat_id = '', enabled = false, send_test = false } = req.body;
+
+    await sql`
+      UPDATE client_accounts 
+      SET telegram_bot_token = ${bot_token.trim()},
+          telegram_chat_id = ${chat_id.trim()},
+          telegram_alerts_enabled = ${Boolean(enabled)}
+      WHERE id = ${client.id}
+    `;
+
+    if (send_test && bot_token && chat_id) {
+      const resp = await fetch(`https://api.telegram.org/bot${bot_token.trim()}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chat_id.trim(),
+          text: `🟢 <b>Featurestic Box Developer Alert Connected</b>\n\nHello <b>@${client.username}</b>! Your Telegram crash alert bot is successfully active. You will receive live instant alerts whenever your .so crashes.`,
+          parse_mode: 'HTML'
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+      const data = await resp.json();
+      if (!data.ok) {
+        return res.status(400).json({ error: data.description || 'Telegram test message delivery failed' });
+      }
+    }
+
+    res.json({ success: true, message: send_test ? 'Telegram test message sent & settings saved!' : 'Telegram alert settings updated successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
