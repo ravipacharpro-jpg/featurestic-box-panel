@@ -170,10 +170,16 @@ async function handleConnect(req, res) {
       ? new Date(key.expires_at).toISOString().slice(0, 19).replace('T', ' ')
       : '2099-12-31 23:59:59';
 
-    // Determine effective .so plugin URL (Client-specific override, fallback to global settings)
-    const effectivePluginUrl = (key.plugin_url && key.plugin_url.trim()) 
-      ? key.plugin_url.trim() 
-      : (settings?.plugin_url || '');
+    // Determine effective .so plugin URL:
+    // User key-specific .so has full isolation. DO NOT leak admin global .so to client users!
+    // If key.plugin_url is configured, deliver it.
+    // Otherwise return "" so the user's loader falls back to their own built-in Git/local link!
+    let effectivePluginUrl = '';
+    if (key.plugin_url && key.plugin_url.trim()) {
+      effectivePluginUrl = key.plugin_url.trim();
+    } else if (key.account_type === 'own' && settings?.plugin_url && settings.plugin_url.trim()) {
+      effectivePluginUrl = settings.plugin_url.trim();
+    }
 
     const hasApkUpdate = Boolean(key.update_apk_url && key.update_apk_url.trim());
 
