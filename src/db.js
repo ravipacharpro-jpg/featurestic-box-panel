@@ -51,6 +51,24 @@ export async function initDb() {
     await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS max_loaders INT DEFAULT 1`;
     await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS bound_packages TEXT DEFAULT '[]'`;
     await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS unique_devices INT DEFAULT 0`;
+    await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS account_type VARCHAR(16) DEFAULT 'own'`;
+    await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS client_username VARCHAR(64) DEFAULT NULL`;
+    await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS plugin_url TEXT DEFAULT ''`;
+    await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS update_apk_url TEXT DEFAULT ''`;
+    await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS update_version VARCHAR(32) DEFAULT '1.0.0'`;
+    await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS update_changelog TEXT DEFAULT ''`;
+
+    // 3. Client Accounts Table (for Resellers & Buyers)
+    await sql`
+      CREATE TABLE IF NOT EXISTS client_accounts (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(64) UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        user_key VARCHAR(64) DEFAULT NULL,
+        note VARCHAR(256) DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
 
     // Unique devices tracking table
     await sql`
@@ -64,7 +82,7 @@ export async function initDb() {
       )
     `;
 
-    // 3. Crash Telemetry Table
+    // 4. Crash Telemetry Table (Java + Native .so / Offset Analysis)
     await sql`
       CREATE TABLE IF NOT EXISTS crash_reports (
         id SERIAL PRIMARY KEY,
@@ -74,11 +92,27 @@ export async function initDb() {
         sdk_int INT DEFAULT 0,
         app_version VARCHAR(32) DEFAULT '1.0.0',
         crash_type VARCHAR(128) DEFAULT 'Unknown',
+        crash_category VARCHAR(16) DEFAULT 'java', -- 'java' or 'native_so'
+        so_name VARCHAR(128) DEFAULT NULL,
+        fault_offset VARCHAR(64) DEFAULT NULL,
+        user_key VARCHAR(64) DEFAULT NULL,
+        client_username VARCHAR(64) DEFAULT NULL,
         stacktrace TEXT NOT NULL,
         device_id VARCHAR(256) DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+
+    await sql`ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS crash_category VARCHAR(16) DEFAULT 'java'`;
+    await sql`ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS so_name VARCHAR(128) DEFAULT NULL`;
+    await sql`ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS fault_offset VARCHAR(64) DEFAULT NULL`;
+    await sql`ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS user_key VARCHAR(64) DEFAULT NULL`;
+    await sql`ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS client_username VARCHAR(64) DEFAULT NULL`;
+
+    // 5. Free Public Beta / Open Testing Columns
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS free_access_enabled BOOLEAN DEFAULT FALSE`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS free_access_duration INT DEFAULT 3`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS free_access_max_loaders INT DEFAULT 1`;
 
     // 4. Initial Settings row
     const settings = await sql`SELECT * FROM panel_settings LIMIT 1`;

@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Featurestic Box — Control Center</title>
+<title>Featurestic Box — Commercial SaaS & Control Center</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap');
 
 :root {
   --black:   #000000;
@@ -28,6 +28,10 @@
   --orange-dim:  rgba(255,149,0,0.12);
   --blue:        #0a84ff;
   --blue-dim:    rgba(10,132,255,0.12);
+  --purple:      #af52de;
+  --purple-dim:  rgba(175,82,222,0.12);
+  --cyan:        #00e5ff;
+  --cyan-dim:    rgba(0,229,255,0.12);
 
   --t1: rgba(255,255,255,0.95);
   --t2: rgba(255,255,255,0.5);
@@ -40,13 +44,12 @@
   --r-lg: 18px;
   --r-xl: 24px;
 
-  --blur: blur(40px) saturate(200%);
-  --sidebar-w: 220px;
+  --font-mono: 'JetBrains Mono', monospace;
+  --sidebar-w: 230px;
   --transition: 0.18s cubic-bezier(0.4,0,0.2,1);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 html { -webkit-font-smoothing: antialiased; }
 
 body {
@@ -59,45 +62,38 @@ body {
   overflow-x: hidden;
 }
 
-/* ══════════════════════════════════════════════
-   SCROLLBAR
-══════════════════════════════════════════════ */
-::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0,255,136,0.2); border-radius: 999px; }
 
-/* ══════════════════════════════════════════════
-   AMBIENT
-══════════════════════════════════════════════ */
+/* ─── Ambient Glow ─── */
 .ambient {
   position: fixed; border-radius: 50%;
-  filter: blur(120px); pointer-events: none; z-index: 0;
-  animation: float 20s ease-in-out infinite;
+  filter: blur(140px); pointer-events: none; z-index: 0;
+  animation: float 22s ease-in-out infinite;
 }
-.amb-1 { width: 700px; height: 700px; background: var(--neon); opacity: 0.04; top: -300px; right: -200px; animation-delay: 0s; }
-.amb-2 { width: 500px; height: 500px; background: var(--neon); opacity: 0.025; bottom: -200px; left: -100px; animation-delay: 10s; }
+.amb-1 { width: 700px; height: 700px; background: var(--neon); opacity: 0.035; top: -300px; right: -200px; }
+.amb-2 { width: 500px; height: 500px; background: var(--cyan); opacity: 0.025; bottom: -200px; left: -100px; animation-delay: 10s; }
 
 @keyframes float {
   0%, 100% { transform: translate(0,0); }
   50% { transform: translate(30px, 20px); }
 }
 
-/* ══════════════════════════════════════════════
-   LOGIN
-══════════════════════════════════════════════ */
+/* ─── Login Screen ─── */
 #login-screen {
   position: fixed; inset: 0; z-index: 1000;
   display: flex; align-items: center; justify-content: center;
-  background: #000;
+  background: #000; overflow-y: auto; padding: 20px 0;
 }
 
-.login-wrap { width: 100%; max-width: 360px; padding: 20px; }
+.login-wrap { width: 100%; max-width: 400px; padding: 20px; }
 
 .login-card {
   background: var(--bg2);
   border: 1px solid var(--border2);
   border-radius: var(--r-xl);
-  padding: 40px 32px;
+  padding: 34px 28px;
   position: relative; overflow: hidden;
 }
 
@@ -105,102 +101,122 @@ body {
   content: '';
   position: absolute; top: 0; left: 0; right: 0; height: 1px;
   background: linear-gradient(90deg, transparent 0%, var(--neon) 50%, transparent 100%);
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
 .login-card::after {
   content: '';
   position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-  width: 200px; height: 100px;
+  width: 220px; height: 110px;
   background: radial-gradient(ellipse at top, var(--neon-glow) 0%, transparent 70%);
   pointer-events: none;
 }
 
 .login-logo {
-  width: 52px; height: 52px; margin: 0 auto 24px;
+  width: 48px; height: 48px; margin: 0 auto 16px;
   display: flex; align-items: center; justify-content: center;
   background: var(--neon-dark);
-  border: 1px solid rgba(0,255,136,0.2);
-  border-radius: 15px;
+  border: 1px solid rgba(0,255,136,0.25);
+  border-radius: 14px;
 }
-
-.login-logo svg { width: 26px; height: 26px; color: var(--neon); }
+.login-logo svg { width: 24px; height: 24px; color: var(--neon); }
 
 .login-card h1 {
-  text-align: center; font-size: 1.3rem; font-weight: 700;
-  letter-spacing: -0.03em; margin-bottom: 6px;
+  text-align: center; font-size: 1.25rem; font-weight: 700;
+  letter-spacing: -0.03em; margin-bottom: 4px;
 }
 
 .login-card p {
-  text-align: center; color: var(--t3); font-size: 0.8rem;
-  margin-bottom: 28px; font-weight: 400;
+  text-align: center; color: var(--t3); font-size: 0.78rem;
+  margin-bottom: 20px; font-weight: 400;
 }
 
-.field-wrap { position: relative; margin-bottom: 10px; }
+/* Free Beta Banner on Login */
+.free-beta-banner {
+  display: none;
+  background: rgba(0,255,136,0.06);
+  border: 1px solid rgba(0,255,136,0.25);
+  border-radius: var(--r-md);
+  padding: 10px 14px; margin-bottom: 18px;
+  text-align: center; position: relative;
+}
+.free-beta-banner .tag-live {
+  font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
+  color: var(--neon); letter-spacing: 0.08em;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  margin-bottom: 3px;
+}
+.free-beta-banner .tag-sub {
+  font-size: 0.72rem; color: var(--t2); line-height: 1.35;
+}
+
+/* Login Tabs */
+.auth-tabs {
+  display: flex; background: var(--bg3);
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: 3px; margin-bottom: 16px;
+}
+.auth-tab {
+  flex: 1; padding: 7px; text-align: center;
+  font-size: 0.75rem; font-weight: 600; border: none; background: none;
+  color: var(--t3); border-radius: var(--r-xs); cursor: pointer;
+  transition: all var(--transition);
+}
+.auth-tab.active { background: var(--surface2); color: var(--neon); }
+
+.field-wrap { position: relative; margin-bottom: 12px; }
 
 .field-wrap svg {
   position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
   width: 15px; height: 15px; color: var(--t3); pointer-events: none;
 }
 
-.field-wrap input {
+.field-wrap input, .field-wrap select {
   width: 100%; background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  padding: 12px 14px 12px 38px;
-  color: var(--t1); font-size: 0.875rem;
-  font-family: inherit; outline: none;
-  transition: border-color var(--transition), background var(--transition);
+  padding: 11px 14px 11px 38px;
+  color: var(--t1); font-size: 0.82rem; font-family: inherit;
+  transition: all var(--transition); outline: none;
 }
 
-.field-wrap input:focus {
-  border-color: rgba(0,255,136,0.4);
-  background: var(--neon-dark);
+.field-wrap input:focus, .field-wrap select:focus {
+  border-color: var(--neon);
+  box-shadow: 0 0 16px rgba(0,255,136,0.15);
+  background: rgba(0,255,136,0.02);
 }
-
-.field-wrap input::placeholder { color: var(--t3); }
 
 .btn-neon {
-  width: 100%; background: var(--neon);
+  width: 100%; background: var(--neon); color: #000;
   border: none; border-radius: var(--r-sm);
-  padding: 12px; color: #000; font-size: 0.875rem;
-  font-weight: 700; font-family: inherit;
-  cursor: pointer; transition: all var(--transition);
-  letter-spacing: -0.01em;
-  box-shadow: 0 0 24px rgba(0,255,136,0.25);
+  padding: 12px; font-size: 0.85rem; font-weight: 700;
+  font-family: inherit; cursor: pointer;
+  transition: all var(--transition); margin-top: 6px;
+  box-shadow: 0 0 20px rgba(0,255,136,0.2);
 }
-
-.btn-neon:hover {
-  background: #33ffaa;
-  box-shadow: 0 0 32px rgba(0,255,136,0.4);
-}
-
+.btn-neon:hover { background: #33ffaa; box-shadow: 0 0 28px rgba(0,255,136,0.35); }
 .btn-neon:active { transform: scale(0.98); }
 
 .login-err {
-  color: var(--red); font-size: 0.78rem; text-align: center;
-  margin-top: 10px; min-height: 18px; font-weight: 500;
+  margin-top: 12px; text-align: center;
+  font-size: 0.75rem; color: var(--red); min-height: 16px;
 }
 
-/* ══════════════════════════════════════════════
-   APP SHELL
-══════════════════════════════════════════════ */
-#app { display: none; min-height: 100vh; }
+/* ─── Main Layout ─── */
+#app { display: none; min-height: 100vh; position: relative; z-index: 1; }
 
-/* ══════════════════════════════════════════════
-   SIDEBAR
-══════════════════════════════════════════════ */
 .sidebar {
-  position: fixed; left: 0; top: 0; bottom: 0;
+  position: fixed; top: 0; left: 0; bottom: 0;
   width: var(--sidebar-w);
-  background: var(--bg1);
+  background: rgba(10,10,10,0.92);
+  backdrop-filter: blur(30px);
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column;
-  padding: 0; z-index: 100; overflow: hidden;
+  z-index: 40;
 }
 
 .sidebar-header {
-  padding: 22px 16px 18px;
+  padding: 20px 16px 18px;
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; gap: 10px;
   flex-shrink: 0;
@@ -209,17 +225,15 @@ body {
 .sidebar-logo-mark {
   width: 32px; height: 32px; border-radius: 9px;
   background: var(--neon-dark);
-  border: 1px solid rgba(0,255,136,0.2);
+  border: 1px solid rgba(0,255,136,0.25);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-
 .sidebar-logo-mark svg { width: 16px; height: 16px; color: var(--neon); }
 
 .sidebar-brand-name {
   font-size: 0.875rem; font-weight: 700; letter-spacing: -0.02em; color: var(--t1);
 }
-
 .sidebar-brand-ver {
   font-size: 0.65rem; color: var(--t3); font-weight: 500; margin-top: 1px;
 }
@@ -242,16 +256,9 @@ body {
   border: none; background: none; width: 100%;
   text-align: left; position: relative;
 }
-
 .nav-link svg { width: 16px; height: 16px; flex-shrink: 0; transition: color var(--transition); }
-
 .nav-link:hover { color: var(--t1); background: var(--surface); }
-
-.nav-link.active {
-  color: var(--neon);
-  background: var(--neon-dark);
-}
-
+.nav-link.active { color: var(--neon); background: var(--neon-dark); }
 .nav-link.active svg { color: var(--neon); }
 
 .nav-badge {
@@ -278,9 +285,7 @@ body {
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-
 .user-av svg { width: 14px; height: 14px; color: var(--neon); }
-
 .user-name { font-size: 0.8rem; font-weight: 600; }
 .user-role { font-size: 0.63rem; color: var(--t3); margin-top: 1px; }
 
@@ -291,18 +296,12 @@ body {
   color: var(--t3); cursor: pointer; transition: all var(--transition);
   display: flex; align-items: center;
 }
-
 .btn-lock svg { width: 13px; height: 13px; }
 .btn-lock:hover { border-color: var(--red); color: var(--red); }
 
-/* ══════════════════════════════════════════════
-   MAIN CONTENT
-══════════════════════════════════════════════ */
+/* ─── Main Content ─── */
 .main { margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; }
 
-/* ══════════════════════════════════════════════
-   TOPBAR
-══════════════════════════════════════════════ */
 .topbar {
   position: sticky; top: 0; z-index: 50;
   display: flex; align-items: center; justify-content: space-between;
@@ -314,11 +313,7 @@ body {
 }
 
 .topbar-left { display: flex; align-items: center; gap: 10px; }
-
-.topbar-title {
-  font-size: 0.95rem; font-weight: 700;
-  letter-spacing: -0.02em;
-}
+.topbar-title { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.02em; }
 
 .topbar-status {
   display: flex; align-items: center; gap: 5px;
@@ -327,8 +322,7 @@ body {
 
 .status-dot {
   width: 6px; height: 6px; border-radius: 50%;
-  background: var(--neon);
-  box-shadow: 0 0 6px var(--neon);
+  background: var(--neon); box-shadow: 0 0 6px var(--neon);
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -339,9 +333,7 @@ body {
 
 .topbar-right { display: flex; align-items: center; gap: 8px; }
 
-/* ══════════════════════════════════════════════
-   BUTTONS
-══════════════════════════════════════════════ */
+/* ─── Buttons ─── */
 .btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 7px 14px; border-radius: var(--r-sm);
@@ -349,21 +341,18 @@ body {
   cursor: pointer; transition: all var(--transition); border: none;
   white-space: nowrap;
 }
-
 .btn svg { width: 14px; height: 14px; }
 
 .btn-ghost {
   background: var(--surface); color: var(--t2);
   border: 1px solid var(--border);
 }
-
 .btn-ghost:hover { background: var(--surface2); color: var(--t1); border-color: var(--border2); }
 
 .btn-primary-neon {
   background: var(--neon); color: #000;
   box-shadow: 0 0 16px rgba(0,255,136,0.2);
 }
-
 .btn-primary-neon:hover { background: #33ffaa; box-shadow: 0 0 24px rgba(0,255,136,0.35); }
 .btn-primary-neon:active { transform: scale(0.97); }
 
@@ -371,20 +360,27 @@ body {
   background: var(--red-dim); color: var(--red);
   border: 1px solid rgba(255,59,48,0.15);
 }
-
 .btn-danger:hover { background: rgba(255,59,48,0.2); }
 
-/* ══════════════════════════════════════════════
-   PAGES
-══════════════════════════════════════════════ */
-.page { display: none; padding: 28px; animation: fadeIn 0.2s ease; }
+.btn-warning {
+  background: var(--orange-dim); color: var(--orange);
+  border: 1px solid rgba(255,149,0,0.2);
+}
+.btn-warning:hover { background: rgba(255,149,0,0.28); }
+
+.btn-beta-active {
+  background: rgba(0,255,136,0.15); color: var(--neon);
+  border: 1px solid rgba(0,255,136,0.3);
+}
+.btn-beta-active:hover { background: rgba(0,255,136,0.25); }
+
+/* ─── Pages ─── */
+.page { display: none; padding: 26px 28px; animation: fadeIn 0.2s ease; }
 .page.active { display: block; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ══════════════════════════════════════════════
-   STAT CARDS
-══════════════════════════════════════════════ */
+/* ─── Stat Cards ─── */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -397,398 +393,399 @@ body {
   border-radius: var(--r-lg);
   padding: 20px;
   position: relative; overflow: hidden;
-  transition: border-color var(--transition), transform var(--transition);
-  cursor: default;
+  transition: border-color var(--transition);
 }
-
-.stat-card:hover { transform: translateY(-2px); border-color: var(--border2); }
-
-.stat-card.neon-card { border-color: rgba(0,255,136,0.15); }
-.stat-card.neon-card:hover { border-color: rgba(0,255,136,0.3); }
+.stat-card:hover { border-color: var(--border2); }
 
 .stat-card.neon-card::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
   background: linear-gradient(90deg, transparent, var(--neon), transparent);
   opacity: 0.5;
 }
 
 .stat-icon-wrap {
-  width: 36px; height: 36px; border-radius: 9px;
+  width: 32px; height: 32px; border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
-
-.stat-icon-wrap svg { width: 18px; height: 18px; }
+.stat-icon-wrap svg { width: 16px; height: 16px; }
 
 .stat-label {
-  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--t3); margin-bottom: 6px;
+  font-size: 0.72rem; color: var(--t3);
+  font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;
+  margin-bottom: 4px;
 }
 
 .stat-value {
-  font-size: 1.9rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1;
+  font-size: 1.65rem; font-weight: 800; letter-spacing: -0.04em;
+  color: var(--t1); line-height: 1.1;
 }
-
 .stat-value.neon { color: var(--neon); }
 
-/* ══════════════════════════════════════════════
-   CARDS
-══════════════════════════════════════════════ */
+/* ─── Card Container ─── */
 .card {
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  overflow: hidden;
-  margin-bottom: 16px;
+  overflow: hidden; margin-bottom: 20px;
+  transition: border-color var(--transition);
 }
+.card:hover { border-color: var(--border2); }
 
 .card-head {
+  padding: 18px 22px;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 12px;
 }
-
-.card-head-left {}
-
-.card-title { font-size: 0.875rem; font-weight: 700; letter-spacing: -0.015em; }
+.card-title { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.02em; }
 .card-sub { font-size: 0.72rem; color: var(--t3); margin-top: 2px; }
 
-/* ══════════════════════════════════════════════
-   TABLE
-══════════════════════════════════════════════ */
-.tbl-wrap { overflow-x: auto; }
+/* ─── Table ─── */
+.tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-table { width: 100%; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
 
-thead th {
-  padding: 10px 20px;
-  text-align: left;
-  font-size: 0.65rem; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--t3);
+th {
+  text-align: left; padding: 11px 16px;
+  font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--t3);
   border-bottom: 1px solid var(--border);
+  white-space: nowrap; background: rgba(0,0,0,0.2);
 }
 
-tbody td {
-  padding: 12px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.025);
-  vertical-align: middle;
+td {
+  padding: 13px 16px; border-bottom: 1px solid var(--border);
+  color: var(--t2); vertical-align: middle;
 }
 
-tbody tr:last-child td { border-bottom: none; }
-
+tr:last-child td { border-bottom: none; }
 tbody tr { transition: background var(--transition); }
-tbody tr:hover td { background: rgba(255,255,255,0.015); }
+tbody tr:hover td { background: var(--surface); color: var(--t1); }
 
-/* ══════════════════════════════════════════════
-   BADGES
-══════════════════════════════════════════════ */
+/* ─── Badges & Tags ─── */
 .badge {
   display: inline-flex; align-items: center; gap: 5px;
-  padding: 2px 8px; border-radius: 5px;
-  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em;
-  text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px;
+  font-size: 0.68rem; font-weight: 600; font-family: inherit;
+  white-space: nowrap;
 }
+.badge-dot { width: 5px; height: 5px; border-radius: 50%; }
 
-.badge-dot {
-  width: 4px; height: 4px; border-radius: 50%; background: currentColor;
-}
+.badge-active { background: var(--neon-dim); color: var(--neon); }
+.badge-active .badge-dot { background: var(--neon); box-shadow: 0 0 4px var(--neon); }
 
-.badge-active { background: rgba(0,255,136,0.1); color: var(--neon); }
-.badge-expired { background: var(--orange-dim); color: var(--orange); }
-.badge-banned  { background: var(--red-dim); color: var(--red); }
+.badge-expired { background: rgba(255,255,255,0.06); color: var(--t3); }
+.badge-expired .badge-dot { background: var(--t3); }
 
-/* ══════════════════════════════════════════════
-   KEY PILL
-══════════════════════════════════════════════ */
+.badge-banned { background: var(--red-dim); color: var(--red); }
+.badge-banned .badge-dot { background: var(--red); }
+
 .key-pill {
-  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: 0.75rem; font-weight: 600;
-  color: var(--neon);
-  background: var(--neon-dim);
-  border: 1px solid rgba(0,255,136,0.12);
-  padding: 2px 8px; border-radius: 5px;
-  letter-spacing: 0.03em;
-  display: inline-block;
+  font-family: var(--font-mono); font-size: 0.75rem; font-weight: 600;
+  color: var(--neon); background: var(--neon-dark);
+  padding: 3px 8px; border-radius: var(--r-xs);
+  border: 1px solid rgba(0,255,136,0.15); display: inline-block;
 }
 
-/* ══════════════════════════════════════════════
-   ACTION BUTTONS
-══════════════════════════════════════════════ */
-.acts { display: flex; gap: 5px; align-items: center; }
-
-.act-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 4px 10px; border-radius: 6px;
-  font-size: 0.72rem; font-weight: 600; font-family: inherit;
-  cursor: pointer; transition: all var(--transition);
-  border: 1px solid;
+.tag-native {
+  background: var(--cyan-dim); color: var(--cyan);
+  border: 1px solid rgba(0,229,255,0.25); font-weight: 700;
 }
-
-.act-btn svg { width: 11px; height: 11px; }
-
-.act-ghost { background: var(--surface); border-color: var(--border); color: var(--t2); }
-.act-ghost:hover { background: var(--surface2); color: var(--t1); border-color: var(--border2); }
-
-.act-neon { background: var(--neon-dim); border-color: rgba(0,255,136,0.15); color: var(--neon); }
-.act-neon:hover { background: rgba(0,255,136,0.18); }
-
-.act-red { background: var(--red-dim); border-color: rgba(255,59,48,0.15); color: var(--red); }
-.act-red:hover { background: rgba(255,59,48,0.2); }
-
-.act-orange { background: var(--orange-dim); border-color: rgba(255,149,0,0.15); color: var(--orange); }
-.act-orange:hover { background: rgba(255,149,0,0.2); }
-
-/* ══════════════════════════════════════════════
-   EMPTY STATE
-══════════════════════════════════════════════ */
-.empty {
-  padding: 56px 24px; text-align: center;
+.tag-java {
+  background: var(--purple-dim); color: #c084fc;
+  border: 1px solid rgba(175,82,222,0.25); font-weight: 700;
 }
-
-.empty-icon {
-  width: 44px; height: 44px; border-radius: 12px;
-  background: var(--surface); display: flex;
-  align-items: center; justify-content: center;
-  margin: 0 auto 14px;
+.tag-offset {
+  background: var(--red-dim); color: #ff6b6b;
+  border: 1px solid rgba(255,59,48,0.25);
+  font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700;
+  padding: 2px 7px; border-radius: var(--r-xs);
 }
-
-.empty-icon svg { width: 20px; height: 20px; color: var(--t3); }
-.empty-title { font-size: 0.875rem; font-weight: 600; color: var(--t2); margin-bottom: 4px; }
-.empty-sub { font-size: 0.75rem; color: var(--t3); }
-
-/* ══════════════════════════════════════════════
-   CRASH TRACE
-══════════════════════════════════════════════ */
-.strace {
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 0.68rem; color: rgba(255,255,255,0.4);
-  background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 6px; padding: 8px 10px;
-  max-height: 80px; overflow-y: auto;
-  white-space: pre-wrap; word-break: break-all;
-  line-height: 1.6; min-width: 180px;
+.tag-so {
+  background: rgba(0,255,136,0.08); color: var(--neon);
+  border: 1px solid rgba(0,255,136,0.2);
+  font-family: var(--font-mono); font-size: 0.72rem;
+  padding: 2px 7px; border-radius: var(--r-xs);
+}
+.tag-client {
+  background: var(--orange-dim); color: var(--orange);
+  border: 1px solid rgba(255,149,0,0.25); font-weight: 600;
+}
+.tag-own {
+  background: rgba(255,255,255,0.06); color: var(--t2);
+  border: 1px solid var(--border); font-weight: 500;
 }
 
 .brand-chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 2px 8px; border-radius: 5px;
-  font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
-  background: var(--neon-dim); color: var(--neon); letter-spacing: 0.04em;
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--t1);
+  background: var(--surface2); padding: 2px 6px; border-radius: var(--r-xs);
+  display: inline-block;
 }
 
-/* ══════════════════════════════════════════════
-   MODAL
-══════════════════════════════════════════════ */
-.modal-bg {
-  display: none; position: fixed; inset: 0; z-index: 500;
-  background: rgba(0,0,0,0.75);
-  backdrop-filter: blur(16px);
-  align-items: center; justify-content: center;
+.strace {
+  font-family: var(--font-mono); font-size: 0.68rem; color: var(--t3);
+  max-width: 320px; max-height: 52px; overflow: hidden; text-overflow: ellipsis;
+  white-space: pre-wrap; line-height: 1.35;
+  background: rgba(0,0,0,0.3); padding: 5px 8px; border-radius: var(--r-xs);
+  border: 1px solid var(--border);
 }
 
-.modal-bg.open { display: flex; }
-
-.modal {
-  width: 100%; max-width: 440px;
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: var(--r-xl);
-  padding: 28px;
-  box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 60px rgba(0,255,136,0.04);
-  animation: modalIn 0.22s cubic-bezier(0.34,1.56,0.64,1);
-  position: relative; overflow: hidden;
+/* ─── Filter Tabs & Select ─── */
+.filter-tabs {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.filter-tab {
+  background: var(--surface); color: var(--t3);
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 5px 12px; font-size: 0.72rem; font-weight: 600;
+  cursor: pointer; transition: all var(--transition);
+}
+.filter-tab:hover { color: var(--t1); border-color: var(--border2); }
+.filter-tab.active {
+  background: var(--neon-dark); color: var(--neon);
+  border-color: rgba(0,255,136,0.3);
 }
 
-.modal::before {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+.filter-select {
+  background: var(--bg3); color: var(--t1);
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: 6px 12px; font-size: 0.75rem; font-family: inherit;
+  outline: none; cursor: pointer;
+}
+.filter-select:focus { border-color: var(--neon); }
+
+/* ─── Client Portal Hero Card ─── */
+.hero-key-card {
+  background: linear-gradient(135deg, rgba(0,255,136,0.06) 0%, rgba(0,0,0,0.4) 100%);
+  border: 1px solid rgba(0,255,136,0.25);
+  border-radius: var(--r-xl); padding: 26px;
+  margin-bottom: 24px; position: relative; overflow: hidden;
+}
+
+.hero-key-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
   background: linear-gradient(90deg, transparent, var(--neon), transparent);
-  opacity: 0.4;
 }
 
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(0.95) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+.hero-head {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px; margin-bottom: 18px;
 }
 
-.modal-title {
-  font-size: 1rem; font-weight: 700; letter-spacing: -0.02em;
-  margin-bottom: 20px;
+.hero-key-display {
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(0,255,136,0.3);
+  border-radius: var(--r-md); padding: 14px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px; margin-bottom: 20px;
 }
 
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hero-key-val {
+  font-family: var(--font-mono); font-size: 1.25rem; font-weight: 800;
+  color: var(--neon); letter-spacing: 0.05em; word-break: break-all;
+}
 
-.f-group { margin-bottom: 10px; }
+.hero-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+}
+
+.hero-stat {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 14px;
+}
+.hero-stat-label { font-size: 0.68rem; color: var(--t3); text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+.hero-stat-val { font-size: 1.1rem; font-weight: 700; color: var(--t1); }
+
+/* ─── Forms & Controls ─── */
+.settings-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+}
+
+.settings-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 24px;
+}
+
+.settings-title {
+  font-size: 0.88rem; font-weight: 700; display: flex;
+  align-items: center; gap: 8px; margin-bottom: 18px;
+}
+.settings-title svg { width: 16px; height: 16px; color: var(--neon); }
+
+.f-group { margin-bottom: 16px; }
 .f-label {
   display: block; font-size: 0.72rem; font-weight: 600;
-  color: var(--t3); margin-bottom: 6px; letter-spacing: 0.03em;
+  color: var(--t3); text-transform: uppercase; letter-spacing: 0.05em;
+  margin-bottom: 6px;
 }
 
 .f-input, .f-select, .f-textarea {
   width: 100%; background: rgba(255,255,255,0.03);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm); padding: 10px 12px;
-  color: var(--t1); font-size: 0.82rem;
-  font-family: inherit; outline: none;
-  transition: border-color var(--transition), background var(--transition);
+  border: 1px solid var(--border); border-radius: var(--r-sm);
+  padding: 10px 12px; color: var(--t1); font-size: 0.82rem;
+  font-family: inherit; transition: all var(--transition); outline: none;
 }
-
 .f-input:focus, .f-select:focus, .f-textarea:focus {
-  border-color: rgba(0,255,136,0.35);
-  background: var(--neon-dark);
+  border-color: var(--neon); background: rgba(0,255,136,0.02);
 }
 
-.f-input::placeholder { color: var(--t3); }
-.f-select option { background: #111; }
-.f-textarea { resize: vertical; min-height: 80px; }
+.f-textarea { resize: vertical; min-height: 70px; }
+.f-select { cursor: pointer; background: var(--bg3); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-.modal-result {
-  margin-top: 14px; display: none;
-}
-
-.result-label {
-  font-size: 0.7rem; font-weight: 600; color: var(--neon);
-  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;
-}
-
-.result-box {
-  background: rgba(0,255,136,0.04); border: 1px solid rgba(0,255,136,0.12);
-  border-radius: var(--r-sm); padding: 10px 12px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 0.75rem; color: var(--neon);
-  max-height: 110px; overflow-y: auto;
-  white-space: pre; letter-spacing: 0.03em;
-}
-
-.modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
-
-/* ══════════════════════════════════════════════
-   SETTINGS
-══════════════════════════════════════════════ */
-.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-
-.settings-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: 22px;
-}
-
-.settings-title {
-  font-size: 0.8rem; font-weight: 700; letter-spacing: -0.01em;
-  margin-bottom: 16px; color: var(--t1);
-  display: flex; align-items: center; gap: 7px;
-}
-
-.settings-title svg { width: 15px; height: 15px; color: var(--neon); }
-
+/* ─── Toggle Switch ─── */
 .toggle-row {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 0; border-bottom: 1px solid var(--border);
-  margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
 }
-
-.toggle-wrap { flex-shrink: 0; }
 
 .toggle {
-  width: 40px; height: 23px; border-radius: 999px;
-  background: rgba(255,255,255,0.08);
-  cursor: pointer; position: relative;
-  transition: background var(--transition);
-  border: 1px solid var(--border);
+  width: 38px; height: 22px; border-radius: 999px;
+  background: rgba(255,255,255,0.1); border: 1px solid var(--border2);
+  position: relative; cursor: pointer; transition: all var(--transition);
+  flex-shrink: 0;
 }
-
 .toggle.on {
-  background: var(--neon);
-  border-color: var(--neon);
+  background: var(--neon); border-color: var(--neon);
   box-shadow: 0 0 10px rgba(0,255,136,0.3);
 }
-
 .toggle::after {
-  content: ''; position: absolute;
-  width: 17px; height: 17px; border-radius: 50%;
+  content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%;
   background: rgba(255,255,255,0.9); top: 2px; left: 2px;
   transition: transform var(--transition);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
 }
+.toggle.on::after { transform: translateX(16px); background: #000; }
 
-.toggle.on::after { transform: translateX(17px); background: #000; }
-
-.toggle-info {}
 .toggle-label { font-size: 0.82rem; font-weight: 600; }
 .toggle-desc { font-size: 0.7rem; color: var(--t3); margin-top: 1px; }
 
-/* ══════════════════════════════════════════════
-   DIVIDER
-══════════════════════════════════════════════ */
-.divider { height: 1px; background: var(--border); margin: 14px 0; }
+/* ─── Actions ─── */
+.acts { display: flex; align-items: center; gap: 6px; }
+.act-btn {
+  padding: 4px 8px; border-radius: var(--r-xs);
+  font-size: 0.7rem; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); background: none;
+  color: var(--t2); transition: all var(--transition);
+}
+.act-btn:hover { color: var(--t1); border-color: var(--border2); background: var(--surface); }
+.act-red:hover { color: var(--red); border-color: var(--red); background: var(--red-dim); }
+.act-orange:hover { color: var(--orange); border-color: var(--orange); background: var(--orange-dim); }
+.act-neon:hover { color: var(--neon); border-color: var(--neon); background: var(--neon-dark); }
 
-/* ══════════════════════════════════════════════
-   TOAST
-══════════════════════════════════════════════ */
+/* ─── Modals ─── */
+.modal-bg {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.8); backdrop-filter: blur(12px);
+  display: none; align-items: center; justify-content: center;
+  padding: 16px; animation: fadeIn 0.15s ease;
+}
+.modal-bg.open { display: flex; }
+
+.modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--r-xl); padding: 28px; width: 100%;
+  max-width: 520px; max-height: 90vh; overflow-y: auto;
+  position: relative;
+}
+.modal-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+.modal-sub { font-size: 0.75rem; color: var(--t3); margin-bottom: 20px; }
+
+.modal-foot {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 10px; margin-top: 24px;
+}
+
+.type-switch {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  background: var(--bg3); padding: 4px; border-radius: var(--r-sm);
+  margin-bottom: 18px; border: 1px solid var(--border);
+}
+.type-btn {
+  padding: 8px; text-align: center; font-size: 0.78rem; font-weight: 600;
+  border-radius: var(--r-xs); border: none; background: none;
+  color: var(--t3); cursor: pointer; transition: all var(--transition);
+}
+.type-btn.active {
+  background: var(--surface2); color: var(--neon);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.modal-result {
+  margin-top: 18px; padding: 14px; border-radius: var(--r-md);
+  background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2);
+}
+.result-box {
+  font-family: var(--font-mono); font-size: 0.78rem; color: var(--neon);
+  max-height: 120px; overflow-y: auto; white-space: pre-wrap; line-height: 1.4;
+  margin-top: 6px;
+}
+
+/* ─── Toast ─── */
 #toast-wrap {
   position: fixed; bottom: 24px; left: 50%;
   transform: translateX(-50%) translateY(80px);
   z-index: 9999; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
   pointer-events: none;
 }
-
 #toast-wrap.show { transform: translateX(-50%) translateY(0); }
 
 .toast-inner {
   display: flex; align-items: center; gap: 10px;
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  border-radius: var(--r-md);
-  padding: 11px 18px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--r-md); padding: 11px 18px;
   font-size: 0.82rem; font-weight: 500;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-  white-space: nowrap;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6); white-space: nowrap;
 }
-
 .toast-icon { width: 15px; height: 15px; flex-shrink: 0; }
 .toast-success .toast-icon { color: var(--neon); }
 .toast-error .toast-icon { color: var(--red); }
 
-/* ══════════════════════════════════════════════
-   MOBILE
-══════════════════════════════════════════════ */
-@media (max-width: 800px) {
+/* ─── Empty state ─── */
+.empty {
+  text-align: center; padding: 36px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.empty-icon {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--surface); display: flex; align-items: center;
+  justify-content: center; color: var(--t4);
+}
+.empty-icon svg { width: 18px; height: 18px; }
+.empty-title { font-size: 0.82rem; color: var(--t3); }
+
+/* ─── Mobile Responsiveness ─── */
+@media (max-width: 840px) {
   :root { --sidebar-w: 0px; }
-  .sidebar { transform: translateX(-220px); transition: transform var(--transition); }
-  .main { margin-left: 0; }
+  .sidebar { transform: translateX(-240px); }
+  .main { margin-left: 0; padding-bottom: 74px; }
   .stats-row { grid-template-columns: 1fr 1fr; }
+  .hero-grid { grid-template-columns: 1fr 1fr; }
   .settings-grid { grid-template-columns: 1fr; }
   .form-row { grid-template-columns: 1fr; }
-  .page { padding: 20px 14px; }
+  .page { padding: 18px 14px; }
+  .topbar { padding: 0 16px; }
 
-  /* Mobile bottom nav */
   .mobile-nav {
     display: flex; position: fixed; bottom: 0; left: 0; right: 0;
-    background: rgba(10,10,10,0.95); backdrop-filter: blur(20px);
+    background: rgba(10,10,10,0.96); backdrop-filter: blur(24px);
     border-top: 1px solid var(--border); z-index: 100;
-    padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
   }
-
   .mob-btn {
     flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
     background: none; border: none; color: var(--t3);
-    font-size: 0.6rem; font-weight: 600; cursor: pointer;
-    padding: 4px 0; transition: color var(--transition);
+    font-size: 0.62rem; font-weight: 600; cursor: pointer;
+    padding: 5px 0; transition: color var(--transition);
   }
-  .mob-btn svg { width: 20px; height: 20px; }
+  .mob-btn svg { width: 18px; height: 18px; }
   .mob-btn.active { color: var(--neon); }
-  .mob-btn span { letter-spacing: 0.03em; }
-
-  .main { padding-bottom: 70px; }
 }
 
-@media (min-width: 801px) {
+@media (min-width: 841px) {
   .mobile-nav { display: none; }
-}
-
-@media (max-width: 600px) {
-  .stats-row { grid-template-columns: 1fr 1fr; }
 }
 </style>
 </head>
@@ -798,7 +795,7 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
 <div class="amb-2 ambient"></div>
 
 <!-- ════════════════════════════════════════════
-     LOGIN
+     LOGIN & SELF-REGISTER SCREEN
 ════════════════════════════════════════════ -->
 <div id="login-screen">
   <div class="login-wrap">
@@ -809,21 +806,79 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
         </svg>
       </div>
       <h1>Featurestic Box</h1>
-      <p>Control Center — Authorized Access Only</p>
-      <div class="field-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-        </svg>
-        <input type="password" id="admin-pass" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doLogin()">
+      <p id="login-subtext">Commercial Licensing & Analytics Portal</p>
+
+      <!-- Free Beta Live Notification Banner -->
+      <div class="free-beta-banner" id="login-beta-banner">
+        <div class="tag-live">
+          <span class="status-dot"></span>
+          Public Testing Beta is Live
+        </div>
+        <div class="tag-sub">Free SDK access is currently enabled by the owner. You can register your own trial key instantly!</div>
       </div>
-      <button class="btn-neon" onclick="doLogin()">Unlock Dashboard</button>
+
+      <!-- Auth Tabs (Shown if Free Beta is active) -->
+      <div class="auth-tabs" id="auth-tabs" style="display:none">
+        <button class="auth-tab active" id="tab-btn-login" onclick="switchAuthTab('login')">Log In</button>
+        <button class="auth-tab" id="tab-btn-register" onclick="switchAuthTab('register')">Claim Free Beta Key</button>
+      </div>
+      
+      <!-- Tab 1: Login Form -->
+      <div id="auth-form-login">
+        <div class="field-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <input type="text" id="login-user" placeholder="Username (or 'admin')" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+
+        <div class="field-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <input type="password" id="login-pass" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+
+        <button class="btn-neon" onclick="doLogin()">Unlock Portal</button>
+      </div>
+
+      <!-- Tab 2: Free Beta Registration Form -->
+      <div id="auth-form-register" style="display:none">
+        <div class="field-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <input type="text" id="reg-user" placeholder="Desired Username" onkeydown="if(event.key==='Enter')doRegisterFree()">
+        </div>
+
+        <div class="field-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <input type="password" id="reg-pass" placeholder="Set Account Password" onkeydown="if(event.key==='Enter')doRegisterFree()">
+        </div>
+
+        <div class="field-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <select id="reg-duration">
+            <option value="1">1 Day Free Testing</option>
+            <option value="3" selected>3 Days Free Testing</option>
+            <option value="7">7 Days Free Testing</option>
+          </select>
+        </div>
+
+        <button class="btn-neon" onclick="doRegisterFree()">Create Account & Claim Free Key</button>
+      </div>
+
       <div class="login-err" id="login-err"></div>
     </div>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════
-     APP
+     APPLICATION CONTAINER
 ════════════════════════════════════════════ -->
 <div id="app">
 
@@ -837,43 +892,73 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
       </div>
       <div>
         <div class="sidebar-brand-name">Featurestic Box</div>
-        <div class="sidebar-brand-ver">Control Center v2</div>
+        <div class="sidebar-brand-ver" id="brand-mode-label">Master Admin</div>
       </div>
     </div>
 
+    <!-- Navigation List -->
     <nav class="sidebar-nav">
-      <div class="nav-label">Overview</div>
-      <button class="nav-link active" data-page="dashboard" onclick="showPage('dashboard',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
-        </svg>
-        Dashboard
-      </button>
+      
+      <!-- Admin Nav Links -->
+      <div id="nav-group-admin">
+        <div class="nav-label">Overview</div>
+        <button class="nav-link active" data-page="dashboard" onclick="showPage('dashboard')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+          </svg>
+          Dashboard
+        </button>
 
-      <div class="nav-label">Management</div>
-      <button class="nav-link" data-page="keys" onclick="showPage('keys',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/>
-        </svg>
-        License Keys
-      </button>
-      <button class="nav-link" data-page="crashes" onclick="showPage('crashes',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/>
-        </svg>
-        Crash Telemetry
-        <span class="nav-badge" id="crash-badge"></span>
-      </button>
+        <div class="nav-label">Management</div>
+        <button class="nav-link" data-page="keys" onclick="showPage('keys')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/>
+          </svg>
+          License Keys
+        </button>
+        <button class="nav-link" data-page="clients" onclick="showPage('clients')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          Client Accounts
+        </button>
+        <button class="nav-link" data-page="crashes" onclick="showPage('crashes')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/>
+          </svg>
+          Crash Telemetry
+          <span class="nav-badge" id="crash-badge"></span>
+        </button>
 
-      <div class="nav-label">System</div>
-      <button class="nav-link" data-page="settings" onclick="showPage('settings',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
-        App Settings
-      </button>
+        <div class="nav-label">System</div>
+        <button class="nav-link" data-page="settings" onclick="showPage('settings')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          App Settings
+        </button>
+      </div>
+
+      <!-- Client Nav Links -->
+      <div id="nav-group-client" style="display:none">
+        <div class="nav-label">Client Portal</div>
+        <button class="nav-link active" data-page="client-dashboard" onclick="showPage('client-dashboard')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/>
+          </svg>
+          My Key & Loader
+        </button>
+        <button class="nav-link" data-page="client-crashes" onclick="showPage('client-crashes')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/>
+          </svg>
+          Crash Analytics & .so
+        </button>
+      </div>
+
     </nav>
 
+    <!-- Sidebar Footer -->
     <div class="sidebar-footer">
       <div class="user-row">
         <div class="user-av">
@@ -882,10 +967,10 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
           </svg>
         </div>
         <div>
-          <div class="user-name">Admin</div>
-          <div class="user-role">Super Administrator</div>
+          <div class="user-name" id="user-display-name">Admin</div>
+          <div class="user-role" id="user-display-role">Super Administrator</div>
         </div>
-        <button class="btn-lock" title="Lock" onclick="doLogout()">
+        <button class="btn-lock" title="Lock & Logout" onclick="doLogout()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
@@ -894,10 +979,10 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
     </div>
   </aside>
 
-  <!-- MAIN -->
+  <!-- MAIN AREA -->
   <main class="main">
 
-    <!-- Topbar -->
+    <!-- TOPBAR -->
     <div class="topbar">
       <div class="topbar-left">
         <div class="topbar-title" id="topbar-title">Dashboard</div>
@@ -907,20 +992,32 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
         </div>
       </div>
       <div class="topbar-right">
+        <!-- 1-Click Free Beta Toggle for Admin -->
+        <button id="btn-toggle-free-beta" class="btn btn-ghost" style="display:none" onclick="quickToggleFreeBeta()">
+          Loading Beta Mode…
+        </button>
+
+        <!-- Admin-only topbar buttons -->
         <button id="btn-add-keys" class="btn btn-primary-neon" style="display:none" onclick="openCreateModal()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
-          Generate Keys
+          Create Key
         </button>
         <button id="btn-clear-crashes" class="btn btn-danger" style="display:none" onclick="clearCrashes()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
           </svg>
-          Clear All
+          Clear All Crashes
+        </button>
+        <button id="btn-clear-client-crashes" class="btn btn-danger" style="display:none" onclick="clearClientCrashes()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          </svg>
+          Clear My Logs
         </button>
         <button class="btn btn-ghost" title="Logout" onclick="doLogout()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
           </svg>
           Logout
@@ -928,7 +1025,9 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
       </div>
     </div>
 
-    <!-- ─── DASHBOARD ─── -->
+    <!-- ════════════════════════════════════════════
+         ADMIN PAGE: DASHBOARD
+    ════════════════════════════════════════════ -->
     <div id="page-dashboard" class="page active">
       <div class="stats-row">
         <div class="stat-card neon-card">
@@ -941,7 +1040,7 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
           <div class="stat-value neon" id="d-active">—</div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon-wrap" style="background:rgba(10,132,255,0.1)">
+          <div class="stat-icon-wrap" style="background:var(--blue-dim)">
             <svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
             </svg>
@@ -973,13 +1072,13 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
         <div class="card-head">
           <div class="card-head-left">
             <div class="card-title">Recent License Keys</div>
-            <div class="card-sub">Last 5 generated keys</div>
+            <div class="card-sub">Last 5 keys issued</div>
           </div>
-          <button class="btn btn-ghost" onclick="showPage('keys', document.querySelector('[data-page=keys]'))">View All</button>
+          <button class="btn btn-ghost" onclick="showPage('keys')">View All</button>
         </div>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>Key</th><th>Status</th><th>Duration</th><th>First Used</th></tr></thead>
+            <thead><tr><th>Key</th><th>Type / Owner</th><th>Status</th><th>Duration</th><th>Created</th></tr></thead>
             <tbody id="d-keys-body"></tbody>
           </table>
         </div>
@@ -988,25 +1087,28 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
       <div class="card">
         <div class="card-head">
           <div class="card-head-left">
-            <div class="card-title">Recent Crashes</div>
-            <div class="card-sub">Auto-reported from device SDK</div>
+            <div class="card-title">Recent Crash Telemetry</div>
+            <div class="card-sub">Real-time signals from SDK runtime</div>
           </div>
+          <button class="btn btn-ghost" onclick="showPage('crashes')">Open Telemetry</button>
         </div>
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>Device</th><th>Android</th><th>Crash Type</th><th>Reported</th></tr></thead>
+            <thead><tr><th>Device Specs</th><th>Category</th><th>Details / Fault Offset</th><th>Reported</th></tr></thead>
             <tbody id="d-crash-body"></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- ─── KEYS ─── -->
+    <!-- ════════════════════════════════════════════
+         ADMIN PAGE: LICENSE KEYS
+    ════════════════════════════════════════════ -->
     <div id="page-keys" class="page">
       <div class="card">
         <div class="card-head">
           <div class="card-head-left">
-            <div class="card-title">License Keys</div>
+            <div class="card-title">License Keys Management</div>
             <div class="card-sub" id="keys-sub">Loading…</div>
           </div>
           <button class="btn btn-primary-neon" onclick="openCreateModal()">
@@ -1019,12 +1121,12 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
             <thead>
               <tr>
                 <th>SDK Key</th>
+                <th>Type / Client</th>
                 <th>Status</th>
                 <th>Loaders Quota</th>
                 <th>Bound Package(s)</th>
                 <th>Active Devices</th>
                 <th>Expires</th>
-                <th>Created</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -1034,23 +1136,74 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
       </div>
     </div>
 
-    <!-- ─── CRASHES ─── -->
+    <!-- ════════════════════════════════════════════
+         ADMIN PAGE: CLIENT ACCOUNTS
+    ════════════════════════════════════════════ -->
+    <div id="page-clients" class="page">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-left">
+            <div class="card-title">Client & Reseller Accounts</div>
+            <div class="card-sub" id="clients-sub">Buyer logins with scoped key management</div>
+          </div>
+          <button class="btn btn-primary-neon" onclick="openCreateModal(true)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Client Account
+          </button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Assigned Key</th>
+                <th>Key Status</th>
+                <th>Quota / Devices</th>
+                <th>Custom .so Plugin</th>
+                <th>APK Auto-Update</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="clients-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+         ADMIN PAGE: CRASH TELEMETRY
+    ════════════════════════════════════════════ -->
     <div id="page-crashes" class="page">
       <div class="card">
         <div class="card-head">
           <div class="card-head-left">
-            <div class="card-title">Crash Telemetry</div>
-            <div class="card-sub">Automatic crash reports from FeaturesticBox SDK — no ADB needed</div>
+            <div class="card-title">Crash Analytics & Native Offset Telemetry</div>
+            <div class="card-sub">Automatic detection for SIGSEGV / SIGBUS / Signal 11 offsets in native .so & Java runtime</div>
+          </div>
+          
+          <!-- Filters -->
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-cat="all" onclick="filterAdminCrashes('all')">All Crashes</button>
+            <button class="filter-tab" data-cat="native_so" onclick="filterAdminCrashes('native_so')">Native .so Crashes</button>
+            <button class="filter-tab" data-cat="java" onclick="filterAdminCrashes('java')">Java Crashes</button>
+            
+            <select id="admin-crash-client-filter" class="filter-select" onchange="filterAdminCrashes()">
+              <option value="">All Keys & Clients</option>
+              <option value="__own__">Internal / Own Keys Only</option>
+            </select>
           </div>
         </div>
         <div class="tbl-wrap">
           <table>
             <thead>
               <tr>
-                <th>Brand / Model</th>
-                <th>Android · SDK</th>
-                <th>Crash Type</th>
-                <th>Stacktrace</th>
+                <th>Brand / Device</th>
+                <th>Android / SDK</th>
+                <th>Type & Category</th>
+                <th>Fault PC Offset / Library</th>
+                <th>Key / Owner</th>
+                <th>Stacktrace / Log</th>
                 <th>Reported At</th>
               </tr>
             </thead>
@@ -1060,7 +1213,9 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
       </div>
     </div>
 
-    <!-- ─── SETTINGS ─── -->
+    <!-- ════════════════════════════════════════════
+         ADMIN PAGE: SETTINGS
+    ════════════════════════════════════════════ -->
     <div id="page-settings" class="page">
       <div class="settings-grid">
         <div class="settings-card">
@@ -1068,7 +1223,7 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
             </svg>
-            App Configuration
+            Global SDK Defaults
           </div>
           <div class="f-group">
             <label class="f-label">App Display Name</label>
@@ -1079,7 +1234,7 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
             <input type="text" id="s-ver" class="f-input" placeholder="1.0.0">
           </div>
           <div class="f-group">
-            <label class="f-label">Plugin .so Download URL</label>
+            <label class="f-label">Fallback .so Plugin URL</label>
             <input type="text" id="s-url" class="f-input" placeholder="https://...">
           </div>
         </div>
@@ -1089,126 +1244,377 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
             </svg>
-            Security & Maintenance
+            Public Testing & Large Scale Betas
           </div>
 
           <div class="toggle-row">
-            <div class="toggle-wrap">
-              <div class="toggle" id="s-maintenance" onclick="this.classList.toggle('on')"></div>
+            <div>
+              <div class="toggle-label">Free Public Beta Mode</div>
+              <div class="toggle-desc">Allows public users to generate trial keys & self-register</div>
             </div>
-            <div class="toggle-info">
-              <div class="toggle-label">Maintenance Mode</div>
-              <div class="toggle-desc">Blocks all user logins globally</div>
+            <div class="toggle" id="s-free-toggle" onclick="this.classList.toggle('on')"></div>
+          </div>
+
+          <div class="form-row" style="margin-top:14px">
+            <div class="f-group">
+              <label class="f-label">Default Trial Duration (Days)</label>
+              <input type="number" id="s-free-days" class="f-input" value="3" min="1" max="30">
+            </div>
+            <div class="f-group">
+              <label class="f-label">Max Loaders for Free Users</label>
+              <input type="number" id="s-free-loaders" class="f-input" value="1" min="1" max="5">
             </div>
           </div>
 
-          <div class="f-group">
+          <div class="divider" style="height:1px;background:var(--border);margin:14px 0"></div>
+
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-label">Maintenance Mode</div>
+              <div class="toggle-desc">Blocks all SDK connect requests globally</div>
+            </div>
+            <div class="toggle" id="s-maintenance" onclick="this.classList.toggle('on')"></div>
+          </div>
+
+          <div class="f-group" style="margin-top:12px">
             <label class="f-label">Maintenance Message</label>
             <textarea id="s-msg" class="f-textarea" placeholder="Server under maintenance, please try again later."></textarea>
           </div>
 
-          <div class="divider"></div>
-
           <div class="f-group">
-            <label class="f-label">New Admin Password</label>
+            <label class="f-label">Change Master Admin Password</label>
             <div style="display:flex;gap:8px">
               <input type="password" id="s-pass" class="f-input" placeholder="Min 4 characters">
-              <button class="btn btn-ghost" onclick="changePass()" style="flex-shrink:0">Change</button>
+              <button class="btn btn-ghost" onclick="changePass()" style="flex-shrink:0">Update</button>
             </div>
           </div>
         </div>
       </div>
 
       <div style="margin-top:16px">
-        <button class="btn btn-primary-neon" style="padding:10px 28px;font-size:0.82rem" onclick="saveSettings()">Save Settings</button>
+        <button class="btn btn-primary-neon" style="padding:10px 28px;font-size:0.82rem" onclick="saveSettings()">Save Global Settings</button>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+         CLIENT PORTAL PAGE: MY KEY & LOADER
+    ════════════════════════════════════════════ -->
+    <div id="page-client-dashboard" class="page">
+      
+      <!-- Key & Fleet Hero Card -->
+      <div class="hero-key-card">
+        <div class="hero-head">
+          <div>
+            <div style="font-size:1.15rem;font-weight:800;letter-spacing:-0.02em">My License Key & Fleet Control</div>
+            <div style="font-size:0.75rem;color:var(--t3);margin-top:2px">Manage your SDK key status, connected loaders, and leak protection</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button id="client-btn-status" class="btn btn-ghost" onclick="toggleClientStatus()">
+              Loading Status…
+            </button>
+            <button class="btn btn-warning" onclick="openRegenModal()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+              Regenerate Key (Leak Protection)
+            </button>
+          </div>
+        </div>
+
+        <!-- Key Display Box -->
+        <div class="hero-key-display">
+          <div>
+            <div style="font-size:0.65rem;color:var(--t3);text-transform:uppercase;font-weight:700;letter-spacing:0.08em;margin-bottom:4px">Assigned SDK License Key</div>
+            <div class="hero-key-val" id="cl-key-val">—</div>
+          </div>
+          <button class="btn btn-primary-neon" onclick="copyClientKey()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Copy Key
+          </button>
+        </div>
+
+        <!-- Key Meta Stats Grid -->
+        <div class="hero-grid">
+          <div class="hero-stat">
+            <div class="hero-stat-label">Key Status</div>
+            <div class="hero-stat-val" id="cl-key-status">—</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-label">Expiration Date</div>
+            <div class="hero-stat-val" style="font-size:0.95rem" id="cl-key-exp">—</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-label">Allowed Loaders Quota</div>
+            <div class="hero-stat-val" id="cl-key-quota">—</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-label">Live Active Devices</div>
+            <div class="hero-stat-val" style="color:var(--neon)" id="cl-key-devices">—</div>
+          </div>
+        </div>
+
+        <!-- Bound Package(s) Section -->
+        <div style="margin-top:16px;padding:12px 16px;background:rgba(0,0,0,0.3);border-radius:var(--r-md);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:0.68rem;color:var(--t3);text-transform:uppercase;font-weight:600">Bound Package Name(s)</div>
+            <div id="cl-bound-packages" style="font-size:0.8rem;color:var(--t1);margin-top:3px">Loading…</div>
+          </div>
+          <button class="btn btn-ghost" onclick="resetClientPackages()">Reset Bound Package</button>
+        </div>
+      </div>
+
+      <!-- In-App Auto-Update & Native .so Settings Card -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-left">
+            <div class="card-title">Loader Automation & Remote .so Plugin</div>
+            <div class="card-sub">Configure direct APK auto-updates and your custom compiled .so for your users' loaders</div>
+          </div>
+        </div>
+
+        <div style="padding:24px">
+          <div class="form-row">
+            <div class="f-group">
+              <label class="f-label">Custom Native .so Plugin URL</label>
+              <input type="text" id="cl-plugin-url" class="f-input" placeholder="https://raw.githubusercontent.com/.../libFeaturesticBox.so">
+              <div style="font-size:0.68rem;color:var(--t3);margin-top:4px">SDK downloads and executes this .so dynamically in RAM on authorized devices.</div>
+            </div>
+
+            <div class="f-group">
+              <label class="f-label">In-App Auto-Update APK Download URL</label>
+              <input type="text" id="cl-update-apk" class="f-input" placeholder="https://github.com/.../releases/download/.../Loader.apk">
+              <div style="font-size:0.68rem;color:var(--t3);margin-top:4px">When updated, user loaders show a 1-click update popup to download and install this APK.</div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="f-group">
+              <label class="f-label">Latest Loader Version String</label>
+              <input type="text" id="cl-update-ver" class="f-input" placeholder="e.g. 1.0.1">
+            </div>
+
+            <div class="f-group">
+              <label class="f-label">Update Changelog / Announcement</label>
+              <input type="text" id="cl-update-msg" class="f-input" placeholder="e.g. Added bypass, fixed offsets for new game version">
+            </div>
+          </div>
+
+          <button class="btn btn-primary-neon" style="padding:10px 24px;margin-top:8px" onclick="saveClientSettings()">
+            Save Loader Configuration
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+         CLIENT PORTAL PAGE: CRASH ANALYTICS & .SO
+    ════════════════════════════════════════════ -->
+    <div id="page-client-crashes" class="page">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-left">
+            <div class="card-title">My Crash Analytics & Native .so Offset Telemetry</div>
+            <div class="card-sub">Scoped crash reports filtered strictly for your loader key and .so library</div>
+          </div>
+
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-clcat="all" onclick="filterClientCrashes('all')">All Crashes</button>
+            <button class="filter-tab" data-clcat="native_so" onclick="filterClientCrashes('native_so')">Native .so Crashes</button>
+            <button class="filter-tab" data-clcat="java" onclick="filterClientCrashes('java')">Java Crashes</button>
+          </div>
+        </div>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Brand / Device</th>
+                <th>Android / SDK</th>
+                <th>Category & Type</th>
+                <th>Fault PC Offset / Library</th>
+                <th>Stacktrace / Signal</th>
+                <th>Reported At</th>
+              </tr>
+            </thead>
+            <tbody id="client-crashes-body"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
   </main>
 
-  <!-- Mobile Bottom Nav -->
+  <!-- MOBILE BOTTOM BAR -->
   <nav class="mobile-nav">
-    <button class="mob-btn active" data-page="dashboard" onclick="showPage('dashboard',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-      <span>Dashboard</span>
-    </button>
-    <button class="mob-btn" data-page="keys" onclick="showPage('keys',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>
-      <span>Keys</span>
-    </button>
-    <button class="mob-btn" data-page="crashes" onclick="showPage('crashes',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
-      <span>Crashes</span>
-    </button>
-    <button class="mob-btn" data-page="settings" onclick="showPage('settings',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span>Settings</span>
-    </button>
+    <div id="mob-admin-nav" style="display:flex;width:100%">
+      <button class="mob-btn active" data-page="dashboard" onclick="showPage('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        <span>Overview</span>
+      </button>
+      <button class="mob-btn" data-page="keys" onclick="showPage('keys')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>
+        <span>Keys</span>
+      </button>
+      <button class="mob-btn" data-page="clients" onclick="showPage('clients')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        <span>Clients</span>
+      </button>
+      <button class="mob-btn" data-page="crashes" onclick="showPage('crashes')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+        <span>Crashes</span>
+      </button>
+      <button class="mob-btn" data-page="settings" onclick="showPage('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>Settings</span>
+      </button>
+    </div>
+
+    <div id="mob-client-nav" style="display:none;width:100%">
+      <button class="mob-btn active" data-page="client-dashboard" onclick="showPage('client-dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>
+        <span>My Key</span>
+      </button>
+      <button class="mob-btn" data-page="client-crashes" onclick="showPage('client-crashes')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
+        <span>Crashes & .so</span>
+      </button>
+      <button class="mob-btn" onclick="doLogout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span>Logout</span>
+      </button>
+    </div>
   </nav>
 
 </div>
 
 <!-- ════════════════════════════════════════════
-     CREATE KEYS MODAL
+     MODAL: GENERATE KEY / CREATE CLIENT
 ════════════════════════════════════════════ -->
 <div class="modal-bg" id="modal-create">
   <div class="modal">
-    <div class="modal-title">Generate License Keys</div>
-    <div class="form-row" style="margin-bottom:10px">
-      <div class="f-group" style="margin:0">
-        <label class="f-label">Key Prefix</label>
-        <input type="text" id="m-prefix" class="f-input" value="FB" maxlength="8" placeholder="FB">
-      </div>
-      <div class="f-group" style="margin:0">
-        <label class="f-label">Quantity</label>
-        <input type="number" id="m-count" class="f-input" value="1" min="1" max="50">
+    <div class="modal-title" id="modal-create-title">Generate License Keys</div>
+    <div class="modal-sub">Create internal operational keys or client/buyer credentials</div>
+
+    <!-- Type Switch -->
+    <div class="type-switch">
+      <button class="type-btn active" id="btn-type-own" onclick="switchCreateType('own')">Internal (Own Key)</button>
+      <button class="type-btn" id="btn-type-client" onclick="switchCreateType('client')">Client (Buyer Account)</button>
+    </div>
+
+    <!-- Own Key Fields -->
+    <div id="fields-own">
+      <div class="form-row">
+        <div class="f-group">
+          <label class="f-label">Key Prefix</label>
+          <input type="text" id="m-prefix" class="f-input" value="FB" maxlength="8" placeholder="FB">
+        </div>
+        <div class="f-group">
+          <label class="f-label">Batch Count</label>
+          <input type="number" id="m-count" class="f-input" value="1" min="1" max="50">
+        </div>
       </div>
     </div>
+
+    <!-- Client Account Fields -->
+    <div id="fields-client" style="display:none">
+      <div class="form-row">
+        <div class="f-group">
+          <label class="f-label">Client Username</label>
+          <input type="text" id="m-client-user" class="f-input" placeholder="e.g. rohit_buyer">
+        </div>
+        <div class="f-group">
+          <label class="f-label">Client Password</label>
+          <input type="text" id="m-client-pass" class="f-input" placeholder="e.g. pass1234">
+        </div>
+      </div>
+
+      <div class="f-group">
+        <label class="f-label">Initial Custom .so Plugin URL (Optional)</label>
+        <input type="text" id="m-client-so" class="f-input" placeholder="https://.../libPlugin.so">
+      </div>
+
+      <div class="f-group">
+        <label class="f-label">Initial APK Update Download Link (Optional)</label>
+        <input type="text" id="m-client-apk" class="f-input" placeholder="https://.../Loader.apk">
+      </div>
+    </div>
+
+    <!-- Common Fields -->
     <div class="form-row">
       <div class="f-group">
-        <label class="f-label">Validity</label>
+        <label class="f-label">Key Duration</label>
         <select id="m-dur" class="f-select">
-          <option value="1">1 Day</option>
-          <option value="7">7 Days</option>
-          <option value="14">14 Days</option>
-          <option value="30" selected>30 Days</option>
-          <option value="90">3 Months</option>
-          <option value="180">6 Months</option>
-          <option value="365">1 Year</option>
-          <option value="9999">Lifetime</option>
+          <option value="1">1 Day (Trial)</option>
+          <option value="7">7 Days (Weekly)</option>
+          <option value="30" selected>30 Days (Monthly)</option>
+          <option value="90">90 Days (Quarterly)</option>
+          <option value="365">365 Days (1 Year)</option>
+          <option value="3650">Lifetime (10 Years)</option>
         </select>
       </div>
+
       <div class="f-group">
-        <label class="f-label">Loaders Allowed (Quota)</label>
+        <label class="f-label">Max Loaders Quota</label>
         <select id="m-loaders" class="f-select">
-          <option value="1" selected>1 Loader (Standard)</option>
-          <option value="2">2 Loaders</option>
-          <option value="3">3 Loaders</option>
-          <option value="5">5 Loaders</option>
-          <option value="0">Unlimited (VIP Enterprise)</option>
+          <option value="1" selected>1 Loader Package</option>
+          <option value="2">2 Loader Packages</option>
+          <option value="5">5 Loader Packages</option>
+          <option value="10">10 Loader Packages</option>
+          <option value="0">Unlimited Packages</option>
         </select>
       </div>
     </div>
+
     <div class="f-group">
-      <label class="f-label">Pre-bound Package Name (optional)</label>
-      <input type="text" id="m-pkg" class="f-input" placeholder="e.g. com.client.loader (leave empty for auto-bind on 1st run)">
+      <label class="f-label">Initial Package Name (Optional)</label>
+      <input type="text" id="m-pkg" class="f-input" placeholder="e.g. com.client.loader (leave empty to auto-bind on 1st run)">
     </div>
+
     <div class="f-group">
-      <label class="f-label">Note / Client Name (optional)</label>
-      <input type="text" id="m-note" class="f-input" placeholder="e.g. Client Rohit, Telegram @user…">
+      <label class="f-label">Admin Note</label>
+      <input type="text" id="m-note" class="f-input" placeholder="e.g. Telegram @buyer, Reseller slot #2">
     </div>
-    <div class="modal-result" id="modal-result">
-      <div class="result-label">Generated Keys</div>
+
+    <div class="modal-result" id="modal-result" style="display:none">
+      <div style="font-size:0.75rem;font-weight:700;color:var(--neon)">Success! Generated:</div>
       <div class="result-box" id="result-keys"></div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
       <button class="btn btn-primary-neon" onclick="createKeys()">Generate</button>
     </div>
   </div>
 </div>
 
-<!-- TOAST -->
+<!-- ════════════════════════════════════════════
+     MODAL: LEAK PROTECTION REGENERATE CONFIRM
+════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-regen">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-title" style="color:var(--orange)">Regenerate SDK License Key?</div>
+    <div class="modal-sub" style="margin-bottom:14px;line-height:1.5">
+      If your SDK key was leaked or shared unauthorizedly, regenerating creates a brand new key.
+    </div>
+
+    <div style="background:rgba(255,149,0,0.06);border:1px solid rgba(255,149,0,0.25);border-radius:var(--r-md);padding:14px;font-size:0.75rem;color:var(--t2);line-height:1.5;margin-bottom:18px">
+      • Old key is immediately revoked and blocked.<br>
+      • All active device sessions bound to the old key are wiped.<br>
+      • <strong style="color:var(--t1)">Your remaining expiration days, allowed quota, and .so settings stay 100% intact.</strong>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeRegenModal()">Cancel</button>
+      <button class="btn btn-warning" onclick="executeRegenerateKey()">Yes, Revoke Old & Regenerate</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TOAST
+════════════════════════════════════════════ -->
 <div id="toast-wrap">
   <div class="toast-inner" id="toast-inner">
     <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="toast-icon">
@@ -1218,9 +1624,22 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
   </div>
 </div>
 
+<!-- ════════════════════════════════════════════
+     JAVASCRIPT LOGIC
+════════════════════════════════════════════ -->
 <script>
-/* ─── State ─── */
+/* ─── Global State ─── */
 let _token = localStorage.getItem('fb_token') || '';
+let _role = localStorage.getItem('fb_role') || 'admin';
+let _username = localStorage.getItem('fb_username') || 'admin';
+let _activeCategory = 'all';
+let _clientActiveCategory = 'all';
+let _clientKeyObj = null;
+let _freeBetaEnabled = false;
+
+// Initial check for free beta status
+checkFreeBetaStatus();
+
 if (_token) {
   bootApp();
 } else {
@@ -1228,42 +1647,146 @@ if (_token) {
   document.getElementById('app').style.display = 'none';
 }
 
-/* ─── Auth ─── */
+/* ─── Public Free Beta Status & Tabs ─── */
+async function checkFreeBetaStatus() {
+  try {
+    const res = await fetch('/api/public/free-access');
+    const data = await res.json();
+    _freeBetaEnabled = Boolean(data && data.enabled);
+
+    const banner = document.getElementById('login-beta-banner');
+    const tabs = document.getElementById('auth-tabs');
+    const topBtn = document.getElementById('btn-toggle-free-beta');
+
+    if (banner) banner.style.display = _freeBetaEnabled ? 'block' : 'none';
+    if (tabs) tabs.style.display = _freeBetaEnabled ? 'flex' : 'none';
+
+    if (topBtn) {
+      topBtn.className = _freeBetaEnabled ? 'btn btn-beta-active' : 'btn btn-ghost';
+      topBtn.innerHTML = _freeBetaEnabled
+        ? '<span class="status-dot"></span><span>Open Beta: ON</span>'
+        : '<span style="color:var(--t4)">●</span><span>Open Beta: OFF</span>';
+    }
+  } catch(e) {
+    console.error('Failed to check free beta status', e);
+  }
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('tab-btn-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-btn-register').classList.toggle('active', tab === 'register');
+  document.getElementById('auth-form-login').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('auth-form-register').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('login-err').textContent = '';
+}
+
+/* ─── Authentication ─── */
 async function doLogin() {
-  const pass = document.getElementById('admin-pass').value.trim();
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value.trim();
   const err = document.getElementById('login-err');
+
   if (!pass) {
     err.textContent = 'Please enter password';
     return;
   }
   err.textContent = '';
+
   try {
-    const r = await api('/api/admin/login', 'POST', { password: pass }, true);
+    const r = await api('/api/auth/login', 'POST', { username: user || 'admin', password: pass }, true);
     if (r && r.success) {
       _token = r.token;
+      _role = r.role || 'admin';
+      _username = r.username || (r.role === 'admin' ? 'admin' : user);
+
       localStorage.setItem('fb_token', _token);
+      localStorage.setItem('fb_role', _role);
+      localStorage.setItem('fb_username', _username);
+
       bootApp();
     } else {
-      err.textContent = (r && r.message) ? r.message : 'Invalid password';
+      err.textContent = (r && r.message) ? r.message : 'Invalid credentials';
     }
-  } catch (e) { err.textContent = 'Connection error'; }
+  } catch (e) {
+    err.textContent = 'Connection error. Check backend server.';
+  }
+}
+
+async function doRegisterFree() {
+  const user = document.getElementById('reg-user').value.trim();
+  const pass = document.getElementById('reg-pass').value.trim();
+  const trial_days = document.getElementById('reg-duration').value;
+  const err = document.getElementById('login-err');
+
+  if (!user || !pass) {
+    err.textContent = 'Please fill username and password';
+    return;
+  }
+  err.textContent = '';
+
+  try {
+    const r = await api('/api/public/register-free-tester', 'POST', { username: user, password: pass, trial_days }, true);
+    if (r && r.success) {
+      _token = r.token;
+      _role = 'client';
+      _username = r.username;
+
+      localStorage.setItem('fb_token', _token);
+      localStorage.setItem('fb_role', _role);
+      localStorage.setItem('fb_username', _username);
+
+      toast('Free tester account created! Welcome.');
+      bootApp();
+    } else {
+      err.textContent = (r && r.message) ? r.message : 'Registration failed';
+    }
+  } catch(e) {
+    err.textContent = 'Registration failed: ' + e.message;
+  }
 }
 
 function bootApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  loadDashboard();
+
+  document.getElementById('user-display-name').textContent = _username;
+  document.getElementById('user-display-role').textContent = _role === 'admin' ? 'Super Administrator' : 'Client Tester';
+  document.getElementById('brand-mode-label').textContent = _role === 'admin' ? 'Master Admin' : 'Client Portal';
+
+  const topBtn = document.getElementById('btn-toggle-free-beta');
+
+  if (_role === 'client') {
+    document.getElementById('nav-group-admin').style.display = 'none';
+    document.getElementById('nav-group-client').style.display = 'block';
+    document.getElementById('mob-admin-nav').style.display = 'none';
+    document.getElementById('mob-client-nav').style.display = 'flex';
+    document.getElementById('btn-add-keys').style.display = 'none';
+    document.getElementById('btn-clear-crashes').style.display = 'none';
+    if (topBtn) topBtn.style.display = 'none';
+    showPage('client-dashboard');
+  } else {
+    document.getElementById('nav-group-admin').style.display = 'block';
+    document.getElementById('nav-group-client').style.display = 'none';
+    document.getElementById('mob-admin-nav').style.display = 'flex';
+    document.getElementById('mob-client-nav').style.display = 'none';
+    if (topBtn) topBtn.style.display = 'inline-flex';
+    checkFreeBetaStatus();
+    showPage('dashboard');
+  }
 }
 
 function doLogout() {
   localStorage.removeItem('fb_token');
+  localStorage.removeItem('fb_role');
+  localStorage.removeItem('fb_username');
   _token = '';
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('admin-pass').value = '';
+  document.getElementById('login-pass').value = '';
+  checkFreeBetaStatus();
 }
 
-/* ─── API helper ─── */
+/* ─── API Helper ─── */
 async function api(path, method = 'GET', body = null, noAuth = false) {
   try {
     const headers = { 'Content-Type': 'application/json' };
@@ -1279,7 +1802,7 @@ async function api(path, method = 'GET', body = null, noAuth = false) {
   }
 }
 
-/* ─── Toast ─── */
+/* ─── Toast Notifications ─── */
 let _toastTimer;
 function toast(msg, type = 'success') {
   const wrap = document.getElementById('toast-wrap');
@@ -1294,42 +1817,61 @@ function toast(msg, type = 'success') {
 
   wrap.classList.add('show');
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => wrap.classList.remove('show'), 2800);
+  _toastTimer = setTimeout(() => wrap.classList.remove('show'), 3000);
 }
 
-/* ─── Page navigation ─── */
+/* ─── 1-Click Fast Toggle for Admin ─── */
+async function quickToggleFreeBeta() {
+  const r = await api('/api/admin/toggle-free-access', 'POST', {});
+  if (r && r.success) {
+    toast(r.enabled ? 'Public Free Beta is now LIVE!' : 'Public Free Beta is now CLOSED');
+    checkFreeBetaStatus();
+    if (document.getElementById('page-settings').classList.contains('active')) {
+      loadSettings();
+    }
+  }
+}
+
+/* ─── Navigation ─── */
 const PAGE_TITLES = {
   dashboard: 'Dashboard',
   keys: 'License Keys',
-  crashes: 'Crash Telemetry',
-  settings: 'App Settings'
+  clients: 'Client & Reseller Accounts',
+  crashes: 'Crash Analytics & Native Offsets',
+  settings: 'Global App Settings',
+  'client-dashboard': 'Client Portal — Key & Fleet',
+  'client-crashes': 'Client Portal — Scoped Telemetry'
 };
 
-function showPage(name, btn) {
+function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-link, .mob-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
 
-  // Activate all matching nav items (sidebar + mobile)
+  const pEl = document.getElementById('page-' + name);
+  if (pEl) pEl.classList.add('active');
+
   document.querySelectorAll(`[data-page="${name}"]`).forEach(b => b.classList.add('active'));
+  document.getElementById('topbar-title').textContent = PAGE_TITLES[name] || 'Control Center';
 
-  document.getElementById('topbar-title').textContent = PAGE_TITLES[name] || name;
-  document.getElementById('btn-add-keys').style.display = name === 'keys' ? '' : 'none';
-  document.getElementById('btn-clear-crashes').style.display = name === 'crashes' ? '' : 'none';
+  document.getElementById('btn-add-keys').style.display = (name === 'keys' && _role === 'admin') ? '' : 'none';
+  document.getElementById('btn-clear-crashes').style.display = (name === 'crashes' && _role === 'admin') ? '' : 'none';
+  document.getElementById('btn-clear-client-crashes').style.display = (name === 'client-crashes' && _role === 'client') ? '' : 'none';
 
   if (name === 'dashboard') loadDashboard();
   if (name === 'keys') loadKeys();
+  if (name === 'clients') loadClients();
   if (name === 'crashes') loadCrashes();
   if (name === 'settings') loadSettings();
+  if (name === 'client-dashboard') loadClientDashboard();
+  if (name === 'client-crashes') loadClientCrashes();
 }
 
-/* ─── Dashboard ─── */
+/* ─── Admin Dashboard ─── */
 async function loadDashboard() {
   const stats = await api('/api/admin/stats');
   if (stats) {
     document.getElementById('d-active').textContent = stats.activeKeys ?? '—';
-    const devEl = document.getElementById('d-devices');
-    if (devEl) devEl.textContent = stats.totalDevices ?? '0';
+    document.getElementById('d-devices').textContent = stats.totalDevices ?? '0';
     document.getElementById('d-today').textContent = stats.todayCrashes ?? '—';
     document.getElementById('d-tcrash').textContent = stats.totalCrashes ?? '—';
     if (+stats.todayCrashes > 0) {
@@ -1345,11 +1887,12 @@ async function loadDashboard() {
   kbody.innerHTML = recent.length
     ? recent.map(k => `<tr>
         <td><span class="key-pill">${k.user_key}</span></td>
+        <td>${k.account_type === 'client' ? `<span class="badge tag-client">@${k.client_username || 'client'}</span>` : '<span class="badge tag-own">Internal (Own)</span>'}</td>
         <td>${badge(k.status)}</td>
         <td style="color:var(--t2)">${k.duration_days}d</td>
-        <td style="color:var(--t3);font-size:0.78rem">${k.first_used_at ? fmtDate(k.first_used_at) : 'Unused'}</td>
+        <td style="color:var(--t3);font-size:0.75rem">${fmtDate(k.created_at)}</td>
       </tr>`).join('')
-    : emptyRow(4, 'No keys yet');
+    : emptyRow(5, 'No keys issued yet');
 
   const crashes = await api('/api/admin/crashes');
   const cbody = document.getElementById('d-crash-body');
@@ -1357,19 +1900,20 @@ async function loadDashboard() {
   cbody.innerHTML = rcrash.length
     ? rcrash.map(c => `<tr>
         <td><span class="brand-chip">${c.brand}</span> <span style="color:var(--t2);font-size:0.78rem">${c.model}</span></td>
-        <td style="color:var(--t2);font-size:0.78rem">Android ${c.android_version}</td>
-        <td style="color:var(--red);font-weight:700;font-size:0.78rem">${c.crash_type}</td>
+        <td>${c.crash_category === 'native_so' ? '<span class="badge tag-native">Native .so</span>' : '<span class="badge tag-java">Java</span>'}</td>
+        <td>${c.fault_offset ? `<span class="tag-offset">PC: +${c.fault_offset}</span> ` : ''}${c.so_name ? `<span class="tag-so">${c.so_name}</span>` : `<span style="color:var(--red);font-weight:700">${c.crash_type}</span>`}</td>
         <td style="color:var(--t3);font-size:0.72rem">${fmtDate(c.created_at)}</td>
       </tr>`).join('')
-    : emptyRow(4, 'No crashes logged');
+    : emptyRow(4, 'No crashes logged yet');
 }
 
-/* ─── Keys ─── */
+/* ─── Admin Keys ─── */
 async function loadKeys() {
   const keys = await api('/api/admin/keys');
   const list = keys || [];
   document.getElementById('keys-sub').textContent = `${list.length} developer key${list.length !== 1 ? 's' : ''} total`;
   const tbody = document.getElementById('keys-body');
+
   tbody.innerHTML = list.length
     ? list.map(k => {
         let pkgs = [];
@@ -1381,14 +1925,18 @@ async function loadKeys() {
           ? pkgs.map(p => `<span class="key-pill" style="font-size:0.68rem;background:rgba(255,255,255,0.06);color:var(--t1)">${p}</span>`).join(' ')
           : '<span style="color:var(--t4);font-size:0.75rem">Auto-bind on 1st run</span>';
 
+        const typeBadge = k.account_type === 'client'
+          ? `<span class="badge tag-client">@${k.client_username || 'client'}</span>`
+          : '<span class="badge tag-own">Internal (Own)</span>';
+
         return `<tr>
           <td><span class="key-pill">${k.user_key}</span></td>
+          <td>${typeBadge}</td>
           <td>${badge(k.status)}</td>
           <td style="font-size:0.75rem">${quotaLabel}</td>
           <td>${pkgsHtml}</td>
           <td><span style="color:var(--neon);font-weight:700;font-size:0.82rem">${k.unique_devices || 0}</span> <span style="color:var(--t3);font-size:0.7rem">devices</span></td>
           <td style="color:var(--t3);font-size:0.72rem">${k.expires_at ? fmtDate(k.expires_at) : '—'}</td>
-          <td style="color:var(--t3);font-size:0.72rem">${fmtDate(k.created_at)}</td>
           <td>
             <div class="acts">
               ${pkgs.length ? `<button class="act-btn act-orange" onclick="resetPackages(${k.id})">Reset Pkg</button>` : ''}
@@ -1401,41 +1949,295 @@ async function loadKeys() {
     : emptyRow(8, 'No developer keys yet. Click "Generate Keys" to create one.', 'key');
 }
 
-/* ─── Crashes ─── */
-async function loadCrashes() {
-  const list = await api('/api/admin/crashes') || [];
-  const tbody = document.getElementById('crashes-body');
+/* ─── Admin Clients ─── */
+async function loadClients() {
+  const clients = await api('/api/admin/clients');
+  const list = clients || [];
+  document.getElementById('clients-sub').textContent = `${list.length} registered client${list.length !== 1 ? 's' : ''}`;
+  const tbody = document.getElementById('clients-body');
+
+  const filterSelect = document.getElementById('admin-crash-client-filter');
+  if (filterSelect) {
+    const curVal = filterSelect.value;
+    filterSelect.innerHTML = `<option value="">All Keys & Clients</option><option value="__own__">Internal / Own Keys Only</option>` +
+      list.map(c => `<option value="${c.username}">@${c.username}</option>`).join('');
+    filterSelect.value = curVal;
+  }
+
   tbody.innerHTML = list.length
-    ? list.map(c => `<tr>
-        <td><div style="display:flex;align-items:center;gap:8px"><span class="brand-chip">${c.brand}</span><span style="color:var(--t2);font-size:0.78rem">${c.model}</span></div></td>
-        <td><span style="font-size:0.78rem">Android <strong>${c.android_version}</strong></span><br><span style="font-size:0.65rem;color:var(--t3)">SDK ${c.sdk_int}</span></td>
-        <td><span style="color:var(--red);font-weight:700;font-size:0.78rem">${c.crash_type}</span></td>
-        <td><div class="strace">${esc(c.stacktrace).slice(0, 400)}</div></td>
-        <td style="color:var(--t3);font-size:0.72rem;white-space:nowrap">${fmtDate(c.created_at)}</td>
-      </tr>`).join('')
-    : emptyRow(5, 'No crash reports. SDK is running clean.', 'shield');
+    ? list.map(c => {
+        const soSnippet = c.plugin_url ? `<span class="tag-so" title="${esc(c.plugin_url)}">Custom .so active</span>` : '<span style="color:var(--t4);font-size:0.72rem">Default</span>';
+        const apkSnippet = c.update_apk_url ? `<span class="badge tag-client" title="${esc(c.update_apk_url)}">v${c.update_version || '1.0.0'}</span>` : '<span style="color:var(--t4);font-size:0.72rem">None</span>';
+
+        return `<tr>
+          <td><strong style="color:var(--t1)">@${c.username}</strong></td>
+          <td><span class="key-pill">${c.user_key || '—'}</span></td>
+          <td>${badge(c.key_status || 'active')}</td>
+          <td><span style="color:var(--neon);font-weight:700">${c.unique_devices || 0}</span> devices</td>
+          <td>${soSnippet}</td>
+          <td>${apkSnippet}</td>
+          <td style="color:var(--t3);font-size:0.72rem">${fmtDate(c.created_at)}</td>
+          <td>
+            <div class="acts">
+              <button class="act-btn act-red" onclick="delClient(${c.id})">Delete Account</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('')
+    : emptyRow(8, 'No client accounts created yet. Click "Add Client Account" to issue one.', 'users');
+}
+
+async function delClient(id) {
+  if (!confirm('Delete this client account and their assigned key permanently?')) return;
+  await api('/api/admin/clients/' + id, 'DELETE');
+  toast('Client account deleted');
+  loadClients();
+}
+
+/* ─── Admin Crash Telemetry ─── */
+function filterAdminCrashes(category = null) {
+  if (category) {
+    _activeCategory = category;
+    document.querySelectorAll('[data-cat]').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-cat') === category);
+    });
+  }
+  loadCrashes();
+}
+
+async function loadCrashes() {
+  const clientFilter = document.getElementById('admin-crash-client-filter')?.value || '';
+  let url = `/api/admin/crashes?category=${_activeCategory}`;
+  if (clientFilter) url += `&client=${encodeURIComponent(clientFilter)}`;
+
+  const list = await api(url) || [];
+  const tbody = document.getElementById('crashes-body');
+
+  tbody.innerHTML = list.length
+    ? list.map(c => {
+        const catBadge = c.crash_category === 'native_so'
+          ? '<span class="badge tag-native">Native .so</span>'
+          : '<span class="badge tag-java">Java</span>';
+
+        const offsetBadge = c.fault_offset
+          ? `<span class="tag-offset">PC: +${c.fault_offset}</span>`
+          : '';
+
+        const soBadge = c.so_name
+          ? `<span class="tag-so">${c.so_name}</span>`
+          : '';
+
+        const ownerBadge = c.client_username
+          ? `<span class="badge tag-client">@${c.client_username}</span>`
+          : (c.user_key ? `<span class="key-pill" style="font-size:0.68rem">${c.user_key}</span>` : '<span class="badge tag-own">Internal</span>');
+
+        return `<tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="brand-chip">${c.brand}</span>
+              <span style="color:var(--t2);font-size:0.78rem">${c.model}</span>
+            </div>
+          </td>
+          <td>
+            <span style="font-size:0.78rem">Android <strong>${c.android_version}</strong></span><br>
+            <span style="font-size:0.65rem;color:var(--t3)">SDK ${c.sdk_int}</span>
+          </td>
+          <td>
+            ${catBadge}<br>
+            <span style="color:var(--red);font-weight:700;font-size:0.72rem">${c.crash_type}</span>
+          </td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              ${offsetBadge}
+              ${soBadge}
+            </div>
+          </td>
+          <td>${ownerBadge}</td>
+          <td><div class="strace">${esc(c.stacktrace).slice(0, 400)}</div></td>
+          <td style="color:var(--t3);font-size:0.72rem;white-space:nowrap">${fmtDate(c.created_at)}</td>
+        </tr>`;
+      }).join('')
+    : emptyRow(7, 'No crashes reported for this filter. Runtime is clean.', 'shield');
 }
 
 async function clearCrashes() {
-  if (!confirm('Clear all crash reports?')) return;
+  if (!confirm('Clear all crash telemetry reports globally?')) return;
   await api('/api/admin/crashes/clear', 'DELETE');
-  toast('Crash logs cleared');
+  toast('Crash logs cleared globally');
   document.getElementById('crash-badge').style.display = 'none';
   loadCrashes();
 }
 
-/* ─── Key actions ─── */
+/* ─── Client Portal Logic ─── */
+async function loadClientDashboard() {
+  const data = await api('/api/client/me');
+  if (!data || !data.key) {
+    toast('Failed to load client profile', 'error');
+    return;
+  }
+
+  _clientKeyObj = data.key;
+  const k = data.key;
+  const stats = data.stats || {};
+
+  document.getElementById('cl-key-val').textContent = k.user_key;
+  
+  const isActive = k.status === 'active';
+  const statusBtn = document.getElementById('client-btn-status');
+  statusBtn.innerHTML = isActive 
+    ? '<span class="badge badge-active"><span class="badge-dot"></span>Key is Live (Click to Pause)</span>'
+    : '<span class="badge badge-banned"><span class="badge-dot"></span>Key is Paused (Click to Resume)</span>';
+
+  document.getElementById('cl-key-status').innerHTML = badge(k.status);
+  document.getElementById('cl-key-exp').textContent = k.expires_at ? fmtDate(k.expires_at) : 'Never (Lifetime)';
+  document.getElementById('cl-key-quota').textContent = k.max_loaders === 0 ? 'Unlimited Loaders' : `${k.max_loaders} Loader Package(s)`;
+  document.getElementById('cl-key-devices').textContent = `${stats.uniqueDevices || 0} Live Devices`;
+
+  let pkgs = [];
+  try { pkgs = JSON.parse(k.bound_packages || '[]'); } catch(e) { pkgs = []; }
+  document.getElementById('cl-bound-packages').innerHTML = pkgs.length
+    ? pkgs.map(p => `<span class="key-pill" style="font-size:0.72rem;margin-right:6px">${p}</span>`).join('')
+    : '<span style="color:var(--t4)">No packages bound yet (auto-binds on 1st loader run)</span>';
+
+  document.getElementById('cl-plugin-url').value = k.plugin_url || '';
+  document.getElementById('cl-update-apk').value = k.update_apk_url || '';
+  document.getElementById('cl-update-ver').value = k.update_version || '1.0.0';
+  document.getElementById('cl-update-msg').value = k.update_changelog || '';
+}
+
+async function copyClientKey() {
+  const val = document.getElementById('cl-key-val').textContent;
+  if (!val || val === '—') return;
+  try {
+    await navigator.clipboard.writeText(val);
+    toast('Key copied to clipboard');
+  } catch(e) {
+    toast('Copied: ' + val);
+  }
+}
+
+async function toggleClientStatus() {
+  const r = await api('/api/client/toggle-status', 'POST', {});
+  if (r && r.success) {
+    toast(`Key ${r.status === 'active' ? 'resumed and active' : 'paused'}`);
+    loadClientDashboard();
+  }
+}
+
+function openRegenModal() {
+  document.getElementById('modal-regen').classList.add('open');
+}
+function closeRegenModal() {
+  document.getElementById('modal-regen').classList.remove('open');
+}
+
+async function executeRegenerateKey() {
+  closeRegenModal();
+  const r = await api('/api/client/regenerate-key', 'POST', {});
+  if (r && r.success) {
+    toast('New key generated! Old key revoked.');
+    loadClientDashboard();
+  } else {
+    toast('Failed to regenerate key', 'error');
+  }
+}
+
+async function saveClientSettings() {
+  const plugin_url = document.getElementById('cl-plugin-url').value;
+  const update_apk_url = document.getElementById('cl-update-apk').value;
+  const update_version = document.getElementById('cl-update-ver').value;
+  const update_changelog = document.getElementById('cl-update-msg').value;
+
+  const r = await api('/api/client/settings', 'POST', {
+    plugin_url,
+    update_apk_url,
+    update_version,
+    update_changelog
+  });
+
+  if (r && r.success) {
+    toast('Loader configuration updated successfully');
+  } else {
+    toast('Failed to save settings', 'error');
+  }
+}
+
+async function resetClientPackages() {
+  if (!confirm('Reset bound package name for your key? This allows you to run on a new loader package.')) return;
+  const r = await api('/api/client/reset-packages', 'POST', {});
+  if (r && r.success) {
+    toast('Package bindings reset');
+    loadClientDashboard();
+  }
+}
+
+/* ─── Client Scoped Crash Analytics ─── */
+function filterClientCrashes(category) {
+  _clientActiveCategory = category;
+  document.querySelectorAll('[data-clcat]').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-clcat') === category);
+  });
+  loadClientCrashes();
+}
+
+async function loadClientCrashes() {
+  const list = await api(`/api/client/crashes?category=${_clientActiveCategory}`) || [];
+  const tbody = document.getElementById('client-crashes-body');
+
+  tbody.innerHTML = list.length
+    ? list.map(c => {
+        const catBadge = c.crash_category === 'native_so'
+          ? '<span class="badge tag-native">Native .so</span>'
+          : '<span class="badge tag-java">Java</span>';
+
+        const offsetBadge = c.fault_offset
+          ? `<span class="tag-offset">PC: +${c.fault_offset}</span>`
+          : '';
+
+        const soBadge = c.so_name
+          ? `<span class="tag-so">${c.so_name}</span>`
+          : '';
+
+        return `<tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="brand-chip">${c.brand}</span>
+              <span style="color:var(--t2);font-size:0.78rem">${c.model}</span>
+            </div>
+          </td>
+          <td>
+            <span style="font-size:0.78rem">Android <strong>${c.android_version}</strong></span><br>
+            <span style="font-size:0.65rem;color:var(--t3)">SDK ${c.sdk_int}</span>
+          </td>
+          <td>
+            ${catBadge}<br>
+            <span style="color:var(--red);font-weight:700;font-size:0.72rem">${c.crash_type}</span>
+          </td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              ${offsetBadge}
+              ${soBadge}
+            </div>
+          </td>
+          <td><div class="strace">${esc(c.stacktrace).slice(0, 400)}</div></td>
+          <td style="color:var(--t3);font-size:0.72rem;white-space:nowrap">${fmtDate(c.created_at)}</td>
+        </tr>`;
+      }).join('')
+    : emptyRow(6, 'No crash reports found for your .so / loader. Running smoothly.', 'shield');
+}
+
+async function clearClientCrashes() {
+  if (!confirm('Clear all crash logs for your key?')) return;
+  await api('/api/client/crashes/clear', 'DELETE');
+  toast('My crash logs cleared');
+  loadClientCrashes();
+}
+
+/* ─── Admin Key Actions ─── */
 async function resetPackages(id) {
   if (!confirm('Reset bound package name(s) for this key?')) return;
   await api('/api/admin/keys/reset-packages', 'POST', { id });
   toast('Package binding reset successfully');
-  loadKeys();
-}
-
-async function resetHwid(id) {
-  if (!confirm('Reset device binding for this key?')) return;
-  await api('/api/admin/keys/reset-device', 'POST', { id });
-  toast('Device reset successfully');
   loadKeys();
 }
 
@@ -1452,33 +2254,91 @@ async function delKey(id) {
   loadKeys(); loadDashboard();
 }
 
-/* ─── Create Modal ─── */
-function openCreateModal() {
+/* ─── Create Key Modal ─── */
+let _currentCreateType = 'own';
+
+function openCreateModal(forClient = false) {
   document.getElementById('modal-result').style.display = 'none';
   document.getElementById('modal-create').classList.add('open');
+  if (forClient) {
+    switchCreateType('client');
+  } else {
+    switchCreateType('own');
+  }
 }
 
 function closeModal() {
   document.getElementById('modal-create').classList.remove('open');
 }
 
+function switchCreateType(type) {
+  _currentCreateType = type;
+  document.getElementById('btn-type-own').classList.toggle('active', type === 'own');
+  document.getElementById('btn-type-client').classList.toggle('active', type === 'client');
+  document.getElementById('fields-own').style.display = type === 'own' ? 'block' : 'none';
+  document.getElementById('fields-client').style.display = type === 'client' ? 'block' : 'none';
+  document.getElementById('modal-create-title').textContent = type === 'own' ? 'Generate Internal Keys' : 'Create Client / Buyer Account';
+}
+
 async function createKeys() {
-  const prefix = document.getElementById('m-prefix').value.trim() || 'FB';
-  const count = parseInt(document.getElementById('m-count').value) || 1;
   const duration_days = parseInt(document.getElementById('m-dur').value);
   const max_loaders = parseInt(document.getElementById('m-loaders').value);
   const package_name = document.getElementById('m-pkg').value.trim();
-  const note = document.getElementById('m-note').value;
-  const r = await api('/api/admin/keys/create', 'POST', { prefix, count, duration_days, max_loaders, package_name, note });
+  const note = document.getElementById('m-note').value.trim();
+
+  let payload = {
+    account_type: _currentCreateType,
+    duration_days,
+    max_loaders,
+    package_name,
+    note
+  };
+
+  if (_currentCreateType === 'client') {
+    const client_username = document.getElementById('m-client-user').value.trim();
+    const client_password = document.getElementById('m-client-pass').value.trim();
+    const plugin_url = document.getElementById('m-client-so').value.trim();
+    const update_apk_url = document.getElementById('m-client-apk').value.trim();
+
+    if (!client_username || !client_password) {
+      return toast('Client username & password are required', 'error');
+    }
+
+    payload = {
+      ...payload,
+      client_username,
+      client_password,
+      plugin_url,
+      update_apk_url
+    };
+  } else {
+    const prefix = document.getElementById('m-prefix').value.trim() || 'FB';
+    const count = parseInt(document.getElementById('m-count').value) || 1;
+    payload = {
+      ...payload,
+      prefix,
+      count
+    };
+  }
+
+  const r = await api('/api/admin/keys/create', 'POST', payload);
   if (r && r.success) {
     document.getElementById('modal-result').style.display = '';
-    document.getElementById('result-keys').textContent = r.keys.join('\n');
-    toast(`${r.keys.length} developer key(s) generated`);
+    if (r.client) {
+      document.getElementById('result-keys').textContent = `Client Username: ${r.client.username}\nClient Password: ${r.client.password}\nAssigned Key: ${r.client.user_key}`;
+      toast(`Client account @${r.client.username} created!`);
+    } else {
+      document.getElementById('result-keys').textContent = r.keys.join('\n');
+      toast(`${r.keys.length} key(s) generated!`);
+    }
     loadKeys(); loadDashboard();
+    if (_currentCreateType === 'client') loadClients();
+  } else {
+    toast((r && r.error) ? r.error : 'Failed to create keys', 'error');
   }
 }
 
-/* ─── Settings ─── */
+/* ─── Global Settings ─── */
 async function loadSettings() {
   const s = await api('/api/admin/settings');
   if (!s) return;
@@ -1486,20 +2346,32 @@ async function loadSettings() {
   document.getElementById('s-ver').value = s.version || '';
   document.getElementById('s-url').value = s.plugin_url || '';
   document.getElementById('s-msg').value = s.maintenance_msg || '';
-  const tog = document.getElementById('s-maintenance');
-  s.maintenance ? tog.classList.add('on') : tog.classList.remove('on');
+
+  const togMaint = document.getElementById('s-maintenance');
+  s.maintenance ? togMaint.classList.add('on') : togMaint.classList.remove('on');
+
+  const togFree = document.getElementById('s-free-toggle');
+  s.free_access_enabled ? togFree.classList.add('on') : togFree.classList.remove('on');
+  document.getElementById('s-free-days').value = s.free_access_duration || 3;
+  document.getElementById('s-free-loaders').value = s.free_access_max_loaders || 1;
 }
 
 async function saveSettings() {
-  const tog = document.getElementById('s-maintenance');
+  const togMaint = document.getElementById('s-maintenance');
+  const togFree = document.getElementById('s-free-toggle');
+
   await api('/api/admin/settings', 'POST', {
     app_name: document.getElementById('s-name').value,
     version: document.getElementById('s-ver').value,
     plugin_url: document.getElementById('s-url').value,
-    maintenance: tog.classList.contains('on'),
+    maintenance: togMaint.classList.contains('on'),
     maintenance_msg: document.getElementById('s-msg').value,
+    free_access_enabled: togFree.classList.contains('on'),
+    free_access_duration: parseInt(document.getElementById('s-free-days').value) || 3,
+    free_access_max_loaders: parseInt(document.getElementById('s-free-loaders').value) || 1
   });
   toast('Settings saved');
+  checkFreeBetaStatus();
 }
 
 async function changePass() {
@@ -1510,23 +2382,25 @@ async function changePass() {
   setTimeout(doLogout, 1500);
 }
 
-/* ─── Helpers ─── */
+/* ─── UI Formatters & Helpers ─── */
 function badge(status) {
   const map = { active: 'badge-active', expired: 'badge-expired', banned: 'badge-banned' };
   return `<span class="badge ${map[status] || ''}"><span class="badge-dot"></span>${status}</span>`;
 }
 
 function fmtDate(d) {
+  if (!d) return '—';
   return new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 const ICONS = {
   key: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>`,
   shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  users: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>`,
   default: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>`
 };
 
@@ -1539,9 +2413,11 @@ function emptyRow(cols, msg, iconKey = 'default') {
   </td></tr>`;
 }
 
-/* ─── Close modal on backdrop click ─── */
 document.getElementById('modal-create').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
+});
+document.getElementById('modal-regen').addEventListener('click', function(e) {
+  if (e.target === this) closeRegenModal();
 });
 </script>
 </body>

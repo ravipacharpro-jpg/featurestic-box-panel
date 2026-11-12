@@ -122,6 +122,13 @@ async function handleConnect(req, res) {
       ? new Date(key.expires_at).toISOString().slice(0, 19).replace('T', ' ')
       : '2099-12-31 23:59:59';
 
+    // Determine effective .so plugin URL (Client-specific override, fallback to global settings)
+    const effectivePluginUrl = (key.plugin_url && key.plugin_url.trim()) 
+      ? key.plugin_url.trim() 
+      : (settings?.plugin_url || '');
+
+    const hasApkUpdate = Boolean(key.update_apk_url && key.update_apk_url.trim());
+
     return res.json({
       status: true,
       data: {
@@ -130,10 +137,17 @@ async function handleConnect(req, res) {
         exp: expStr,
         mod_name: settings?.app_name || 'Featurestic Box',
         version: settings?.version || '1.0.0',
-        plugin_url: settings?.plugin_url || '',
+        plugin_url: effectivePluginUrl,
         max_loaders: maxLoaders,
         bound_packages: boundPackages,
         unique_devices: devCount,
+        update: {
+          has_update: hasApkUpdate,
+          latest_version: key.update_version || settings?.version || '1.0.0',
+          apk_url: key.update_apk_url || '',
+          changelog: key.update_changelog || 'Latest performance updates & bug fixes',
+          force_update: false
+        },
         message: 'SDK authenticated successfully'
       }
     });
@@ -149,30 +163,77 @@ app.all('/api/public/connect', handleConnect);
 
 // -------------------------------------------------------------
 // 2. Automated Crash Telemetry API (/api/telemetry/crash)
+//    Supports Java Exception Stacktraces & Native .so / Signal Offsets
 // -------------------------------------------------------------
 app.post('/api/telemetry/crash', async (req, res) => {
   try {
-    const { brand, model, android_version, sdk_int, app_version, crash_type, stacktrace, device_id } = req.body;
+    const { 
+      brand, model, android_version, sdk_int, app_version, 
+      crash_type, stacktrace, device_id, user_key 
+    } = req.body;
     
     if (!stacktrace) {
       return res.status(400).json({ error: 'stacktrace is required' });
     }
 
+    const st = String(stacktrace);
+
+    // Auto-detect Native .so Crashes vs Java Exception
+    const isNativeSignal = /SIGSEGV|SIGBUS|SIGFPE|SIGILL|SIGABRT|signal 11|signal 7|fault addr|backtrace:/i.test(st);
+    const crash_category = req.body.crash_category || (isNativeSignal ? 'native_so' : 'java');
+
+    // Extract .so library name if present (e.g. libFeaturesticBox.so or custom.so)
+    let so_name = req.body.so_name || null;
+    if (!so_name) {
+      const soMatch = st.match(/([\w\-\.]+\.so)/i);
+      if (soMatch) so_name = soMatch[1];
+    }
+
+    // Extract crash fault offset / PC address (e.g. pc 00014a38 or +0x14a38)
+    let fault_offset = req.body.fault_offset || null;
+    if (!fault_offset) {
+      const pcMatch = st.match(/(?:pc\s+([0-9a-fA-F]{4,16})|\+0x([0-9a-fA-F]{2,12}))/i);
+      if (pcMatch) fault_offset = (pcMatch[1] || pcMatch[2]).toUpperCase();
+    }
+
+    // Look up client_username if key was provided
+    let client_username = null;
+    const finalKey = user_key ? String(user_key).trim() : null;
+    if (finalKey) {
+      const kRow = (await sql`SELECT client_username FROM license_keys WHERE user_key = ${finalKey} LIMIT 1`)[0];
+      if (kRow) client_username = kRow.client_username;
+    }
+
     await sql`
-      INSERT INTO crash_reports (brand, model, android_version, sdk_int, app_version, crash_type, stacktrace, device_id)
+      INSERT INTO crash_reports (
+        brand, model, android_version, sdk_int, app_version, 
+        crash_type, crash_category, so_name, fault_offset, user_key, client_username,
+        stacktrace, device_id
+      )
       VALUES (
         ${brand || 'Unknown'},
         ${model || 'Unknown'},
         ${android_version || 'Unknown'},
         ${sdk_int || 0},
         ${app_version || '1.0.0'},
-        ${crash_type || 'General Crash'},
+        ${crash_type || (isNativeSignal ? 'Native Signal Crash' : 'Java Crash')},
+        ${crash_category},
+        ${so_name},
+        ${fault_offset},
+        ${finalKey},
+        ${client_username},
         ${stacktrace},
         ${device_id || null}
       )
     `;
 
-    return res.json({ success: true, message: 'Crash report logged successfully' });
+    return res.json({ 
+      success: true, 
+      message: 'Crash report logged successfully',
+      category: crash_category,
+      so_name,
+      fault_offset
+    });
   } catch (err) {
     console.error('[Telemetry Crash] Error:', err);
     return res.status(500).json({ error: err.message });
@@ -180,7 +241,7 @@ app.post('/api/telemetry/crash', async (req, res) => {
 });
 
 // -------------------------------------------------------------
-// 3. Admin Authentication & Dashboard API
+// 3. Multi-Role Authentication (Master Admin + Client Portals)
 // -------------------------------------------------------------
 function checkAdminAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -194,15 +255,156 @@ function checkAdminAuth(req, res, next) {
   next();
 }
 
+async function checkClientAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const token = authHeader.split(' ')[1];
+
+  // Admin has master access to client routes too
+  if (token === process.env.ADMIN_PASSWORD || token === 'admin123') {
+    req.isAdmin = true;
+    return next();
+  }
+
+  if (!token.startsWith('CLT_')) {
+    return res.status(403).json({ error: 'Invalid client token' });
+  }
+
+  const parts = token.split('_');
+  const username = parts[1];
+  const clientRow = (await sql`SELECT * FROM client_accounts WHERE username = ${username} LIMIT 1`)[0];
+  if (!clientRow) {
+    return res.status(403).json({ error: 'Client account not found' });
+  }
+
+  req.client = clientRow;
+  next();
+}
+
+// Unified Login Route (Admin & Client)
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+  const settings = (await sql`SELECT admin_password FROM panel_settings LIMIT 1`)[0];
+  const adminPass = settings ? settings.admin_password : (process.env.ADMIN_PASSWORD || 'admin123');
+
+  // Check Master Admin
+  if (!username || username === 'admin') {
+    if (password === adminPass) {
+      return res.json({ success: true, role: 'admin', token: adminPass, username: 'admin' });
+    }
+  }
+
+  // Check Client Account
+  if (username) {
+    const client = (await sql`SELECT * FROM client_accounts WHERE username = ${username.trim()} LIMIT 1`)[0];
+    if (client && client.password === password) {
+      const token = `CLT_${client.username}_${client.id}`;
+      return res.json({ 
+        success: true, 
+        role: 'client', 
+        token, 
+        username: client.username,
+        user_key: client.user_key
+      });
+    }
+  }
+
+  return res.status(401).json({ success: false, message: 'Invalid credentials' });
+});
+
+// Backward compatibility admin login
 app.post('/api/admin/login', async (req, res) => {
   const { password } = req.body;
   const settings = (await sql`SELECT admin_password FROM panel_settings LIMIT 1`)[0];
   const validPass = settings ? settings.admin_password : (process.env.ADMIN_PASSWORD || 'admin123');
 
   if (password === validPass) {
-    return res.json({ success: true, token: validPass });
+    return res.json({ success: true, role: 'admin', token: validPass });
   }
   return res.status(401).json({ success: false, message: 'Invalid Admin Password' });
+});
+
+// -------------------------------------------------------------
+// Public Free Access & Self-Registration (Open Beta / Trial Testing)
+// -------------------------------------------------------------
+app.get('/api/public/free-access', async (req, res) => {
+  try {
+    const settings = (await sql`SELECT free_access_enabled, free_access_duration, free_access_max_loaders FROM panel_settings LIMIT 1`)[0];
+    res.json({
+      enabled: Boolean(settings?.free_access_enabled),
+      duration_days: settings?.free_access_duration || 3,
+      max_loaders: settings?.free_access_max_loaders || 1
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/public/register-free-tester', async (req, res) => {
+  try {
+    const settings = (await sql`SELECT free_access_enabled, free_access_duration, free_access_max_loaders FROM panel_settings LIMIT 1`)[0];
+    if (!settings?.free_access_enabled) {
+      return res.status(403).json({ success: false, message: 'Free beta testing registration is currently closed by the administrator.' });
+    }
+
+    const { username, password, trial_days } = req.body;
+    const u = (username || '').trim();
+    const p = (password || '').trim();
+
+    if (!u || !p) {
+      return res.status(400).json({ success: false, message: 'Username and password are required' });
+    }
+    if (u.length < 3 || p.length < 4) {
+      return res.status(400).json({ success: false, message: 'Username min 3 characters, password min 4 characters' });
+    }
+
+    const existing = (await sql`SELECT id FROM client_accounts WHERE username = ${u} LIMIT 1`)[0];
+    if (existing) {
+      return res.status(400).json({ success: false, message: `Username "${u}" is already taken. Please choose another or login.` });
+    }
+
+    const maxAllowed = settings.free_access_duration || 3;
+    const requestedDays = parseInt(trial_days);
+    const finalDuration = (!isNaN(requestedDays) && requestedDays > 0 && requestedDays <= maxAllowed)
+      ? requestedDays
+      : maxAllowed;
+
+    const rand = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+    const user_key = `FB-FREE-${rand}`;
+    const maxLoaders = settings.free_access_max_loaders || 1;
+
+    await sql`
+      INSERT INTO license_keys (
+        user_key, duration_days, note, max_loaders, bound_packages, account_type, client_username
+      )
+      VALUES (
+        ${user_key}, ${finalDuration}, 'Public Free Beta Tester', ${maxLoaders}, '[]', 'client', ${u}
+      )
+    `;
+
+    const clientRow = (await sql`
+      INSERT INTO client_accounts (username, password, user_key, note)
+      VALUES (${u}, ${p}, ${user_key}, 'Public Free Beta Tester')
+      RETURNING id
+    `)[0];
+
+    const token = `CLT_${u}_${clientRow.id}`;
+
+    return res.json({
+      success: true,
+      role: 'client',
+      token,
+      username: u,
+      user_key,
+      duration_days: finalDuration,
+      message: 'Free tester account created successfully!'
+    });
+  } catch (err) {
+    console.error('[Free Tester Register] Error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // Admin Stats
@@ -231,17 +433,74 @@ app.get('/api/admin/keys', checkAdminAuth, async (req, res) => {
 
 app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
   try {
-    const { prefix = 'FB', duration_days = 30, note = '', count = 1, max_loaders = 1, package_name = '' } = req.body;
-    const generated = [];
+    const { 
+      prefix = 'FB', 
+      duration_days = 30, 
+      note = '', 
+      count = 1, 
+      max_loaders = 1, 
+      package_name = '',
+      account_type = 'own',
+      client_username = '',
+      client_password = '',
+      plugin_url = '',
+      update_apk_url = '',
+      update_version = '1.0.0',
+      update_changelog = ''
+    } = req.body;
+
     const loadersQuota = parseInt(max_loaders);
     const initialBound = package_name && package_name.trim() ? JSON.stringify([package_name.trim()]) : '[]';
 
+    if (account_type === 'client') {
+      const u = (client_username || '').trim();
+      const p = (client_password || '').trim();
+      if (!u || !p) {
+        return res.status(400).json({ error: 'Client username and password are required' });
+      }
+      const existing = (await sql`SELECT id FROM client_accounts WHERE username = ${u} LIMIT 1`)[0];
+      if (existing) {
+        return res.status(400).json({ error: `Username "${u}" is already taken` });
+      }
+
+      const rand = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+      const user_key = `${prefix}-${rand}`;
+
+      await sql`
+        INSERT INTO license_keys (
+          user_key, duration_days, note, max_loaders, bound_packages,
+          account_type, client_username, plugin_url, update_apk_url, update_version, update_changelog
+        )
+        VALUES (
+          ${user_key}, ${duration_days}, ${note}, ${isNaN(loadersQuota) ? 1 : loadersQuota}, ${initialBound},
+          'client', ${u}, ${plugin_url.trim()}, ${update_apk_url.trim()}, ${update_version.trim()}, ${update_changelog.trim()}
+        )
+      `;
+
+      await sql`
+        INSERT INTO client_accounts (username, password, user_key, note)
+        VALUES (${u}, ${p}, ${user_key}, ${note})
+      `;
+
+      return res.json({ 
+        success: true, 
+        keys: [user_key],
+        client: { username: u, password: p, user_key } 
+      });
+    }
+
+    // Default: 'own' key(s)
+    const generated = [];
     for (let i = 0; i < Math.min(count, 50); i++) {
       const rand = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
       const user_key = `${prefix}-${rand}`;
       await sql`
-        INSERT INTO license_keys (user_key, duration_days, note, max_loaders, bound_packages)
-        VALUES (${user_key}, ${duration_days}, ${note}, ${isNaN(loadersQuota) ? 1 : loadersQuota}, ${initialBound})
+        INSERT INTO license_keys (
+          user_key, duration_days, note, max_loaders, bound_packages, account_type
+        )
+        VALUES (
+          ${user_key}, ${duration_days}, ${note}, ${isNaN(loadersQuota) ? 1 : loadersQuota}, ${initialBound}, 'own'
+        )
       `;
       generated.push(user_key);
     }
@@ -278,10 +537,70 @@ app.delete('/api/admin/keys/:id', checkAdminAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-// Admin Crash Reports
+// Admin Clients Management
+app.get('/api/admin/clients', checkAdminAuth, async (req, res) => {
+  try {
+    const clients = await sql`
+      SELECT ca.id, ca.username, ca.password, ca.user_key, ca.note, ca.created_at,
+             lk.status as key_status, lk.expires_at, lk.unique_devices, lk.max_loaders, 
+             lk.bound_packages, lk.plugin_url, lk.update_apk_url, lk.update_version
+      FROM client_accounts ca
+      LEFT JOIN license_keys lk ON ca.user_key = lk.user_key
+      ORDER BY ca.id DESC
+    `;
+    res.json(clients);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/admin/clients/:id', checkAdminAuth, async (req, res) => {
+  try {
+    const client = (await sql`SELECT user_key FROM client_accounts WHERE id = ${req.params.id}`)[0];
+    if (client && client.user_key) {
+      await sql`DELETE FROM license_keys WHERE user_key = ${client.user_key}`;
+    }
+    await sql`DELETE FROM client_accounts WHERE id = ${req.params.id}`;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin Crash Reports with Category and Client Filtering
 app.get('/api/admin/crashes', checkAdminAuth, async (req, res) => {
-  const reports = await sql`SELECT * FROM crash_reports ORDER BY id DESC LIMIT 100`;
-  res.json(reports);
+  try {
+    const { category, client } = req.query;
+    let reports;
+    if (category === 'native_so') {
+      if (client === '__own__') {
+        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'native_so' AND (client_username IS NULL OR client_username = '') ORDER BY id DESC LIMIT 150`;
+      } else if (client) {
+        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'native_so' AND client_username = ${client} ORDER BY id DESC LIMIT 150`;
+      } else {
+        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'native_so' ORDER BY id DESC LIMIT 150`;
+      }
+    } else if (category === 'java') {
+      if (client === '__own__') {
+        reports = await sql`SELECT * FROM crash_reports WHERE (crash_category = 'java' OR crash_category IS NULL) AND (client_username IS NULL OR client_username = '') ORDER BY id DESC LIMIT 150`;
+      } else if (client) {
+        reports = await sql`SELECT * FROM crash_reports WHERE (crash_category = 'java' OR crash_category IS NULL) AND client_username = ${client} ORDER BY id DESC LIMIT 150`;
+      } else {
+        reports = await sql`SELECT * FROM crash_reports WHERE (crash_category = 'java' OR crash_category IS NULL) ORDER BY id DESC LIMIT 150`;
+      }
+    } else {
+      if (client === '__own__') {
+        reports = await sql`SELECT * FROM crash_reports WHERE (client_username IS NULL OR client_username = '') ORDER BY id DESC LIMIT 150`;
+      } else if (client) {
+        reports = await sql`SELECT * FROM crash_reports WHERE client_username = ${client} ORDER BY id DESC LIMIT 150`;
+      } else {
+        reports = await sql`SELECT * FROM crash_reports ORDER BY id DESC LIMIT 150`;
+      }
+    }
+    res.json(reports);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/admin/crashes/clear', checkAdminAuth, async (req, res) => {
@@ -296,7 +615,10 @@ app.get('/api/admin/settings', checkAdminAuth, async (req, res) => {
 });
 
 app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
-  const { app_name, version, maintenance, maintenance_msg, plugin_url } = req.body;
+  const { 
+    app_name, version, maintenance, maintenance_msg, plugin_url,
+    free_access_enabled, free_access_duration, free_access_max_loaders
+  } = req.body;
   await sql`
     UPDATE panel_settings 
     SET app_name = ${app_name},
@@ -304,10 +626,197 @@ app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
         maintenance = ${maintenance},
         maintenance_msg = ${maintenance_msg},
         plugin_url = ${plugin_url},
+        free_access_enabled = ${Boolean(free_access_enabled)},
+        free_access_duration = ${parseInt(free_access_duration) || 3},
+        free_access_max_loaders = ${parseInt(free_access_max_loaders) || 1},
         updated_at = CURRENT_TIMESTAMP
     WHERE id = 1
   `;
   res.json({ success: true });
+});
+
+// 1-Click Fast Toggle for Public Free Beta / Trial Access
+app.post('/api/admin/toggle-free-access', checkAdminAuth, async (req, res) => {
+  try {
+    const settings = (await sql`SELECT free_access_enabled FROM panel_settings LIMIT 1`)[0];
+    const newStatus = !settings?.free_access_enabled;
+    await sql`UPDATE panel_settings SET free_access_enabled = ${newStatus} WHERE id = 1`;
+    res.json({ success: true, enabled: newStatus });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -------------------------------------------------------------
+// 4. Client Reseller & Buyer Portal Endpoints
+// -------------------------------------------------------------
+
+// Fetch Client Profile & Assigned Key
+app.get('/api/client/me', checkClientAuth, async (req, res) => {
+  try {
+    const client = req.client;
+    const key = (await sql`SELECT * FROM license_keys WHERE user_key = ${client.user_key} LIMIT 1`)[0];
+    const totalCrashes = (await sql`
+      SELECT COUNT(*)::int as c FROM crash_reports 
+      WHERE user_key = ${client.user_key} OR client_username = ${client.username}
+    `)[0]?.c || 0;
+
+    const nativeCrashes = (await sql`
+      SELECT COUNT(*)::int as c FROM crash_reports 
+      WHERE (user_key = ${client.user_key} OR client_username = ${client.username}) 
+        AND crash_category = 'native_so'
+    `)[0]?.c || 0;
+
+    res.json({
+      client: { id: client.id, username: client.username, note: client.note },
+      key: key || null,
+      stats: {
+        totalCrashes,
+        nativeCrashes,
+        uniqueDevices: key?.unique_devices || 0
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Toggle Client Key (On / Off)
+app.post('/api/client/toggle-status', checkClientAuth, async (req, res) => {
+  try {
+    const client = req.client;
+    const key = (await sql`SELECT id, status FROM license_keys WHERE user_key = ${client.user_key} LIMIT 1`)[0];
+    if (!key) return res.status(404).json({ error: 'License key not found' });
+
+    const newStatus = key.status === 'banned' ? 'active' : 'banned';
+    await sql`UPDATE license_keys SET status = ${newStatus} WHERE id = ${key.id}`;
+    res.json({ success: true, status: newStatus });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Leak Protection: Regenerate Client Key (Preserves Exact Expiration & Quotas, Revokes Old Key & Devices)
+app.post('/api/client/regenerate-key', checkClientAuth, async (req, res) => {
+  try {
+    const client = req.client;
+    const key = (await sql`SELECT * FROM license_keys WHERE user_key = ${client.user_key} LIMIT 1`)[0];
+    if (!key) return res.status(404).json({ error: 'Current license key not found' });
+
+    const prefix = key.user_key.includes('-') ? key.user_key.split('-')[0] : 'FB';
+    const rand = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+    const newKey = `${prefix}-${rand}`;
+    const oldKey = key.user_key;
+
+    // Update key string in license_keys, preserving expires_at, quotas, and wiping cached device binding
+    await sql`
+      UPDATE license_keys 
+      SET user_key = ${newKey}, device_id = NULL
+      WHERE id = ${key.id}
+    `;
+
+    // Update client account record
+    await sql`UPDATE client_accounts SET user_key = ${newKey} WHERE id = ${client.id}`;
+
+    // Sever previous unauthorized device sessions
+    await sql`DELETE FROM sdk_devices WHERE user_key = ${oldKey}`;
+
+    // Update in-memory reference
+    client.user_key = newKey;
+
+    res.json({
+      success: true,
+      old_key: oldKey,
+      new_key: newKey,
+      expires_at: key.expires_at,
+      message: 'Key successfully regenerated. Old key has been revoked and device sessions cleared.'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update Client Settings (.so URL & In-App APK Auto Update config)
+app.post('/api/client/settings', checkClientAuth, async (req, res) => {
+  try {
+    const client = req.client;
+    const { 
+      plugin_url = '', 
+      update_apk_url = '', 
+      update_version = '1.0.0', 
+      update_changelog = '' 
+    } = req.body;
+
+    await sql`
+      UPDATE license_keys 
+      SET plugin_url = ${plugin_url.trim()},
+          update_apk_url = ${update_apk_url.trim()},
+          update_version = ${update_version.trim()},
+          update_changelog = ${update_changelog.trim()}
+      WHERE user_key = ${client.user_key}
+    `;
+
+    res.json({ success: true, message: 'Client configuration updated successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Reset Bound Package Names for Client
+app.post('/api/client/reset-packages', checkClientAuth, async (req, res) => {
+  try {
+    const client = req.client;
+    await sql`UPDATE license_keys SET bound_packages = '[]' WHERE user_key = ${client.user_key}`;
+    res.json({ success: true, message: 'Package bindings reset successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Scoped Crash Telemetry for Client
+app.get('/api/client/crashes', checkClientAuth, async (req, res) => {
+  try {
+    const client = req.client;
+    const { category } = req.query;
+    let reports;
+
+    if (category === 'native_so') {
+      reports = await sql`
+        SELECT * FROM crash_reports 
+        WHERE (user_key = ${client.user_key} OR client_username = ${client.username}) 
+          AND crash_category = 'native_so'
+        ORDER BY id DESC LIMIT 100
+      `;
+    } else if (category === 'java') {
+      reports = await sql`
+        SELECT * FROM crash_reports 
+        WHERE (user_key = ${client.user_key} OR client_username = ${client.username}) 
+          AND (crash_category = 'java' OR crash_category IS NULL)
+        ORDER BY id DESC LIMIT 100
+      `;
+    } else {
+      reports = await sql`
+        SELECT * FROM crash_reports 
+        WHERE (user_key = ${client.user_key} OR client_username = ${client.username})
+        ORDER BY id DESC LIMIT 100
+      `;
+    }
+
+    res.json(reports);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Clear Client Crashes
+app.delete('/api/client/crashes/clear', checkClientAuth, async (req, res) => {
+  try {
+    const client = req.client;
+    await sql`DELETE FROM crash_reports WHERE user_key = ${client.user_key} OR client_username = ${client.username}`;
+    res.json({ success: true, message: 'Crash logs cleared' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Fallback to SPA
