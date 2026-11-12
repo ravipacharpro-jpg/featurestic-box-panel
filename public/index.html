@@ -919,6 +919,12 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
           </svg>
           Clear All
         </button>
+        <button class="btn btn-ghost" title="Logout" onclick="doLogout()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Logout
+        </button>
       </div>
     </div>
 
@@ -1198,45 +1204,62 @@ tbody tr:hover td { background: rgba(255,255,255,0.015); }
 <script>
 /* ─── State ─── */
 let _token = localStorage.getItem('fb_token') || '';
-if (_token) bootApp();
+if (_token) {
+  bootApp();
+} else {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
 
 /* ─── Auth ─── */
 async function doLogin() {
-  const pass = document.getElementById('admin-pass').value;
+  const pass = document.getElementById('admin-pass').value.trim();
   const err = document.getElementById('login-err');
+  if (!pass) {
+    err.textContent = 'Please enter password';
+    return;
+  }
   err.textContent = '';
   try {
     const r = await api('/api/admin/login', 'POST', { password: pass }, true);
-    if (r.success) {
+    if (r && r.success) {
       _token = r.token;
       localStorage.setItem('fb_token', _token);
       bootApp();
     } else {
-      err.textContent = r.message || 'Invalid password';
+      err.textContent = (r && r.message) ? r.message : 'Invalid password';
     }
   } catch (e) { err.textContent = 'Connection error'; }
 }
 
 function bootApp() {
   document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = '';
+  document.getElementById('app').style.display = 'block';
   loadDashboard();
 }
 
 function doLogout() {
   localStorage.removeItem('fb_token');
-  location.reload();
+  _token = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('admin-pass').value = '';
 }
 
 /* ─── API helper ─── */
 async function api(path, method = 'GET', body = null, noAuth = false) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (!noAuth) headers['Authorization'] = 'Bearer ' + _token;
-  const opts = { method, headers };
-  if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(path, opts);
-  if (r.status === 401 || r.status === 403) { doLogout(); return {}; }
-  return r.json();
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (!noAuth && _token) headers['Authorization'] = 'Bearer ' + _token;
+    const opts = { method, headers };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(path, opts);
+    if (r.status === 401 || r.status === 403) { doLogout(); return null; }
+    return await r.json();
+  } catch (err) {
+    console.error('API error:', err);
+    return null;
+  }
 }
 
 /* ─── Toast ─── */
