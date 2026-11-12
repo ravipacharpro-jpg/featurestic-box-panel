@@ -757,35 +757,171 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
 .empty-title { font-size: 0.82rem; color: var(--t3); }
 
 /* ─── Mobile Responsiveness ─── */
+.mob-menu-btn { display: none; }
+.mob-sidebar-close { display: none; }
+.sidebar-backdrop { display: none; }
+.btn-text-mob { display: none; }
+.btn-text-full { display: inline; }
+
 @media (max-width: 840px) {
   :root { --sidebar-w: 0px; }
-  .sidebar { transform: translateX(-240px); }
-  .main { margin-left: 0; padding-bottom: 74px; }
-  .stats-row { grid-template-columns: 1fr 1fr; }
-  .hero-grid { grid-template-columns: 1fr 1fr; }
-  .settings-grid { grid-template-columns: 1fr; }
-  .form-row { grid-template-columns: 1fr; }
-  .page { padding: 18px 14px; }
-  .topbar { padding: 0 16px; }
 
+  /* 1. Silky Smooth Slide-In Mobile Sidebar */
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 275px; z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    background: rgba(12, 12, 12, 0.96);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border-right: 1px solid var(--border2);
+    box-shadow: 12px 0 48px rgba(0,0,0,0.85);
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  .sidebar-backdrop {
+    position: fixed; inset: 0; z-index: 190;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .sidebar-backdrop.show {
+    display: block !important;
+    opacity: 1; pointer-events: auto;
+  }
+
+  .mob-menu-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: var(--r-xs);
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--t1); cursor: pointer; flex-shrink: 0;
+  }
+  .mob-menu-btn svg { width: 17px; height: 17px; }
+
+  .mob-sidebar-close {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: var(--r-xs);
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--t2); cursor: pointer; margin-left: auto;
+  }
+  .mob-sidebar-close svg { width: 16px; height: 16px; }
+
+  /* 2. Topbar Responsive Tuning */
+  .topbar {
+    padding: 0 12px; height: 52px;
+    gap: 6px;
+  }
+  .topbar-left {
+    gap: 8px; min-width: 0; flex: 1;
+  }
+  .topbar-title {
+    font-size: 0.88rem; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .topbar-status { display: none; }
+
+  .topbar-right {
+    gap: 5px; flex-shrink: 0;
+  }
+  .topbar-right .btn {
+    padding: 5px 9px; font-size: 0.72rem;
+    height: 32px; gap: 4px;
+  }
+  .btn-text-full { display: none !important; }
+  .btn-text-mob { display: inline !important; }
+
+  /* 3. Main Container & Pages */
+  .main { margin-left: 0; padding-bottom: 74px; }
+  .page { padding: 14px 12px 84px; }
+
+  .card {
+    padding: 16px 13px; border-radius: var(--r-md);
+    margin-bottom: 14px;
+  }
+  .card-head {
+    flex-direction: column; align-items: flex-start;
+    gap: 12px;
+  }
+  .card-head > div:last-child {
+    width: 100%;
+  }
+
+  /* 4. Grid Adjustments */
+  .stats-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card { padding: 12px 10px; border-radius: var(--r-md); }
+  .stat-val { font-size: 1.35rem; }
+  .stat-label { font-size: 0.68rem; }
+
+  .hero-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .settings-grid { grid-template-columns: 1fr; gap: 14px; }
+  .form-row { grid-template-columns: 1fr; gap: 10px; }
+
+  /* 5. Mobile Tables with Horizontal Scroll */
+  .tbl-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  table {
+    min-width: 680px;
+  }
+  th, td {
+    padding: 10px 12px;
+    font-size: 0.76rem;
+  }
+  .acts {
+    flex-wrap: nowrap; gap: 4px;
+  }
+  .act-btn {
+    padding: 4px 8px; font-size: 0.68rem;
+  }
+
+  /* 6. Form Inputs Font Size (Prevents iOS Safari Auto-Zoom) */
+  .f-input, .f-select, .f-textarea {
+    font-size: 16px !important;
+  }
+
+  /* 7. Apple Bottom Navigation */
   .mobile-nav {
     display: flex; position: fixed; bottom: 0; left: 0; right: 0;
-    background: rgba(10,10,10,0.96); backdrop-filter: blur(24px);
+    background: rgba(10,10,10,0.95); backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
     border-top: 1px solid var(--border); z-index: 100;
-    padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+    padding: 5px 0 max(5px, env(safe-area-inset-bottom));
   }
   .mob-btn {
-    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
     background: none; border: none; color: var(--t3);
-    font-size: 0.62rem; font-weight: 600; cursor: pointer;
-    padding: 5px 0; transition: color var(--transition);
+    font-size: 0.6rem; font-weight: 600; cursor: pointer;
+    padding: 4px 0; transition: color var(--transition);
   }
   .mob-btn svg { width: 18px; height: 18px; }
   .mob-btn.active { color: var(--neon); }
+
+  /* 8. iOS Bottom Sheet Style for Modals */
+  .modal-bg {
+    align-items: flex-end; padding: 0;
+  }
+  .modal {
+    max-height: 88vh; border-radius: 22px 22px 0 0;
+    padding: 22px 16px max(24px, env(safe-area-inset-bottom));
+    border-bottom: none; border-left: none; border-right: none;
+    animation: slideUpModal 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  @keyframes slideUpModal {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
 }
 
 @media (min-width: 841px) {
-  .mobile-nav { display: none; }
+  .mobile-nav { display: none !important; }
 }
 </style>
 </head>
@@ -885,15 +1021,22 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-header">
-      <div class="sidebar-logo-mark">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="sidebar-logo-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="sidebar-brand-name">Featurestic Box</div>
+          <div class="sidebar-brand-ver" id="brand-mode-label">Master Admin</div>
+        </div>
+      </div>
+      <button class="mob-sidebar-close" onclick="toggleMobileSidebar()" aria-label="Close Navigation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
-      </div>
-      <div>
-        <div class="sidebar-brand-name">Featurestic Box</div>
-        <div class="sidebar-brand-ver" id="brand-mode-label">Master Admin</div>
-      </div>
+      </button>
     </div>
 
     <!-- Navigation List -->
@@ -985,12 +1128,20 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
     </div>
   </aside>
 
+  <!-- Mobile Sidebar Backdrop -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleMobileSidebar()"></div>
+
   <!-- MAIN AREA -->
   <main class="main">
 
     <!-- TOPBAR -->
     <div class="topbar">
       <div class="topbar-left">
+        <button class="mob-menu-btn" onclick="toggleMobileSidebar()" aria-label="Toggle Menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
         <div class="topbar-title" id="topbar-title">Dashboard</div>
         <div class="topbar-status">
           <div class="status-dot"></div>
@@ -1000,12 +1151,12 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
       <div class="topbar-right">
         <!-- 1-Click Fast Safe Mode (Anti-Cheat Kill Switch) Toggle -->
         <button id="btn-toggle-safe-mode" class="btn btn-ghost" style="display:none" onclick="quickToggleSafeMode()" title="Kill switch: Freeze loader launches during game updates">
-          Safe Mode: OFF
+          <span class="btn-text-full">Safe Mode: OFF</span><span class="btn-text-mob">Safe</span>
         </button>
 
         <!-- 1-Click Free Beta Toggle for Admin -->
         <button id="btn-toggle-free-beta" class="btn btn-ghost" style="display:none" onclick="quickToggleFreeBeta()">
-          Loading Beta Mode…
+          <span class="btn-text-full">Loading Beta Mode…</span><span class="btn-text-mob">Beta</span>
         </button>
 
         <!-- Admin-only topbar buttons -->
@@ -1013,25 +1164,25 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
-          Create Key
+          <span class="btn-text-full">Create Key</span><span class="btn-text-mob">+ Key</span>
         </button>
         <button id="btn-clear-crashes" class="btn btn-danger" style="display:none" onclick="clearCrashes()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
           </svg>
-          Clear All Crashes
+          <span class="btn-text-full">Clear All Crashes</span><span class="btn-text-mob">Clear</span>
         </button>
         <button id="btn-clear-client-crashes" class="btn btn-danger" style="display:none" onclick="clearClientCrashes()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
           </svg>
-          Clear My Logs
+          <span class="btn-text-full">Clear My Logs</span><span class="btn-text-mob">Clear</span>
         </button>
         <button class="btn btn-ghost" title="Logout" onclick="doLogout()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
           </svg>
-          Logout
+          <span class="btn-text-full">Logout</span>
         </button>
       </div>
     </div>
@@ -1599,9 +1750,11 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/></svg>
         <span>Crashes</span>
       </button>
-      <button class="mob-btn" data-page="settings" onclick="showPage('settings')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        <span>Settings</span>
+      <button class="mob-btn" onclick="toggleMobileSidebar()" aria-label="Open Full Navigation Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+        </svg>
+        <span>Menu</span>
       </button>
     </div>
 
@@ -1798,8 +1951,8 @@ async function checkFreeBetaStatus() {
     if (topBtn) {
       topBtn.className = _freeBetaEnabled ? 'btn btn-beta-active' : 'btn btn-ghost';
       topBtn.innerHTML = _freeBetaEnabled
-        ? '<span class="status-dot"></span><span>Open Beta: ON</span>'
-        : '<span style="color:var(--t4)">●</span><span>Open Beta: OFF</span>';
+        ? '<span class="status-dot"></span><span class="btn-text-full">Open Beta: ON</span><span class="btn-text-mob">Beta: ON</span>'
+        : '<span style="color:var(--t4)">●</span><span class="btn-text-full">Open Beta: OFF</span><span class="btn-text-mob">Beta: OFF</span>';
     }
   } catch(e) {
     console.error('Failed to check free beta status', e);
@@ -1977,12 +2130,12 @@ async function checkSafeModeStatus() {
   if (!btn || !s) return;
   btn.style.display = 'inline-flex';
   if (s.emergency_safe_mode) {
-    btn.innerHTML = '<span style="color:var(--red)">●</span> <span>Safe Mode: ACTIVE</span>';
+    btn.innerHTML = '<span style="color:var(--red)">●</span> <span class="btn-text-full">Safe Mode: ACTIVE</span><span class="btn-text-mob">Safe: ON</span>';
     btn.style.color = 'var(--red)';
     btn.style.border = '1px solid rgba(255,59,48,0.4)';
     btn.style.background = 'rgba(255,59,48,0.12)';
   } else {
-    btn.innerHTML = '<span style="color:var(--t4)">●</span> <span>Safe Mode: OFF</span>';
+    btn.innerHTML = '<span style="color:var(--t4)">●</span> <span class="btn-text-full">Safe Mode: OFF</span><span class="btn-text-mob">Safe: OFF</span>';
     btn.style.color = 'var(--t2)';
     btn.style.border = '1px solid var(--border)';
     btn.style.background = 'transparent';
@@ -2000,6 +2153,15 @@ async function quickToggleSafeMode() {
   }
 }
 
+/* ─── Mobile Sidebar Toggle ─── */
+function toggleMobileSidebar() {
+  const sb = document.querySelector('.sidebar');
+  const bd = document.getElementById('sidebar-backdrop');
+  if (!sb) return;
+  const isOpen = sb.classList.toggle('mobile-open');
+  if (bd) bd.classList.toggle('show', isOpen);
+}
+
 /* ─── Navigation ─── */
 const PAGE_TITLES = {
   dashboard: 'Dashboard',
@@ -2013,6 +2175,14 @@ const PAGE_TITLES = {
 };
 
 function showPage(name) {
+  // Auto-close mobile drawer if open
+  const sb = document.querySelector('.sidebar');
+  const bd = document.getElementById('sidebar-backdrop');
+  if (sb && sb.classList.contains('mobile-open')) {
+    sb.classList.remove('mobile-open');
+    if (bd) bd.classList.remove('show');
+  }
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-link, .mob-btn').forEach(b => b.classList.remove('active'));
 
