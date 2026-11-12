@@ -272,8 +272,11 @@ async function checkClientAuth(req, res, next) {
     return res.status(403).json({ error: 'Invalid client token' });
   }
 
-  const parts = token.split('_');
-  const username = parts[1];
+  const tokenMatch = token.match(/^CLT_(.+)_\d+$/);
+  if (!tokenMatch) {
+    return res.status(403).json({ error: 'Invalid client token format' });
+  }
+  const username = tokenMatch[1];
   const clientRow = (await sql`SELECT * FROM client_accounts WHERE username = ${username} LIMIT 1`)[0];
   if (!clientRow) {
     return res.status(403).json({ error: 'Client account not found' });
