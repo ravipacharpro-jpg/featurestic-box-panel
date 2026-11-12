@@ -193,11 +193,11 @@ async function handleConnect(req, res) {
       ? key.update_apk_url.trim()
       : (settings?.update_apk_url || '');
 
-    const effectiveApkVer = (key.update_version && key.update_version.trim())
+    const effectiveApkVer = (key.update_apk_url && key.update_apk_url.trim() && key.update_version && key.update_version.trim())
       ? key.update_version.trim()
       : (settings?.update_version || '1.0.1');
 
-    const effectiveChangelog = (key.update_changelog && key.update_changelog.trim())
+    const effectiveChangelog = (key.update_apk_url && key.update_apk_url.trim() && key.update_changelog && key.update_changelog.trim())
       ? key.update_changelog.trim()
       : (settings?.update_changelog || 'Latest performance updates & bug fixes');
 
