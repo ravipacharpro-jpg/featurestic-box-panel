@@ -114,6 +114,25 @@ export async function initDb() {
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS free_access_duration INT DEFAULT 3`;
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS free_access_max_loaders INT DEFAULT 1`;
 
+    // 6. Emergency Kill Switch, Broadcast Notice & Telegram Alerts
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS emergency_safe_mode BOOLEAN DEFAULT FALSE`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS emergency_safe_msg TEXT DEFAULT 'Service temporarily paused for game security update. Please do not play now.'`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS broadcast_notice TEXT DEFAULT ''`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS broadcast_notice_id INT DEFAULT 0`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS telegram_bot_token TEXT DEFAULT ''`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS telegram_chat_id TEXT DEFAULT ''`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS telegram_alerts_enabled BOOLEAN DEFAULT FALSE`;
+
+    // 7. Global Hardware ID (HWID) Blacklist Table
+    await sql`
+      CREATE TABLE IF NOT EXISTS hwid_blacklist (
+        id SERIAL PRIMARY KEY,
+        device_id VARCHAR(256) UNIQUE NOT NULL,
+        reason VARCHAR(256) DEFAULT 'Unauthorized activity or leak attempt',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
     // 4. Initial Settings row
     const settings = await sql`SELECT * FROM panel_settings LIMIT 1`;
     if (settings.length === 0) {

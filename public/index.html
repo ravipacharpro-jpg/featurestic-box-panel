@@ -929,6 +929,12 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
           Crash Telemetry
           <span class="nav-badge" id="crash-badge"></span>
         </button>
+        <button class="nav-link" data-page="blacklist" onclick="showPage('blacklist')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          HWID Blacklist
+        </button>
 
         <div class="nav-label">System</div>
         <button class="nav-link" data-page="settings" onclick="showPage('settings')">
@@ -992,6 +998,11 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
         </div>
       </div>
       <div class="topbar-right">
+        <!-- 1-Click Fast Safe Mode (Anti-Cheat Kill Switch) Toggle -->
+        <button id="btn-toggle-safe-mode" class="btn btn-ghost" style="display:none" onclick="quickToggleSafeMode()" title="Kill switch: Freeze loader launches during game updates">
+          Safe Mode: OFF
+        </button>
+
         <!-- 1-Click Free Beta Toggle for Admin -->
         <button id="btn-toggle-free-beta" class="btn btn-ghost" style="display:none" onclick="quickToggleFreeBeta()">
           Loading Beta Mode…
@@ -1289,10 +1300,133 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
             </div>
           </div>
         </div>
+
+        <!-- Card 3: Anti-Cheat Emergency Kill Switch & Remote In-App Broadcast Notice -->
+        <div class="settings-card">
+          <div class="settings-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Emergency Kill Switch & Broadcast Notice
+          </div>
+
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-label" style="color:var(--red)">Emergency Safe Mode (Anti-Cheat Update)</div>
+              <div class="toggle-desc">Instantly freezes game launches to protect users from new anti-cheat ban waves</div>
+            </div>
+            <div class="toggle" id="s-safemode-toggle" onclick="this.classList.toggle('on')"></div>
+          </div>
+
+          <div class="f-group" style="margin-top:12px">
+            <label class="f-label">Emergency Alert Message</label>
+            <textarea id="s-safemode-msg" class="f-textarea" placeholder="Service temporarily paused for game security update. Please do not play now."></textarea>
+          </div>
+
+          <div class="divider" style="height:1px;background:var(--border);margin:14px 0"></div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <label class="f-label" style="margin-bottom:0">Remote Broadcast In-App Notice</label>
+            <span class="badge tag-client" id="s-broadcast-counter">Notice Version #0</span>
+          </div>
+          <div class="f-group">
+            <textarea id="s-broadcast-msg" class="f-textarea" placeholder="Enter message to display as a popup dialog inside all user loaders upon next launch..."></textarea>
+          </div>
+          <button class="btn btn-primary-neon" onclick="sendBroadcastNotice()" style="width:100%;font-size:0.78rem">
+            Broadcast Notice to All Loaders
+          </button>
+        </div>
+
+        <!-- Card 4: Telegram Webhook Automated Alerts -->
+        <div class="settings-card">
+          <div class="settings-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            Telegram Webhook Alerts
+          </div>
+
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-label">Real-Time Telegram Alerts</div>
+              <div class="toggle-desc">Instant alerts for Native .so crashes with PC offsets and new Beta user signups</div>
+            </div>
+            <div class="toggle" id="s-tg-toggle" onclick="this.classList.toggle('on')"></div>
+          </div>
+
+          <div class="f-group" style="margin-top:14px">
+            <label class="f-label">Telegram Bot Token</label>
+            <input type="text" id="s-tg-token" class="f-input" placeholder="e.g. 7123456789:AAH... from @BotFather">
+          </div>
+
+          <div class="f-group">
+            <label class="f-label">Telegram Chat ID / Channel ID</label>
+            <input type="text" id="s-tg-chat" class="f-input" placeholder="e.g. 123456789 or -100123456789">
+          </div>
+
+          <button class="btn btn-ghost" onclick="testTelegram()" style="width:100%;font-size:0.78rem">
+            Send Test Alert to Telegram
+          </button>
+        </div>
       </div>
 
       <div style="margin-top:16px">
         <button class="btn btn-primary-neon" style="padding:10px 28px;font-size:0.82rem" onclick="saveSettings()">Save Global Settings</button>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+         GLOBAL HWID BLACKLIST PAGE
+    ════════════════════════════════════════════ -->
+    <div id="page-blacklist" class="page">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-head">
+          <div>
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              Global Hardware ID (HWID) Blacklist
+            </div>
+            <div class="card-subtitle">Block leaked, cracked, or unauthorized physical devices from connecting across all keys</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <div class="f-group" style="flex:1;min-width:240px;margin-bottom:0">
+            <label class="f-label">Device Serial / Hardware UUID</label>
+            <input type="text" id="bl-hwid" class="f-input" placeholder="e.g. 9b7a44f128c9b4e0">
+          </div>
+          <div class="f-group" style="flex:1;min-width:200px;margin-bottom:0">
+            <label class="f-label">Ban Reason / Note</label>
+            <input type="text" id="bl-reason" class="f-input" placeholder="e.g. Attempted key share / debugger hook">
+          </div>
+          <button class="btn btn-danger" onclick="addBlacklistDevice()" style="margin-bottom:0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Ban HWID
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Device HWID</th>
+                <th>Ban Reason</th>
+                <th>Blacklisted At</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-blacklist-body">
+              <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--t3)">Loading blacklist…</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -1754,6 +1888,7 @@ function bootApp() {
   document.getElementById('brand-mode-label').textContent = _role === 'admin' ? 'Master Admin' : 'Client Portal';
 
   const topBtn = document.getElementById('btn-toggle-free-beta');
+  const safeBtn = document.getElementById('btn-toggle-safe-mode');
 
   if (_role === 'client') {
     document.getElementById('nav-group-admin').style.display = 'none';
@@ -1763,6 +1898,7 @@ function bootApp() {
     document.getElementById('btn-add-keys').style.display = 'none';
     document.getElementById('btn-clear-crashes').style.display = 'none';
     if (topBtn) topBtn.style.display = 'none';
+    if (safeBtn) safeBtn.style.display = 'none';
     showPage('client-dashboard');
   } else {
     document.getElementById('nav-group-admin').style.display = 'block';
@@ -1770,7 +1906,9 @@ function bootApp() {
     document.getElementById('mob-admin-nav').style.display = 'flex';
     document.getElementById('mob-client-nav').style.display = 'none';
     if (topBtn) topBtn.style.display = 'inline-flex';
+    if (safeBtn) safeBtn.style.display = 'inline-flex';
     checkFreeBetaStatus();
+    checkSafeModeStatus();
     showPage('dashboard');
   }
 }
@@ -1832,12 +1970,43 @@ async function quickToggleFreeBeta() {
   }
 }
 
+async function checkSafeModeStatus() {
+  if (_role !== 'admin') return;
+  const s = await api('/api/admin/settings');
+  const btn = document.getElementById('btn-toggle-safe-mode');
+  if (!btn || !s) return;
+  btn.style.display = 'inline-flex';
+  if (s.emergency_safe_mode) {
+    btn.innerHTML = '<span style="color:var(--red)">●</span> <span>Safe Mode: ACTIVE</span>';
+    btn.style.color = 'var(--red)';
+    btn.style.border = '1px solid rgba(255,59,48,0.4)';
+    btn.style.background = 'rgba(255,59,48,0.12)';
+  } else {
+    btn.innerHTML = '<span style="color:var(--t4)">●</span> <span>Safe Mode: OFF</span>';
+    btn.style.color = 'var(--t2)';
+    btn.style.border = '1px solid var(--border)';
+    btn.style.background = 'transparent';
+  }
+}
+
+async function quickToggleSafeMode() {
+  const r = await api('/api/admin/toggle-safe-mode', 'POST', {});
+  if (r && r.success) {
+    toast(r.emergency_safe_mode ? '🚨 Emergency Safe Mode ACTIVATED. All game launches frozen!' : 'Safe Mode deactivated. Regular traffic resumed.');
+    checkSafeModeStatus();
+    if (document.getElementById('page-settings').classList.contains('active')) {
+      loadSettings();
+    }
+  }
+}
+
 /* ─── Navigation ─── */
 const PAGE_TITLES = {
   dashboard: 'Dashboard',
   keys: 'License Keys',
   clients: 'Client & Reseller Accounts',
   crashes: 'Crash Analytics & Native Offsets',
+  blacklist: 'Global Hardware ID (HWID) Blacklist',
   settings: 'Global App Settings',
   'client-dashboard': 'Client Portal — Key & Fleet',
   'client-crashes': 'Client Portal — Scoped Telemetry'
@@ -1861,6 +2030,7 @@ function showPage(name) {
   if (name === 'keys') loadKeys();
   if (name === 'clients') loadClients();
   if (name === 'crashes') loadCrashes();
+  if (name === 'blacklist') loadBlacklist();
   if (name === 'settings') loadSettings();
   if (name === 'client-dashboard') loadClientDashboard();
   if (name === 'client-crashes') loadClientCrashes();
@@ -1939,6 +2109,7 @@ async function loadKeys() {
           <td style="color:var(--t3);font-size:0.72rem">${k.expires_at ? fmtDate(k.expires_at) : '—'}</td>
           <td>
             <div class="acts">
+              <button class="act-btn act-neon" title="Copy Key Template for WhatsApp / Telegram" onclick="copyTelegramKey('${esc(k.user_key)}', ${k.duration_days}, ${k.max_loaders || 1})">Copy</button>
               ${pkgs.length ? `<button class="act-btn act-orange" onclick="resetPackages(${k.id})">Reset Pkg</button>` : ''}
               <button class="act-btn act-ghost" onclick="toggleBan(${k.id})">${k.status === 'banned' ? 'Unban' : 'Ban'}</button>
               <button class="act-btn act-red" onclick="delKey(${k.id})">Delete</button>
@@ -2354,11 +2525,37 @@ async function loadSettings() {
   s.free_access_enabled ? togFree.classList.add('on') : togFree.classList.remove('on');
   document.getElementById('s-free-days').value = s.free_access_duration || 3;
   document.getElementById('s-free-loaders').value = s.free_access_max_loaders || 1;
+
+  // Safe Mode
+  const togSafe = document.getElementById('s-safemode-toggle');
+  if (togSafe) {
+    s.emergency_safe_mode ? togSafe.classList.add('on') : togSafe.classList.remove('on');
+  }
+  const safeMsg = document.getElementById('s-safemode-msg');
+  if (safeMsg) safeMsg.value = s.emergency_safe_msg || '';
+
+  // Remote Broadcast Notice
+  const bMsg = document.getElementById('s-broadcast-msg');
+  if (bMsg) bMsg.value = s.broadcast_notice || '';
+  const bCounter = document.getElementById('s-broadcast-counter');
+  if (bCounter) bCounter.textContent = `Notice Version #${s.broadcast_notice_id || 0}`;
+
+  // Telegram Alerts
+  const togTg = document.getElementById('s-tg-toggle');
+  if (togTg) {
+    s.telegram_alerts_enabled ? togTg.classList.add('on') : togTg.classList.remove('on');
+  }
+  const tgToken = document.getElementById('s-tg-token');
+  if (tgToken) tgToken.value = s.telegram_bot_token || '';
+  const tgChat = document.getElementById('s-tg-chat');
+  if (tgChat) tgChat.value = s.telegram_chat_id || '';
 }
 
 async function saveSettings() {
   const togMaint = document.getElementById('s-maintenance');
   const togFree = document.getElementById('s-free-toggle');
+  const togSafe = document.getElementById('s-safemode-toggle');
+  const togTg = document.getElementById('s-tg-toggle');
 
   await api('/api/admin/settings', 'POST', {
     app_name: document.getElementById('s-name').value,
@@ -2368,10 +2565,83 @@ async function saveSettings() {
     maintenance_msg: document.getElementById('s-msg').value,
     free_access_enabled: togFree.classList.contains('on'),
     free_access_duration: parseInt(document.getElementById('s-free-days').value) || 3,
-    free_access_max_loaders: parseInt(document.getElementById('s-free-loaders').value) || 1
+    free_access_max_loaders: parseInt(document.getElementById('s-free-loaders').value) || 1,
+    emergency_safe_mode: togSafe ? togSafe.classList.contains('on') : false,
+    emergency_safe_msg: document.getElementById('s-safemode-msg')?.value || '',
+    broadcast_notice: document.getElementById('s-broadcast-msg')?.value || '',
+    telegram_bot_token: document.getElementById('s-tg-token')?.value || '',
+    telegram_chat_id: document.getElementById('s-tg-chat')?.value || '',
+    telegram_alerts_enabled: togTg ? togTg.classList.contains('on') : false
   });
   toast('Settings saved');
   checkFreeBetaStatus();
+  checkSafeModeStatus();
+}
+
+async function sendBroadcastNotice() {
+  const notice = document.getElementById('s-broadcast-msg').value.trim();
+  if (!notice) return toast('Notice message cannot be empty', 'error');
+  const res = await api('/api/admin/broadcast-notice', 'POST', { notice });
+  if (res && res.success) {
+    toast(`Remote Notice #${res.notice_id} broadcasted to all active loaders!`);
+    loadSettings();
+  }
+}
+
+async function testTelegram() {
+  toast('Sending test notification to Telegram…');
+  const res = await api('/api/admin/telegram-test', 'POST', {});
+  if (res && res.success) {
+    toast('Telegram test notification sent successfully!');
+  } else {
+    toast(res?.error || 'Telegram test failed. Check Bot Token & Chat ID.', 'error');
+  }
+}
+
+/* ─── Global HWID Blacklist ─── */
+async function loadBlacklist() {
+  const list = await api('/api/admin/blacklist');
+  const tbody = document.getElementById('tbl-blacklist-body');
+  if (!tbody) return;
+  tbody.innerHTML = (list && list.length)
+    ? list.map(b => `<tr>
+        <td style="color:var(--t3)">#${b.id}</td>
+        <td><span class="key-pill" style="color:var(--red);border-color:rgba(255,59,48,0.3);background:rgba(255,59,48,0.08)">${esc(b.device_id)}</span></td>
+        <td style="color:var(--t2)">${esc(b.reason || 'Unauthorized')}</td>
+        <td style="color:var(--t3);font-size:0.75rem">${fmtDate(b.created_at)}</td>
+        <td>
+          <button class="act-btn act-ghost" onclick="delBlacklist(${b.id})">Unban</button>
+        </td>
+      </tr>`).join('')
+    : emptyRow(5, 'No hardware devices currently blacklisted', 'shield');
+}
+
+async function addBlacklistDevice() {
+  const hwid = document.getElementById('bl-hwid').value.trim();
+  const reason = document.getElementById('bl-reason').value.trim();
+  if (!hwid) return toast('Please enter a Device Serial / HWID', 'error');
+  const res = await api('/api/admin/blacklist/add', 'POST', { device_id: hwid, reason });
+  if (res && res.success) {
+    toast('Device HWID blacklisted');
+    document.getElementById('bl-hwid').value = '';
+    document.getElementById('bl-reason').value = '';
+    loadBlacklist();
+  }
+}
+
+async function delBlacklist(id) {
+  if (!confirm('Remove this device from global blacklist?')) return;
+  const res = await api(`/api/admin/blacklist/${id}`, 'DELETE');
+  if (res && res.success) {
+    toast('Device unbanned from blacklist');
+    loadBlacklist();
+  }
+}
+
+function copyTelegramKey(key, days, maxLoaders) {
+  const text = `💎 Featurestic Box Access Key 💎\n━━━━━━━━━━━━━━━━━━━━\n🔑 Key: ${key}\n⏳ Duration: ${days} Days\n📱 Max Devices: ${maxLoaders === 0 ? 'Unlimited' : maxLoaders}\n━━━━━━━━━━━━━━━━━━━━\n⚡ Fast • Anti-Ban • Auto-Updating`;
+  navigator.clipboard.writeText(text);
+  toast('Telegram/WhatsApp key format copied to clipboard!');
 }
 
 async function changePass() {

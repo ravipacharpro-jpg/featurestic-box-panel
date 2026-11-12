@@ -18,6 +18,33 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Helper: Non-blocking Telegram Alerts
+async function sendTelegramAlert(text) {
+  try {
+    const settings = (await sql`SELECT telegram_alerts_enabled, telegram_bot_token, telegram_chat_id FROM panel_settings LIMIT 1`)[0];
+    if (!settings || !settings.telegram_alerts_enabled || !settings.telegram_bot_token || !settings.telegram_chat_id) {
+      return;
+    }
+    const token = settings.telegram_bot_token.trim();
+    const chat_id = settings.telegram_chat_id.trim();
+    if (!token || !chat_id) return;
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chat_id,
+        text: text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      }),
+      signal: AbortSignal.timeout(4000)
+    }).catch(err => console.error('[Telegram Alert Error]', err.message));
+  } catch (e) {
+    console.error('[Telegram Alert Failed]', e.message);
+  }
+}
+
 // -------------------------------------------------------------
 // 1. Loader & SDK Connect API (/connect & /api/public/connect)
 // -------------------------------------------------------------
@@ -28,6 +55,18 @@ async function handleConnect(req, res) {
     const serial = (params.serial || params.uuid || params.device || params.device_id || '').trim();
     const game = (params.game || params.gamename || '').trim();
 
+    // 0. Global HWID Blacklist check
+    if (serial) {
+      const blacklisted = await sql`SELECT * FROM hwid_blacklist WHERE device_id = ${serial} LIMIT 1`;
+      if (blacklisted.length > 0) {
+        return res.json({
+          status: false,
+          reason: 'DEVICE_BANNED',
+          message: `This device has been blacklisted: ${blacklisted[0].reason || 'Unauthorized security violation'}`
+        });
+      }
+    }
+
     // Check maintenance
     const settings = (await sql`SELECT * FROM panel_settings LIMIT 1`)[0];
     if (settings && settings.maintenance) {
@@ -35,6 +74,15 @@ async function handleConnect(req, res) {
         status: false,
         reason: settings.maintenance_msg || 'Under maintenance',
         message: settings.maintenance_msg || 'Under maintenance'
+      });
+    }
+
+    // Emergency Safe Mode / Remote Kill Switch (freeze launches during game anti-cheat updates)
+    if (settings && settings.emergency_safe_mode) {
+      return res.json({
+        status: false,
+        reason: 'SAFE_MODE_ACTIVE',
+        message: settings.emergency_safe_msg || 'Emergency Safe Mode is active due to a game security update. Please do not launch now.'
       });
     }
 
@@ -148,6 +196,10 @@ async function handleConnect(req, res) {
           changelog: key.update_changelog || 'Latest performance updates & bug fixes',
           force_update: false
         },
+        notice: {
+          id: settings?.broadcast_notice_id || 0,
+          message: settings?.broadcast_notice || ''
+        },
         message: 'SDK authenticated successfully'
       }
     });
@@ -224,8 +276,20 @@ app.post('/api/telemetry/crash', async (req, res) => {
         ${client_username},
         ${stacktrace},
         ${device_id || null}
-      )
     `;
+
+    // Non-blocking Telegram alert on native crash detection
+    if (crash_category === 'native_so' || isNativeSignal) {
+      sendTelegramAlert(
+        `🚨 <b>Native Crash Telemetry (.so)</b>\n\n` +
+        `<b>Library:</b> <code>${so_name || 'libFeaturesticBox.so'}</code>\n` +
+        `<b>Offset:</b> <code>${fault_offset || 'N/A'}</code>\n` +
+        `<b>Key:</b> <code>${finalKey || 'N/A'}</code>\n` +
+        `<b>Client:</b> <code>${client_username || 'Admin/Own'}</code>\n` +
+        `<b>Device:</b> ${brand || ''} ${model || ''} (SDK ${sdk_int || 'N/A'})\n\n` +
+        `<b>Stacktrace:</b>\n<pre>${st.slice(0, 350)}</pre>`
+      );
+    }
 
     return res.json({ 
       success: true, 
@@ -394,6 +458,15 @@ app.post('/api/public/register-free-tester', async (req, res) => {
     `)[0];
 
     const token = `CLT_${u}_${clientRow.id}`;
+
+    // Non-blocking Telegram alert on free tester registration
+    sendTelegramAlert(
+      `👤 <b>New Free Beta Tester Registered</b>\n\n` +
+      `<b>Username:</b> <code>${u}</code>\n` +
+      `<b>Assigned Key:</b> <code>${user_key}</code>\n` +
+      `<b>Trial Duration:</b> ${finalDuration} Days\n` +
+      `<b>Device Quota:</b> 1 Device`
+    );
 
     return res.json({
       success: true,
@@ -620,18 +693,26 @@ app.get('/api/admin/settings', checkAdminAuth, async (req, res) => {
 app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
   const { 
     app_name, version, maintenance, maintenance_msg, plugin_url,
-    free_access_enabled, free_access_duration, free_access_max_loaders
+    free_access_enabled, free_access_duration, free_access_max_loaders,
+    emergency_safe_mode, emergency_safe_msg, broadcast_notice,
+    telegram_bot_token, telegram_chat_id, telegram_alerts_enabled
   } = req.body;
   await sql`
     UPDATE panel_settings 
     SET app_name = ${app_name},
         version = ${version},
-        maintenance = ${maintenance},
+        maintenance = ${Boolean(maintenance)},
         maintenance_msg = ${maintenance_msg},
         plugin_url = ${plugin_url},
         free_access_enabled = ${Boolean(free_access_enabled)},
         free_access_duration = ${parseInt(free_access_duration) || 3},
         free_access_max_loaders = ${parseInt(free_access_max_loaders) || 1},
+        emergency_safe_mode = ${Boolean(emergency_safe_mode)},
+        emergency_safe_msg = ${emergency_safe_msg || 'Service temporarily paused for game security update. Please do not play now.'},
+        broadcast_notice = ${broadcast_notice || ''},
+        telegram_bot_token = ${telegram_bot_token || ''},
+        telegram_chat_id = ${telegram_chat_id || ''},
+        telegram_alerts_enabled = ${Boolean(telegram_alerts_enabled)},
         updated_at = CURRENT_TIMESTAMP
     WHERE id = 1
   `;
@@ -645,6 +726,103 @@ app.post('/api/admin/toggle-free-access', checkAdminAuth, async (req, res) => {
     const newStatus = !settings?.free_access_enabled;
     await sql`UPDATE panel_settings SET free_access_enabled = ${newStatus} WHERE id = 1`;
     res.json({ success: true, enabled: newStatus });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 1-Click Fast Toggle for Emergency Safe Mode (Game Anti-Cheat Kill Switch)
+app.post('/api/admin/toggle-safe-mode', checkAdminAuth, async (req, res) => {
+  try {
+    const settings = (await sql`SELECT emergency_safe_mode, emergency_safe_msg FROM panel_settings LIMIT 1`)[0];
+    const newStatus = !settings?.emergency_safe_mode;
+    const msg = req.body.message || settings?.emergency_safe_msg || 'Service temporarily paused for game security update. Please do not play now.';
+    await sql`UPDATE panel_settings SET emergency_safe_mode = ${newStatus}, emergency_safe_msg = ${msg} WHERE id = 1`;
+    res.json({ success: true, emergency_safe_mode: newStatus });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Broadcast Remote Notice (increments notice_id to notify all loaders)
+app.post('/api/admin/broadcast-notice', checkAdminAuth, async (req, res) => {
+  try {
+    const { notice = '' } = req.body;
+    await sql`
+      UPDATE panel_settings 
+      SET broadcast_notice = ${notice.trim()},
+          broadcast_notice_id = broadcast_notice_id + 1
+      WHERE id = 1
+    `;
+    const updated = (await sql`SELECT broadcast_notice, broadcast_notice_id FROM panel_settings LIMIT 1`)[0];
+    res.json({ success: true, notice: updated.broadcast_notice, notice_id: updated.broadcast_notice_id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Global HWID Blacklist Endpoints
+app.get('/api/admin/blacklist', checkAdminAuth, async (req, res) => {
+  try {
+    const list = await sql`SELECT * FROM hwid_blacklist ORDER BY id DESC LIMIT 200`;
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/blacklist/add', checkAdminAuth, async (req, res) => {
+  try {
+    const { device_id, reason = 'Unauthorized activity or leak attempt' } = req.body;
+    if (!device_id || !device_id.trim()) {
+      return res.status(400).json({ error: 'Device Hardware ID (HWID) is required' });
+    }
+    await sql`
+      INSERT INTO hwid_blacklist (device_id, reason)
+      VALUES (${device_id.trim()}, ${reason.trim()})
+      ON CONFLICT (device_id) DO UPDATE SET reason = ${reason.trim()}
+    `;
+    res.json({ success: true, message: 'Device HWID blacklisted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/admin/blacklist/:id', checkAdminAuth, async (req, res) => {
+  try {
+    await sql`DELETE FROM hwid_blacklist WHERE id = ${req.params.id}`;
+    res.json({ success: true, message: 'Device HWID removed from blacklist' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Telegram Notification Test
+app.post('/api/admin/telegram-test', checkAdminAuth, async (req, res) => {
+  try {
+    const settings = (await sql`SELECT telegram_bot_token, telegram_chat_id FROM panel_settings LIMIT 1`)[0];
+    if (!settings?.telegram_bot_token || !settings?.telegram_chat_id) {
+      return res.status(400).json({ error: 'Please enter and save both Telegram Bot Token and Chat ID first.' });
+    }
+    const token = settings.telegram_bot_token.trim();
+    const chat_id = settings.telegram_chat_id.trim();
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chat_id,
+        text: '🟢 <b>Featurestic Box System Alert Test</b>\n\nTelegram webhook notifications are connected and working seamlessly!',
+        parse_mode: 'HTML'
+      }),
+      signal: AbortSignal.timeout(5000)
+    });
+    const result = await resp.json();
+    if (result.ok) {
+      res.json({ success: true, message: 'Test message sent successfully to Telegram!' });
+    } else {
+      res.status(400).json({ error: result.description || 'Failed to send message via Telegram' });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
