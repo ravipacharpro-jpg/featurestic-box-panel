@@ -975,21 +975,15 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
       <p id="login-subtext">Commercial Licensing & Analytics Portal</p>
 
       <!-- Free Beta Live Notification Banner -->
-      <div class="free-beta-banner" id="login-beta-banner">
+      <div class="free-beta-banner" id="login-beta-banner" style="display:none">
         <div class="tag-live">
           <span class="status-dot"></span>
           Public Testing Beta is Live
         </div>
-        <div class="tag-sub">Free SDK access is currently enabled by the owner. You can register your own trial key instantly!</div>
+        <div class="tag-sub">Free SDK access is currently enabled. No registration required — claim or paste your Beta Key below!</div>
       </div>
 
-      <!-- Auth Tabs (Shown if Free Beta is active) -->
-      <div class="auth-tabs" id="auth-tabs" style="display:none">
-        <button class="auth-tab active" id="tab-btn-login" onclick="switchAuthTab('login')">Log In</button>
-        <button class="auth-tab" id="tab-btn-register" onclick="switchAuthTab('register')">Claim Free Beta Key</button>
-      </div>
-      
-      <!-- Tab 1: Login Form -->
+      <!-- Official Account Login Form -->
       <div id="auth-form-login">
         <div class="field-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1008,34 +1002,34 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
         <button class="btn-neon" onclick="doLogin()">Unlock Portal</button>
       </div>
 
-      <!-- Tab 2: Free Beta Registration Form -->
-      <div id="auth-form-register" style="display:none">
-        <div class="field-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-          </svg>
-          <input type="text" id="reg-user" placeholder="Desired Username" onkeydown="if(event.key==='Enter')doRegisterFree()">
+      <!-- Beta Developer Key Direct Login (Shown Only When Free Beta is Active) -->
+      <div id="login-beta-key-section" style="display:none;margin-top:20px;padding-top:16px;border-top:1px dashed rgba(0,255,136,0.22)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--neon);letter-spacing:0.5px">
+            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--neon);box-shadow:0 0 8px var(--neon)"></span>
+            FREE BETA DEVELOPER ACCESS
+          </div>
+          <span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(0,255,136,0.1);color:var(--neon);border:1px solid rgba(0,255,136,0.3)">SDK KEY LOGIN</span>
         </div>
+        <p style="font-size:11px;color:var(--t4);margin-bottom:12px;line-height:1.4">
+          Beta testers don't need a username/password. Enter your Beta Key to open your developer dashboard directly.
+        </p>
 
         <div class="field-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
           </svg>
-          <input type="password" id="reg-pass" placeholder="Set Account Password" onkeydown="if(event.key==='Enter')doRegisterFree()">
+          <input type="text" id="login-beta-key" placeholder="Paste Beta Key (FB-BETA-XXXX)" onkeydown="if(event.key==='Enter')doBetaKeyLogin()">
         </div>
 
-        <div class="field-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-          <select id="reg-duration">
-            <option value="1">1 Day Free Testing</option>
-            <option value="3" selected>3 Days Free Testing</option>
-            <option value="7">7 Days Free Testing</option>
-          </select>
-        </div>
+        <button class="btn-neon" id="btn-login-beta" onclick="doBetaKeyLogin()" style="width:100%;background:rgba(0,255,136,0.12);border-color:var(--neon);color:var(--neon)">
+          ⚡ Enter Developer Dashboard
+        </button>
 
-        <button class="btn-neon" onclick="doRegisterFree()">Create Account & Claim Free Key</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:11px">
+          <span style="color:var(--t4)">Don't have a Beta Key?</span>
+          <a href="#beta" onclick="showBetaPortal()" style="color:var(--neon);text-decoration:none;font-weight:600">⚡ Claim Free Beta Key →</a>
+        </div>
       </div>
 
       <div class="login-err" id="login-err"></div>
@@ -1444,6 +1438,10 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
             <label class="f-label">Global In-App Auto-Update APK Download URL</label>
             <input type="text" id="s-update-apk" class="f-input" placeholder="https://github.com/.../Loader.apk">
           </div>
+          <div class="f-group">
+            <label class="f-label">Latest SDK .aar Download URL (GitHub Actions Release)</label>
+            <input type="text" id="s-sdk-aar" class="f-input" placeholder="https://github.com/ravipacharpro-jpg/Fbox/releases/latest/download/featurestic-box.aar">
+          </div>
           <div class="form-row">
             <div class="f-group">
               <label class="f-label">Latest Version</label>
@@ -1686,12 +1684,13 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
         <div style="font-size:3rem;margin-bottom:12px">🚀</div>
         <div class="card-title" style="font-size:1.6rem;color:var(--neon)">Featurestic Box • Free Public Beta</div>
         <div class="card-sub" style="font-size:0.88rem;margin:8px 0 20px;line-height:1.5">
-          Experience next-generation loader bypass with unlimited package builds and full features unlocked.
+          Experience next-generation loader bypass with unlimited package builds, SDK library (.aar), and full developer features unlocked.
         </div>
 
         <div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.25);border-radius:var(--r-lg);padding:18px;margin-bottom:24px;text-align:left;line-height:1.7;font-size:0.82rem">
           <div>✨ <strong>Unlimited Loaders Quota:</strong> Test any Android package without restrictions.</div>
           <div>🛡️ <strong>Live Anti-Cheat Bypass:</strong> Full 120Hz synthetic engine and native hooks active.</div>
+          <div>📱 <strong>Device Bound Persistent Key:</strong> Your browser device always receives the same Beta Key.</div>
           <div>⚠️ <strong style="color:var(--orange)">Beta Watermark:</strong> Free test keys render on-screen watermark: <code>FEATURESTIC BOX • FREE BETA VERSION</code>.</div>
         </div>
 
@@ -1702,15 +1701,28 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
         </div>
 
         <div id="beta-result-box" style="display:none;margin-top:24px;text-align:left">
-          <div style="font-size:0.75rem;font-weight:700;color:var(--neon);margin-bottom:6px">🎉 Your Beta License Key:</div>
-          <div style="display:flex;gap:10px;align-items:center;background:var(--bg3);border:1px solid var(--neon);border-radius:var(--r-md);padding:12px 16px;margin-bottom:14px">
-            <span id="beta-key-display" style="font-family:var(--font-mono);font-size:1.15rem;font-weight:800;color:#00ff88;letter-spacing:0.04em"></span>
-            <button class="btn btn-primary-neon" style="margin-left:auto;font-size:0.75rem" onclick="copyPlain(document.getElementById('beta-key-display').textContent)">📋 Copy</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div style="font-size:0.82rem;font-weight:700;color:var(--neon)">🎉 Your Dedicated Beta License Key (Device Bound):</div>
+            <span id="beta-existing-badge" style="display:none;font-size:10px;padding:3px 8px;border-radius:12px;background:rgba(0,255,136,0.15);color:var(--neon);border:1px solid var(--neon)">● Active Device Key</span>
           </div>
-          <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
-            <a id="beta-apk-btn" href="https://github.com/ravipacharpro-jpg/Fbox/releases/download/Floader/FeaturesticLoader-v1.0.1.apk" target="_blank" class="btn btn-ghost" style="text-decoration:none">
-              📥 Download Loader APK (v1.0.1)
+
+          <div style="display:flex;gap:10px;align-items:center;background:var(--bg3);border:1px solid var(--neon);border-radius:var(--r-md);padding:12px 16px;margin-bottom:16px">
+            <span id="beta-key-display" style="font-family:var(--font-mono);font-size:1.15rem;font-weight:800;color:#00ff88;letter-spacing:0.04em"></span>
+            <button class="btn btn-primary-neon" style="margin-left:auto;font-size:0.75rem" onclick="copyPlain(document.getElementById('beta-key-display').textContent)">📋 Copy Key</button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <button class="btn btn-primary-neon" id="btn-beta-open-portal" style="padding:12px;font-size:0.88rem;display:flex;align-items:center;justify-content:center;gap:6px" onclick="openPortalWithBetaKey()">
+              🚀 Open Developer Portal (1-Click)
+            </button>
+            <a id="beta-aar-btn" href="https://github.com/ravipacharpro-jpg/Fbox/releases/latest/download/featurestic-box.aar" target="_blank" class="btn btn-ghost" style="padding:12px;font-size:0.88rem;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;border-color:var(--neon);color:var(--neon);background:rgba(0,255,136,0.06)">
+              📦 Download Latest SDK (.aar)
             </a>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--t3);padding:10px 14px;background:var(--bg2);border-radius:var(--r-sm)">
+            <span>💡 Integrate <code>.aar</code> into Android Studio libs/ directory for live loader testing.</span>
+            <a id="beta-apk-btn" href="https://github.com/ravipacharpro-jpg/Fbox/releases/download/Floader/FeaturesticLoader-v1.0.1.apk" target="_blank" style="color:var(--t3);text-decoration:underline">Download Loader APK</a>
           </div>
         </div>
 
@@ -2320,19 +2332,66 @@ if (_token) {
   document.getElementById('app').style.display = 'none';
 }
 
-/* ─── Public Free Beta Status & Tabs ─── */
+/* ─── Browser Persistent Device Fingerprint ─── */
+function getBrowserDeviceId() {
+  let devId = localStorage.getItem('fb_browser_device_id');
+  if (devId && devId.length >= 8) return devId;
+
+  const match = document.cookie.match(/(^|;)\s*fb_dev_id=([^;]+)/);
+  if (match && match[2]) {
+    devId = decodeURIComponent(match[2]);
+    localStorage.setItem('fb_browser_device_id', devId);
+    return devId;
+  }
+
+  try {
+    const nav = window.navigator || {};
+    const scr = window.screen || {};
+    const raw = [
+      nav.userAgent || '',
+      nav.language || '',
+      scr.width + 'x' + scr.height,
+      scr.colorDepth || '',
+      new Date().getTimezoneOffset(),
+      nav.hardwareConcurrency || '',
+      nav.platform || ''
+    ].join('###');
+
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0; i < raw.length; i++) {
+      const ch = raw.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    const hash = (h2 >>> 0).toString(16).padStart(8, '0') + (h1 >>> 0).toString(16).padStart(8, '0');
+    devId = 'DEV-' + hash.toUpperCase().slice(0, 8);
+  } catch(e) {
+    devId = 'DEV-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+  }
+
+  localStorage.setItem('fb_browser_device_id', devId);
+  document.cookie = `fb_dev_id=${encodeURIComponent(devId)}; path=/; max-age=157680000; SameSite=Lax`;
+  return devId;
+}
+
+let _currentBetaKey = '';
+let _currentBetaToken = '';
+
+/* ─── Public Free Beta Status & Device Key Auto-Detection ─── */
 async function checkFreeBetaStatus() {
   try {
-    const res = await fetch('/api/public/free-access');
+    const res = await fetch('/api/public/beta-info');
     const data = await res.json();
     _freeBetaEnabled = Boolean(data && data.enabled);
 
     const banner = document.getElementById('login-beta-banner');
-    const tabs = document.getElementById('auth-tabs');
+    const betaLoginSection = document.getElementById('login-beta-key-section');
     const topBtn = document.getElementById('btn-toggle-free-beta');
 
     if (banner) banner.style.display = _freeBetaEnabled ? 'block' : 'none';
-    if (tabs) tabs.style.display = _freeBetaEnabled ? 'flex' : 'none';
+    if (betaLoginSection) betaLoginSection.style.display = _freeBetaEnabled ? 'block' : 'none';
 
     if (topBtn) {
       topBtn.className = _freeBetaEnabled ? 'btn btn-beta-active' : 'btn btn-ghost';
@@ -2344,17 +2403,35 @@ async function checkFreeBetaStatus() {
     if (togFree) {
       _freeBetaEnabled ? togFree.classList.add('on') : togFree.classList.remove('on');
     }
+
+    // Auto-detect persistent beta key for this browser device
+    if (_freeBetaEnabled) {
+      const devId = getBrowserDeviceId();
+      fetch('/api/public/my-beta-key?device_id=' + encodeURIComponent(devId))
+        .then(r => r.json())
+        .then(info => {
+          if (info && info.found && info.key) {
+            _currentBetaKey = info.key;
+            _currentBetaToken = info.token;
+
+            const input = document.getElementById('login-beta-key');
+            if (input && !input.value) input.value = info.key;
+
+            const resBox = document.getElementById('beta-result-box');
+            const claimBox = document.getElementById('beta-claim-box');
+            if (resBox && claimBox) {
+              document.getElementById('beta-key-display').textContent = info.key;
+              claimBox.style.display = 'none';
+              resBox.style.display = 'block';
+              const badge = document.getElementById('beta-existing-badge');
+              if (badge) badge.style.display = 'inline-block';
+            }
+          }
+        }).catch(() => {});
+    }
   } catch(e) {
     console.error('Failed to check free beta status', e);
   }
-}
-
-function switchAuthTab(tab) {
-  document.getElementById('tab-btn-login').classList.toggle('active', tab === 'login');
-  document.getElementById('tab-btn-register').classList.toggle('active', tab === 'register');
-  document.getElementById('auth-form-login').style.display = tab === 'login' ? 'block' : 'none';
-  document.getElementById('auth-form-register').style.display = tab === 'register' ? 'block' : 'none';
-  document.getElementById('login-err').textContent = '';
 }
 
 /* ─── Authentication ─── */
@@ -2389,36 +2466,50 @@ async function doLogin() {
   }
 }
 
-async function doRegisterFree() {
-  const user = document.getElementById('reg-user').value.trim();
-  const pass = document.getElementById('reg-pass').value.trim();
-  const trial_days = document.getElementById('reg-duration').value;
+/* ─── Direct Beta Developer Key Login (Beta Only) ─── */
+async function doBetaKeyLogin(keyOverride = null) {
+  const keyInput = document.getElementById('login-beta-key');
+  const key = (keyOverride || (keyInput ? keyInput.value : '')).trim();
   const err = document.getElementById('login-err');
 
-  if (!user || !pass) {
-    err.textContent = 'Please fill username and password';
+  if (!key) {
+    if (err) err.textContent = 'Please enter your Beta Key (FB-BETA-XXXX)';
+    toast('Please enter your Beta Key', 'error');
     return;
   }
-  err.textContent = '';
+  if (!key.startsWith('FB-BETA-')) {
+    if (err) err.textContent = 'Direct key login is exclusively for Beta Keys (FB-BETA-...). Official accounts must log in with username/password.';
+    toast('Direct key login is only for Beta keys', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-login-beta') || document.getElementById('btn-beta-open-portal');
+  if (btn) { btn.disabled = true; btn.dataset.origText = btn.textContent; btn.textContent = 'Verifying Key…'; }
+  if (err) err.textContent = '';
 
   try {
-    const r = await api('/api/public/register-free-tester', 'POST', { username: user, password: pass, trial_days }, true);
-    if (r && r.success) {
-      _token = r.token;
+    const res = await api('/api/auth/login-with-beta-key', 'POST', { key }, true);
+    if (res && res.success) {
+      _token = res.token;
       _role = 'client';
-      _username = r.username;
+      _username = res.username || res.user_key;
 
       localStorage.setItem('fb_token', _token);
       localStorage.setItem('fb_role', _role);
       localStorage.setItem('fb_username', _username);
 
-      toast('Free tester account created! Welcome.');
+      toast('Beta Developer Dashboard unlocked!');
       bootApp();
     } else {
-      err.textContent = (r && r.message) ? r.message : 'Registration failed';
+      const msg = res?.message || 'Invalid or expired Beta key.';
+      if (err) err.textContent = msg;
+      toast(msg, 'error');
     }
-  } catch(e) {
-    err.textContent = 'Registration failed: ' + e.message;
+  } catch (e) {
+    if (err) err.textContent = 'Connection error: ' + e.message;
+    toast('Connection error', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = btn.dataset.origText || '⚡ Enter Developer Dashboard'; }
   }
 }
 
@@ -3235,26 +3326,51 @@ async function claimBetaKey() {
   const btn = document.querySelector('#beta-claim-box button');
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Generating Beta Key…';
+    btn.textContent = 'Binding Device & Generating Key…';
   }
 
-  const r = await api('/api/public/claim-beta-key', 'POST', {}, true);
+  const device_id = getBrowserDeviceId();
+  const r = await api('/api/public/claim-beta-key', 'POST', { device_id }, true);
   if (btn) {
     btn.disabled = false;
     btn.textContent = '⚡ Claim Instant Free Beta Key';
   }
 
   if (r && r.success) {
+    _currentBetaKey = r.key;
+    _currentBetaToken = r.token;
+
     document.getElementById('beta-claim-box').style.display = 'none';
     document.getElementById('beta-result-box').style.display = 'block';
     document.getElementById('beta-key-display').textContent = r.key;
-    if (r.apk_url) {
+
+    const badge = document.getElementById('beta-existing-badge');
+    if (badge) badge.style.display = r.is_existing ? 'inline-block' : 'none';
+
+    if (r.aar_url && document.getElementById('beta-aar-btn')) {
+      document.getElementById('beta-aar-btn').href = r.aar_url;
+    }
+    if (r.apk_url && document.getElementById('beta-apk-btn')) {
       document.getElementById('beta-apk-btn').href = r.apk_url;
     }
-    toast(`Beta Key Claimed: ${r.key}`);
+
+    const loginInput = document.getElementById('login-beta-key');
+    if (loginInput) loginInput.value = r.key;
+
+    toast(r.is_existing ? 'Retrieved your persistent Beta Key!' : `Beta Key Claimed: ${r.key}`);
   } else {
     toast((r && r.message) ? r.message : 'Beta registration is currently closed', 'error');
     document.getElementById('beta-closed-alert').style.display = 'block';
+  }
+}
+
+function openPortalWithBetaKey() {
+  if (_currentBetaKey) {
+    doBetaKeyLogin(_currentBetaKey);
+  } else {
+    const k = document.getElementById('beta-key-display')?.textContent.trim();
+    if (k) doBetaKeyLogin(k);
+    else toast('No Beta Key found to open portal', 'error');
   }
 }
 
@@ -3356,6 +3472,7 @@ async function loadSettings() {
   if (document.getElementById('s-update-apk')) document.getElementById('s-update-apk').value = s.update_apk_url || '';
   if (document.getElementById('s-update-ver')) document.getElementById('s-update-ver').value = s.update_version || '1.0.1';
   if (document.getElementById('s-update-msg')) document.getElementById('s-update-msg').value = s.update_changelog || '';
+  if (document.getElementById('s-sdk-aar')) document.getElementById('s-sdk-aar').value = s.sdk_aar_url || 'https://github.com/ravipacharpro-jpg/Fbox/releases/latest/download/featurestic-box.aar';
 
   const togMaint = document.getElementById('s-maintenance');
   s.maintenance ? togMaint.classList.add('on') : togMaint.classList.remove('on');
@@ -3404,6 +3521,7 @@ async function saveSettings() {
     update_apk_url: document.getElementById('s-update-apk')?.value || '',
     update_version: document.getElementById('s-update-ver')?.value || '1.0.1',
     update_changelog: document.getElementById('s-update-msg')?.value || '',
+    sdk_aar_url: document.getElementById('s-sdk-aar')?.value || '',
     maintenance: togMaint.classList.contains('on'),
     maintenance_msg: document.getElementById('s-msg').value,
     free_access_enabled: togFree.classList.contains('on'),

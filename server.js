@@ -67,6 +67,71 @@ async function logSystem(action, message, level = 'info', details = {}, req = nu
 }
 
 // -------------------------------------------------------------
+// Active SQL Injection & Payload Inspection Firewall (WAF)
+// -------------------------------------------------------------
+const SQLI_PATTERNS = [
+  /(\b(SELECT|UNION|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE)\b.+?\b(FROM|INTO|TABLE|DATABASE|WHERE)\b)/i,
+  /(\bUNION\s+(ALL\s+)?SELECT\b)/i,
+  /('|\b)\s*OR\s+['"]?1['"]?\s*=\s*['"]?1/i,
+  /('|\b)\s*AND\s+['"]?1['"]?\s*=\s*['"]?1/i,
+  /('|\b)\s*OR\s+[0-9]+\s*=\s*[0-9]+/i,
+  /('|"|;)\s*--/i,
+  /\/\*[\s\S]*?\*\//,
+  /(\bEXEC(\s+|\+)+(SP_|XP_))/i,
+  /(\bPG_SLEEP\s*\(|\bWAITFOR\s+DELAY\b|\bBENCHMARK\s*\()/i,
+  /(\bINFORMATION_SCHEMA\b|\bPG_CATALOG\b|\bPG_TABLES\b)/i,
+  /(\bLOAD_FILE\s*\(|\bINTO\s+(OUT|DUMP)FILE\b)/i
+];
+
+function checkSqlInjection(val, path = '') {
+  if (val === null || val === undefined) return null;
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (trimmed.length < 3) return null;
+    if (/^https?:\/\/[^\s]+$/i.test(trimmed)) return null;
+    if (/^\d{4}-\d{2}-\d{2}T/i.test(trimmed)) return null;
+
+    for (const pat of SQLI_PATTERNS) {
+      if (pat.test(trimmed)) {
+        return { pattern: pat.toString(), value: trimmed.slice(0, 100), path };
+      }
+    }
+    return null;
+  }
+  if (typeof val === 'object') {
+    for (const k of Object.keys(val)) {
+      if (k === 'stacktrace' || k === 'changelog' || k === 'details' || k === 'config') continue;
+      const found = checkSqlInjection(val[k], path ? `${path}.${k}` : k);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+app.use((req, res, next) => {
+  const violation = checkSqlInjection(req.query, 'query') || checkSqlInjection(req.body, 'body') || checkSqlInjection(req.params, 'params');
+  if (violation) {
+    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '';
+    const alertMsg = `🚨 <b>SQL Injection Blocked</b>\n` +
+      `<b>IP:</b> <code>${String(ip).slice(0, 64)}</code>\n` +
+      `<b>URL:</b> <code>${req.method} ${req.originalUrl}</code>\n` +
+      `<b>Field:</b> <code>${violation.path}</code>\n` +
+      `<b>Payload:</b> <code>${violation.value}</code>`;
+
+    console.warn('[SECURITY WAF] SQL Injection blocked from', ip, violation);
+    logSystem('SQLI_BLOCKED', `SQL Injection blocked on ${req.originalUrl} (${violation.path})`, 'warning', violation, req);
+    sendTelegramAlert(alertMsg);
+
+    return res.status(403).json({
+      success: false,
+      error: 'SECURITY_VIOLATION',
+      message: 'Suspicious payload detected. Request blocked by Security Firewall.'
+    });
+  }
+  next();
+});
+
+// -------------------------------------------------------------
 // 1. Loader & SDK Connect API (/connect & /api/public/connect)
 // -------------------------------------------------------------
 async function handleConnect(req, res) {
@@ -513,6 +578,40 @@ async function checkClientAuth(req, res, next) {
     return next();
   }
 
+  // Direct Beta Key Token Support
+  if (token.startsWith('KEY_')) {
+    const lastUnderscore = token.lastIndexOf('_');
+    const user_key = token.slice(4, lastUnderscore);
+
+    if (!user_key.startsWith('FB-BETA-')) {
+      return res.status(403).json({ error: 'Direct key login is exclusively available for Free Beta keys.' });
+    }
+
+    const settings = (await sql`SELECT free_access_enabled FROM panel_settings LIMIT 1`)[0];
+    if (!settings || !settings.free_access_enabled) {
+      return res.status(403).json({ error: 'Free Beta testing has ended. Access revoked.' });
+    }
+
+    const keyRow = (await sql`SELECT * FROM license_keys WHERE user_key = ${user_key} LIMIT 1`)[0];
+    if (!keyRow || keyRow.status === 'banned') {
+      return res.status(403).json({ error: 'Beta license key is invalid or has been revoked.' });
+    }
+
+    if (keyRow.expires_at && new Date(keyRow.expires_at) < new Date()) {
+      return res.status(403).json({ error: 'Beta license key has expired.' });
+    }
+
+    const clientRow = (await sql`SELECT * FROM client_accounts WHERE user_key = ${user_key} LIMIT 1`)[0];
+    req.client = clientRow || {
+      id: keyRow.id,
+      username: keyRow.client_username || `Beta_${user_key.slice(-6)}`,
+      user_key: user_key,
+      is_beta: true
+    };
+    req.isBeta = true;
+    return next();
+  }
+
   if (!token.startsWith('CLT_')) {
     return res.status(403).json({ error: 'Invalid client token' });
   }
@@ -560,6 +659,78 @@ app.post('/api/auth/login', async (req, res) => {
   }
 
   return res.status(401).json({ success: false, message: 'Invalid credentials' });
+});
+
+// Direct Developer Portal Login via Beta Key (Exclusively for Beta Mode)
+app.post('/api/auth/login-with-beta-key', async (req, res) => {
+  try {
+    const user_key = (req.body.key || req.body.user_key || '').trim();
+    if (!user_key) {
+      return res.status(400).json({ success: false, message: 'Please enter your Beta key' });
+    }
+
+    // Strict rule: ONLY beta keys allowed for direct key login
+    if (!user_key.startsWith('FB-BETA-')) {
+      return res.status(403).json({
+        success: false,
+        message: 'Direct key login is exclusively available for Free Beta testers. Official client accounts must log in with Username and Password.'
+      });
+    }
+
+    // Check if Free Beta mode is active
+    const settings = (await sql`SELECT free_access_enabled FROM panel_settings LIMIT 1`)[0];
+    if (!settings || !settings.free_access_enabled) {
+      return res.status(403).json({
+        success: false,
+        message: 'Free Beta testing mode is currently closed by the administrator.'
+      });
+    }
+
+    const keyRow = (await sql`SELECT * FROM license_keys WHERE user_key = ${user_key} LIMIT 1`)[0];
+    if (!keyRow) {
+      return res.status(404).json({ success: false, message: 'Beta license key not found.' });
+    }
+
+    if (keyRow.status === 'banned') {
+      return res.status(403).json({ success: false, message: 'This Beta key has been revoked.' });
+    }
+
+    if (keyRow.expires_at && new Date(keyRow.expires_at) < new Date()) {
+      return res.status(403).json({ success: false, message: 'This Beta key has expired.' });
+    }
+
+    // Ensure associated client_account exists
+    let clientAccount = (await sql`SELECT * FROM client_accounts WHERE user_key = ${user_key} LIMIT 1`)[0];
+    if (!clientAccount) {
+      const u = `BetaDev_${user_key.slice(-6)}`;
+      try {
+        clientAccount = (await sql`
+          INSERT INTO client_accounts (username, password, user_key, note)
+          VALUES (${u}, ${'beta_' + user_key}, ${user_key}, 'Free Beta Developer')
+          ON CONFLICT (username) DO UPDATE SET user_key = ${user_key}
+          RETURNING *
+        `)[0];
+      } catch (e) {
+        clientAccount = (await sql`SELECT * FROM client_accounts WHERE user_key = ${user_key} LIMIT 1`)[0];
+      }
+    }
+
+    const token = `KEY_${user_key}_${clientAccount ? clientAccount.id : keyRow.id}`;
+    await logSystem('BETA_PORTAL_LOGIN', `Beta developer logged into portal with key ${user_key}`, 'info', {}, req, user_key, clientAccount?.username);
+
+    return res.json({
+      success: true,
+      role: 'client',
+      token,
+      username: clientAccount?.username || user_key,
+      user_key,
+      is_beta: true,
+      max_loaders: 0
+    });
+  } catch (err) {
+    console.error('[login-with-beta-key Error]', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 // Backward compatibility admin login
@@ -1015,7 +1186,8 @@ app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
     free_access_enabled, free_access_duration, free_access_max_loaders,
     emergency_safe_mode, emergency_safe_msg, broadcast_notice,
     telegram_bot_token, telegram_chat_id, telegram_alerts_enabled,
-    so_sha256 = '', update_apk_url = '', update_version = '1.0.1', update_changelog = ''
+    so_sha256 = '', update_apk_url = '', update_version = '1.0.1', update_changelog = '',
+    sdk_aar_url = 'https://github.com/ravipacharpro-jpg/Fbox/releases/latest/download/featurestic-box.aar'
   } = req.body;
   await sql`
     UPDATE panel_settings 
@@ -1028,6 +1200,7 @@ app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
         update_apk_url = ${update_apk_url.trim()},
         update_version = ${update_version.trim()},
         update_changelog = ${update_changelog.trim()},
+        sdk_aar_url = ${sdk_aar_url.trim()},
         free_access_enabled = ${Boolean(free_access_enabled)},
         free_access_duration = ${parseInt(free_access_duration) || 3},
         free_access_max_loaders = ${parseInt(free_access_max_loaders) || 1},
@@ -1529,16 +1702,117 @@ app.post('/api/admin/clients/:id/packages', checkAdminAuth, async (req, res) => 
 });
 
 // =============================================================
-// PUBLIC FREE BETA SYSTEM (Dedicated URL & 1-Click Key Claim)
+// SECURE DOWNLOAD PROXIES (Protects GitHub Repo & Masks Source Code)
+// =============================================================
+app.get('/api/public/download/sdk-aar', async (req, res) => {
+  try {
+    const settings = (await sql`SELECT free_access_enabled, sdk_aar_url FROM panel_settings LIMIT 1`)[0];
+    if (!settings || !settings.free_access_enabled) {
+      return res.status(403).send('Free Beta access is currently closed.');
+    }
+
+    const targetUrl = settings.sdk_aar_url || 'https://github.com/ravipacharpro-jpg/Fbox/releases/latest/download/featurestic-box.aar';
+    const upstreamRes = await fetch(targetUrl, {
+      headers: { 'User-Agent': 'FeaturesticBox-Panel/1.0' },
+      redirect: 'follow'
+    });
+
+    if (!upstreamRes.ok) {
+      return res.status(502).send('SDK library currently unavailable. Please check back shortly.');
+    }
+
+    res.setHeader('Content-Disposition', 'attachment; filename="FeaturesticBox-SDK.aar"');
+    res.setHeader('Content-Type', 'application/octet-stream');
+    const cl = upstreamRes.headers.get('content-length');
+    if (cl) res.setHeader('Content-Length', cl);
+
+    const { Readable } = await import('stream');
+    Readable.fromWeb(upstreamRes.body).pipe(res);
+  } catch (err) {
+    console.error('[SDK AAR Proxy Error]', err);
+    res.status(500).send('Download error occurred');
+  }
+});
+
+app.get('/api/public/download/loader-apk', async (req, res) => {
+  try {
+    const settings = (await sql`SELECT update_apk_url FROM panel_settings LIMIT 1`)[0];
+    const targetUrl = settings?.update_apk_url || 'https://github.com/ravipacharpro-jpg/Fbox/releases/download/Floader/FeaturesticLoader-v1.0.1.apk';
+    const upstreamRes = await fetch(targetUrl, {
+      headers: { 'User-Agent': 'FeaturesticBox-Panel/1.0' },
+      redirect: 'follow'
+    });
+
+    if (!upstreamRes.ok) {
+      return res.status(502).send('Loader APK currently unavailable.');
+    }
+
+    res.setHeader('Content-Disposition', 'attachment; filename="FeaturesticLoader.apk"');
+    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+    const cl = upstreamRes.headers.get('content-length');
+    if (cl) res.setHeader('Content-Length', cl);
+
+    const { Readable } = await import('stream');
+    Readable.fromWeb(upstreamRes.body).pipe(res);
+  } catch (err) {
+    console.error('[APK Proxy Error]', err);
+    res.status(500).send('Download error occurred');
+  }
+});
+
+// =============================================================
+// PUBLIC FREE BETA SYSTEM (Dedicated URL, Device ID Binding & SDK .aar)
 // =============================================================
 app.get('/api/public/beta-info', async (req, res) => {
   try {
-    const settings = (await sql`SELECT free_access_enabled, free_access_duration, update_apk_url, update_version FROM panel_settings LIMIT 1`)[0];
+    const settings = (await sql`SELECT free_access_enabled, free_access_duration, update_version FROM panel_settings LIMIT 1`)[0];
     res.json({
       enabled: Boolean(settings?.free_access_enabled),
       duration_days: settings?.free_access_duration || 3,
-      apk_url: settings?.update_apk_url || 'https://github.com/ravipacharpro-jpg/Fbox/releases/download/Floader/FeaturesticLoader-v1.0.1.apk',
+      aar_url: '/api/public/download/sdk-aar',
+      apk_url: '/api/public/download/loader-apk',
       version: settings?.update_version || '1.0.1'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Check if browser device already has an active Beta key
+app.get('/api/public/my-beta-key', async (req, res) => {
+  try {
+    const device_id = (req.query.device_id || '').trim();
+    if (!device_id) return res.json({ found: false });
+
+    const settings = (await sql`SELECT free_access_enabled, update_version FROM panel_settings LIMIT 1`)[0];
+    if (!settings || !settings.free_access_enabled) {
+      return res.json({ found: false, beta_closed: true });
+    }
+
+    const keyRow = (await sql`
+      SELECT * FROM license_keys 
+      WHERE device_id = ${device_id} 
+        AND user_key LIKE 'FB-BETA-%' 
+        AND status = 'active'
+        AND (expires_at IS NULL OR expires_at > NOW())
+      ORDER BY id DESC LIMIT 1
+    `)[0];
+
+    if (!keyRow) return res.json({ found: false });
+
+    let clientRow = (await sql`SELECT * FROM client_accounts WHERE user_key = ${keyRow.user_key} LIMIT 1`)[0];
+    const token = `KEY_${keyRow.user_key}_${clientRow ? clientRow.id : keyRow.id}`;
+
+    res.json({
+      found: true,
+      key: keyRow.user_key,
+      token,
+      username: clientRow?.username || keyRow.user_key,
+      duration_days: keyRow.duration_days,
+      expires_at: keyRow.expires_at,
+      aar_url: '/api/public/download/sdk-aar',
+      apk_url: '/api/public/download/loader-apk',
+      version: settings.update_version || '1.0.1'
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1547,7 +1821,7 @@ app.get('/api/public/beta-info', async (req, res) => {
 
 app.post('/api/public/claim-beta-key', async (req, res) => {
   try {
-    const settings = (await sql`SELECT free_access_enabled, free_access_duration, update_apk_url, update_version FROM panel_settings LIMIT 1`)[0];
+    const settings = (await sql`SELECT free_access_enabled, free_access_duration, update_version FROM panel_settings LIMIT 1`)[0];
     if (!settings || !settings.free_access_enabled) {
       return res.status(403).json({
         success: false,
@@ -1555,6 +1829,41 @@ app.post('/api/public/claim-beta-key', async (req, res) => {
       });
     }
 
+    const device_id = (req.body.device_id || '').trim();
+
+    // 1. If device_id provided, return existing active Beta key so device key is always persistent!
+    if (device_id) {
+      const existing = (await sql`
+        SELECT * FROM license_keys 
+        WHERE device_id = ${device_id} 
+          AND user_key LIKE 'FB-BETA-%' 
+          AND status = 'active'
+          AND (expires_at IS NULL OR expires_at > NOW())
+        ORDER BY id DESC LIMIT 1
+      `)[0];
+
+      if (existing) {
+        let clientRow = (await sql`SELECT * FROM client_accounts WHERE user_key = ${existing.user_key} LIMIT 1`)[0];
+        const token = `KEY_${existing.user_key}_${clientRow ? clientRow.id : existing.id}`;
+        return res.json({
+          success: true,
+          is_existing: true,
+          key: existing.user_key,
+          token: token,
+          username: clientRow?.username || existing.user_key,
+          duration_days: existing.duration_days,
+          expires_at: existing.expires_at,
+          max_loaders: 0,
+          is_unlimited: true,
+          aar_url: '/api/public/download/sdk-aar',
+          apk_url: '/api/public/download/loader-apk',
+          version: settings.update_version || '1.0.1',
+          message: 'Retrieved your persistent Beta key for this device.'
+        });
+      }
+    }
+
+    // 2. Otherwise generate brand new Beta key tied permanently to this device
     const duration = settings.free_access_duration || 3;
     const rand = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
     const user_key = `FB-BETA-${rand}`;
@@ -1563,25 +1872,42 @@ app.post('/api/public/claim-beta-key', async (req, res) => {
 
     await sql`
       INSERT INTO license_keys (
-        user_key, duration_days, note, max_loaders, bound_packages, package_configs, account_type,
+        user_key, device_id, duration_days, note, max_loaders, bound_packages, package_configs, account_type,
         status, first_used_at, expires_at
       )
       VALUES (
-        ${user_key}, ${duration}, 'Public Free Beta Key (Unlimited Loaders)', 0, '[]', '[]', 'beta',
+        ${user_key}, ${device_id || null}, ${duration}, 'Public Free Beta Key (Unlimited Loaders)', 0, '[]', '[]', 'beta',
         'active', ${now.toISOString()}, ${exp.toISOString()}
       )
     `;
 
-    await logSystem('BETA_KEY_CLAIMED', `New Beta Key claimed: ${user_key}`, 'info', { duration, expires_at: exp }, req, user_key);
+    const u = `BetaDev_${rand.slice(0, 6)}`;
+    let clientRow;
+    try {
+      clientRow = (await sql`
+        INSERT INTO client_accounts (username, password, user_key, note)
+        VALUES (${u}, ${'beta_' + user_key}, ${user_key}, 'Free Beta Developer')
+        RETURNING id, username
+      `)[0];
+    } catch (e) {
+      clientRow = (await sql`SELECT id, username FROM client_accounts WHERE user_key = ${user_key} LIMIT 1`)[0];
+    }
+
+    const token = `KEY_${user_key}_${clientRow ? clientRow.id : 0}`;
+    await logSystem('BETA_KEY_CLAIMED', `New Beta Key claimed: ${user_key} (device: ${device_id || 'N/A'})`, 'info', { duration, expires_at: exp, device_id }, req, user_key);
 
     res.json({
       success: true,
+      is_existing: false,
       key: user_key,
+      token: token,
+      username: clientRow?.username || u,
       duration_days: duration,
       expires_at: exp.toISOString(),
       max_loaders: 0,
       is_unlimited: true,
-      apk_url: settings.update_apk_url || 'https://github.com/ravipacharpro-jpg/Fbox/releases/download/Floader/FeaturesticLoader-v1.0.1.apk',
+      aar_url: '/api/public/download/sdk-aar',
+      apk_url: '/api/public/download/loader-apk',
       version: settings.update_version || '1.0.1'
     });
   } catch (err) {

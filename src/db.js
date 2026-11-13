@@ -58,6 +58,8 @@ export async function initDb() {
     await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS update_version VARCHAR(32) DEFAULT '1.0.0'`;
     await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS update_changelog TEXT DEFAULT ''`;
     await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS package_configs TEXT DEFAULT '[]'`;
+    await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS device_id VARCHAR(256) DEFAULT NULL`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_license_keys_device_id ON license_keys(device_id)`;
 
     // 3. Client Accounts Table (for Resellers & Buyers)
     await sql`
@@ -150,6 +152,7 @@ export async function initDb() {
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS update_apk_url TEXT DEFAULT ''`;
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS update_version TEXT DEFAULT '1.0.1'`;
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS update_changelog TEXT DEFAULT 'Latest performance updates & bug fixes'`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS sdk_aar_url TEXT DEFAULT 'https://github.com/ravipacharpro-jpg/Fbox/releases/latest/download/featurestic-box.aar'`;
 
     // 12. System Audit & Debug Logs Table (Detect bugs & loader failures)
     await sql`
