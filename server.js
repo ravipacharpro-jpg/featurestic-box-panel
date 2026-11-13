@@ -1780,23 +1780,35 @@ app.get('/api/public/download/sdk-aar', async (req, res) => {
       return res.status(403).send('Free Beta access is currently closed.');
     }
 
-    const targetUrl = settings.sdk_aar_url || 'https://github.com/ravipacharpro-jpg/Fbox/releases/latest/download/featurestic-box.aar';
-    const upstreamRes = await fetch(targetUrl, {
-      headers: { 'User-Agent': 'FeaturesticBox-Panel/1.0' },
-      redirect: 'follow'
-    });
+    const targetUrl = settings.sdk_aar_url;
+    if (targetUrl) {
+      try {
+        const upstreamRes = await fetch(targetUrl, {
+          headers: { 'User-Agent': 'FeaturesticBox-Panel/1.0' },
+          redirect: 'follow'
+        });
+        if (upstreamRes.ok) {
+          res.setHeader('Content-Disposition', 'attachment; filename="FeaturesticBox-SDK.aar"');
+          res.setHeader('Content-Type', 'application/octet-stream');
+          const cl = upstreamRes.headers.get('content-length');
+          if (cl) res.setHeader('Content-Length', cl);
 
-    if (!upstreamRes.ok) {
-      return res.status(502).send('SDK library currently unavailable. Please check back shortly.');
+          const { Readable } = await import('stream');
+          return Readable.fromWeb(upstreamRes.body).pipe(res);
+        }
+      } catch (upstreamErr) {
+        console.warn('[SDK AAR Upstream Warning]', upstreamErr.message);
+      }
     }
 
-    res.setHeader('Content-Disposition', 'attachment; filename="FeaturesticBox-SDK.aar"');
-    res.setHeader('Content-Type', 'application/octet-stream');
-    const cl = upstreamRes.headers.get('content-length');
-    if (cl) res.setHeader('Content-Length', cl);
+    const localAar = path.join(__dirname, 'public', 'downloads', 'FeaturesticBox.aar');
+    if (fs.existsSync(localAar)) {
+      res.setHeader('Content-Disposition', 'attachment; filename="FeaturesticBox-SDK.aar"');
+      res.setHeader('Content-Type', 'application/octet-stream');
+      return res.sendFile(localAar);
+    }
 
-    const { Readable } = await import('stream');
-    Readable.fromWeb(upstreamRes.body).pipe(res);
+    return res.status(502).send('SDK library currently unavailable. Please check back shortly.');
   } catch (err) {
     console.error('[SDK AAR Proxy Error]', err);
     res.status(500).send('Download error occurred');
