@@ -400,17 +400,21 @@ async function handleConnect(req, res) {
     }
 
     // Determine effective APK update URL & version (prioritize package-specific -> key -> settings)
-    const effectiveApkUrl = (activePkgConfig && activePkgConfig.update_apk_url && activePkgConfig.update_apk_url.trim())
-      ? activePkgConfig.update_apk_url.trim()
-      : ((key.update_apk_url && key.update_apk_url.trim()) ? key.update_apk_url.trim() : (settings?.update_apk_url || ''));
+    let effectiveApkUrl = '';
+    let effectiveApkVer = '1.0.1';
+    let effectiveChangelog = settings?.update_changelog || 'Latest performance updates & bug fixes';
 
-    const effectiveApkVer = (activePkgConfig && activePkgConfig.update_version && activePkgConfig.update_version.trim())
-      ? activePkgConfig.update_version.trim()
-      : ((key.update_version && key.update_version.trim()) ? key.update_version.trim() : (settings?.update_version || '1.0.1'));
-
-    const effectiveChangelog = (key.update_changelog && key.update_changelog.trim())
-      ? key.update_changelog.trim()
-      : (settings?.update_changelog || 'Latest performance updates & bug fixes');
+    if (activePkgConfig && activePkgConfig.update_apk_url && activePkgConfig.update_apk_url.trim()) {
+      effectiveApkUrl = activePkgConfig.update_apk_url.trim();
+      effectiveApkVer = (activePkgConfig.update_version && activePkgConfig.update_version.trim()) || '1.0.1';
+    } else if (key.update_apk_url && key.update_apk_url.trim()) {
+      effectiveApkUrl = key.update_apk_url.trim();
+      effectiveApkVer = (key.update_version && key.update_version.trim()) || '1.0.1';
+      if (key.update_changelog && key.update_changelog.trim()) effectiveChangelog = key.update_changelog.trim();
+    } else if (settings?.update_apk_url && settings.update_apk_url.trim()) {
+      effectiveApkUrl = settings.update_apk_url.trim();
+      effectiveApkVer = (settings.update_version && settings.update_version.trim()) || '1.0.1';
+    }
 
     const hasApkUpdate = Boolean(effectiveApkUrl) && isNewerVersion(clientAppVer, effectiveApkVer);
 
