@@ -17,8 +17,6 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
-
 // Security Headers: Clickjacking / Frame Protection & Content Sniffing Guard
 app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
@@ -27,6 +25,8 @@ app.use((req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   next();
 });
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Helper: Non-blocking Telegram Alerts
 async function sendTelegramAlert(text, customBotToken = null, customChatId = null) {
