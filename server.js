@@ -132,14 +132,71 @@ app.use((req, res, next) => {
 });
 
 // -------------------------------------------------------------
+// Rate Limiter & Flood Protection (In-Memory Sliding Window)
+// -------------------------------------------------------------
+const rateLimits = new Map();
+
+function applyRateLimit(req, res, maxPerMin = 40, actionName = 'request') {
+  const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+
+  let record = rateLimits.get(ip);
+  if (!record || now - record.start > windowMs) {
+    record = { start: now, count: 1 };
+    rateLimits.set(ip, record);
+    return true;
+  }
+
+  record.count++;
+  if (record.count > maxPerMin) {
+    if (record.count === maxPerMin + 1) {
+      logSystem('RATE_LIMIT_EXCEEDED', `Rate limit exceeded by ${ip} on ${actionName} (${record.count} req/min)`, 'warning', { ip, action: actionName }, req);
+    }
+    res.status(429).json({
+      status: false,
+      error: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many requests. Please wait a moment before trying again.'
+    });
+    return false;
+  }
+  return true;
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, rec] of rateLimits.entries()) {
+    if (now - rec.start > 120000) rateLimits.delete(ip);
+  }
+}, 60000);
+
+// Helper: Semantic Version Comparison (e.g. "1.0.0" vs "1.0.1")
+function isNewerVersion(currentVer, latestVer) {
+  if (!latestVer) return false;
+  if (!currentVer) return true; // If client didn't supply version, assume update available
+  const p1 = String(currentVer).replace(/^v/i, '').split('.').map(n => parseInt(n) || 0);
+  const p2 = String(latestVer).replace(/^v/i, '').split('.').map(n => parseInt(n) || 0);
+  const len = Math.max(p1.length, p2.length);
+  for (let i = 0; i < len; i++) {
+    const v1 = p1[i] || 0;
+    const v2 = p2[i] || 0;
+    if (v2 > v1) return true;
+    if (v2 < v1) return false;
+  }
+  return false;
+}
+
+// -------------------------------------------------------------
 // 1. Loader & SDK Connect API (/connect & /api/public/connect)
 // -------------------------------------------------------------
 async function handleConnect(req, res) {
   try {
+    if (!applyRateLimit(req, res, 40, 'connect')) return;
     const params = { ...req.query, ...req.body };
     const user_key = (params.user_key || params.userkey || params.license_key || params.key || '').trim();
     const serial = (params.serial || params.uuid || params.device || params.device_id || '').trim();
     const game = (params.game || params.gamename || '').trim();
+    const clientAppVer = (params.app_version || params.version || params.appversion || '').trim();
 
     // 0. Global HWID Blacklist check
     if (serial) {
@@ -355,7 +412,7 @@ async function handleConnect(req, res) {
       ? key.update_changelog.trim()
       : (settings?.update_changelog || 'Latest performance updates & bug fixes');
 
-    const hasApkUpdate = Boolean(effectiveApkUrl);
+    const hasApkUpdate = Boolean(effectiveApkUrl) && isNewerVersion(clientAppVer, effectiveApkVer);
 
     // Determine .so SHA-256 Anti-Tamper Checksum (package-specific -> key -> settings)
     const effectiveSoSha256 = (activePkgConfig && activePkgConfig.so_sha256 && activePkgConfig.so_sha256.trim())
@@ -402,6 +459,12 @@ async function handleConnect(req, res) {
         plugin_url: effectivePluginUrl,
         so_sha256: effectiveSoSha256,
         so_token: `SO_${Buffer.from(user_key).toString('base64')}_${Date.now()}`,
+        so_security: {
+          in_memory_only: Boolean(effectivePluginUrl),
+          anti_dump: true,
+          memfd_load: true,
+          protect_source: 'sdk_panel'
+        },
         config: devConfig,
         watermark: watermark,
         is_beta: isBetaKey,
@@ -438,6 +501,7 @@ app.all('/api/public/connect', handleConnect);
 // -------------------------------------------------------------
 app.post('/api/telemetry/crash', async (req, res) => {
   try {
+    if (!applyRateLimit(req, res, 25, 'telemetry_crash')) return;
     const { 
       brand, model, android_version, sdk_int, app_version, 
       crash_type, stacktrace, device_id, user_key 
@@ -1953,6 +2017,17 @@ app.get('*', (req, res) => {
 initDb().then(() => {
   app.listen(PORT, () => {
     console.log(`[Featurestic Box Panel] Running on port ${PORT}`);
+
+    // Render Keep-Alive Self-Ping Worker (Prevents free tier sleep)
+    const PING_INTERVAL = 10 * 60 * 1000; // 10 minutes
+    setInterval(() => {
+      try {
+        const host = process.env.RENDER_EXTERNAL_URL || 'https://featurestic-box-panel.onrender.com';
+        fetch(`${host}/api/public/beta-info`, { signal: AbortSignal.timeout(5000) })
+          .then(() => {})
+          .catch(() => {});
+      } catch (e) {}
+    }, PING_INTERVAL);
   });
 }).catch(err => {
   console.error('[Featurestic Box Panel] Failed to start:', err);
