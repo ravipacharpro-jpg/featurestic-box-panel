@@ -3172,9 +3172,14 @@ async function loadClientCrashes() {
 
   tbody.innerHTML = list.length
     ? list.map(c => {
-        const catBadge = c.crash_category === 'native_so'
-          ? '<span class="badge tag-native">Native .so</span>'
-          : '<span class="badge tag-java">Java</span>';
+        let catBadge = '';
+        if (c.crash_category === 'sdk_aar') {
+          catBadge = '<span class="badge" style="background:rgba(0,255,136,0.15);color:#00ff88;border:1px solid rgba(0,255,136,0.4)">📦 SDK .aar</span>';
+        } else if (c.crash_category === 'client_so' || c.crash_category === 'native_so') {
+          catBadge = '<span class="badge tag-native">Native .so</span>';
+        } else {
+          catBadge = '<span class="badge tag-java">Java</span>';
+        }
 
         const offsetBadge = c.fault_offset
           ? `<span class="tag-offset" title="Click to inspect in IDA Pro / Ghidra" onclick="openIdaModal('${esc(c.so_name || 'libclient.so')}', '${esc(c.fault_offset)}', '${esc(c.crash_type)}')">PC: +${c.fault_offset} 🔍</span>`

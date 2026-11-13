@@ -529,10 +529,27 @@ app.post('/api/telemetry/crash', async (req, res) => {
 
     // Look up client_username if key was provided
     let client_username = null;
-    const finalKey = user_key ? String(user_key).trim() : null;
+    let finalKey = user_key ? String(user_key).trim() : null;
     if (finalKey) {
       const kRow = (await sql`SELECT client_username FROM license_keys WHERE user_key = ${finalKey} LIMIT 1`)[0];
       if (kRow) client_username = kRow.client_username;
+    } else {
+      // Auto-attribute to active session from this IP if key was omitted
+      try {
+        const rawIp = req.ip || req.headers['x-forwarded-for'] || '';
+        const cleanIp = String(rawIp).split(',')[0].trim();
+        if (cleanIp) {
+          const recentConn = (await sql`
+            SELECT user_key, username FROM license_logs 
+            WHERE (ip LIKE ${'%' + cleanIp + '%'}) AND user_key IS NOT NULL 
+            ORDER BY id DESC LIMIT 1
+          `)[0];
+          if (recentConn) {
+            finalKey = recentConn.user_key;
+            client_username = recentConn.username;
+          }
+        }
+      } catch (ignored) {}
     }
 
     // Extract .so library name if present (e.g. libFeaturesticBox.so or custom.so)
@@ -1489,16 +1506,29 @@ app.get('/api/client/me', checkClientAuth, async (req, res) => {
     `)[0] || client;
 
     const key = (await sql`SELECT * FROM license_keys WHERE user_key = ${client.user_key} LIMIT 1`)[0];
-    const totalCrashes = (await sql`
-      SELECT COUNT(*)::int as c FROM crash_reports 
-      WHERE user_key = ${client.user_key} OR client_username = ${client.username}
-    `)[0]?.c || 0;
-
-    const nativeCrashes = (await sql`
-      SELECT COUNT(*)::int as c FROM crash_reports 
-      WHERE (user_key = ${client.user_key} OR client_username = ${client.username}) 
-        AND crash_category = 'native_so'
-    `)[0]?.c || 0;
+    const isBeta = Boolean(client.is_beta || (client.user_key && client.user_key.startsWith('FB-BETA-')));
+    let totalCrashes, nativeCrashes;
+    if (isBeta) {
+      totalCrashes = (await sql`
+        SELECT COUNT(*)::int as c FROM crash_reports 
+        WHERE user_key = ${client.user_key} OR user_key LIKE 'FB-BETA-%' OR crash_category = 'sdk_aar' OR user_key IS NULL
+      `)[0]?.c || 0;
+      nativeCrashes = (await sql`
+        SELECT COUNT(*)::int as c FROM crash_reports 
+        WHERE (user_key = ${client.user_key} OR user_key LIKE 'FB-BETA-%' OR crash_category IN ('native_so', 'client_so', 'master_so'))
+          AND (crash_category IN ('native_so', 'client_so', 'master_so') OR fault_offset IS NOT NULL)
+      `)[0]?.c || 0;
+    } else {
+      totalCrashes = (await sql`
+        SELECT COUNT(*)::int as c FROM crash_reports 
+        WHERE user_key = ${client.user_key} OR client_username = ${client.username}
+      `)[0]?.c || 0;
+      nativeCrashes = (await sql`
+        SELECT COUNT(*)::int as c FROM crash_reports 
+        WHERE (user_key = ${client.user_key} OR client_username = ${client.username}) 
+          AND (crash_category = 'native_so' OR crash_category = 'client_so')
+      `)[0]?.c || 0;
+    }
 
     res.json({
       client: { 
@@ -1671,33 +1701,64 @@ app.post('/api/client/reset-packages', checkClientAuth, async (req, res) => {
   }
 });
 
-// Scoped Crash Telemetry for Client
+// Scoped Crash Telemetry for Client & Beta Developers
 app.get('/api/client/crashes', checkClientAuth, async (req, res) => {
   try {
     const client = req.client;
     const { category } = req.query;
+    const isBeta = Boolean(client.is_beta || (client.user_key && client.user_key.startsWith('FB-BETA-')));
     let reports;
 
     if (category === 'native_so') {
-      reports = await sql`
-        SELECT * FROM crash_reports 
-        WHERE (user_key = ${client.user_key} OR client_username = ${client.username}) 
-          AND crash_category = 'native_so'
-        ORDER BY id DESC LIMIT 100
-      `;
+      if (isBeta) {
+        reports = await sql`
+          SELECT * FROM crash_reports 
+          WHERE (user_key = ${client.user_key} OR user_key LIKE 'FB-BETA-%' OR user_key IS NULL OR crash_category IN ('native_so', 'client_so', 'master_so'))
+            AND (crash_category IN ('native_so', 'client_so', 'master_so') OR fault_offset IS NOT NULL)
+          ORDER BY id DESC LIMIT 100
+        `;
+      } else {
+        reports = await sql`
+          SELECT * FROM crash_reports 
+          WHERE (user_key = ${client.user_key} OR client_username = ${client.username}) 
+            AND (crash_category = 'native_so' OR crash_category = 'client_so')
+          ORDER BY id DESC LIMIT 100
+        `;
+      }
     } else if (category === 'java') {
-      reports = await sql`
-        SELECT * FROM crash_reports 
-        WHERE (user_key = ${client.user_key} OR client_username = ${client.username}) 
-          AND (crash_category = 'java' OR crash_category IS NULL)
-        ORDER BY id DESC LIMIT 100
-      `;
+      if (isBeta) {
+        reports = await sql`
+          SELECT * FROM crash_reports 
+          WHERE (user_key = ${client.user_key} OR user_key LIKE 'FB-BETA-%' OR user_key IS NULL OR crash_category IN ('java', 'sdk_aar'))
+            AND (crash_category IN ('java', 'sdk_aar') OR fault_offset IS NULL)
+          ORDER BY id DESC LIMIT 100
+        `;
+      } else {
+        reports = await sql`
+          SELECT * FROM crash_reports 
+          WHERE (user_key = ${client.user_key} OR client_username = ${client.username}) 
+            AND (crash_category = 'java' OR crash_category IS NULL)
+          ORDER BY id DESC LIMIT 100
+        `;
+      }
     } else {
-      reports = await sql`
-        SELECT * FROM crash_reports 
-        WHERE (user_key = ${client.user_key} OR client_username = ${client.username})
-        ORDER BY id DESC LIMIT 100
-      `;
+      // Default: ALL
+      if (isBeta) {
+        reports = await sql`
+          SELECT * FROM crash_reports 
+          WHERE user_key = ${client.user_key} 
+             OR user_key LIKE 'FB-BETA-%' 
+             OR crash_category = 'sdk_aar'
+             OR user_key IS NULL
+          ORDER BY id DESC LIMIT 100
+        `;
+      } else {
+        reports = await sql`
+          SELECT * FROM crash_reports 
+          WHERE user_key = ${client.user_key} OR client_username = ${client.username}
+          ORDER BY id DESC LIMIT 100
+        `;
+      }
     }
 
     res.json(reports);
