@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { sql, initDb } from './src/db.js';
@@ -1828,6 +1829,39 @@ app.get('/api/public/download/loader-apk', async (req, res) => {
   }
 });
 
+app.get('/api/public/download/loader-source', async (req, res) => {
+  try {
+    const localZip = path.join(__dirname, 'public', 'downloads', 'FeaturesticLoader-Source.zip');
+    if (fs.existsSync(localZip)) {
+      res.setHeader('Content-Disposition', 'attachment; filename="FeaturesticLoader-Source.zip"');
+      res.setHeader('Content-Type', 'application/zip');
+      return res.sendFile(localZip);
+    }
+
+    const settings = (await sql`SELECT loader_source_url FROM panel_settings LIMIT 1`)[0];
+    const targetUrl = settings?.loader_source_url;
+    if (targetUrl) {
+      const upstreamRes = await fetch(targetUrl, {
+        headers: { 'User-Agent': 'FeaturesticBox-Panel/1.0' },
+        redirect: 'follow'
+      });
+      if (upstreamRes.ok) {
+        res.setHeader('Content-Disposition', 'attachment; filename="FeaturesticLoader-Source.zip"');
+        res.setHeader('Content-Type', 'application/zip');
+        const cl = upstreamRes.headers.get('content-length');
+        if (cl) res.setHeader('Content-Length', cl);
+        const { Readable } = await import('stream');
+        return Readable.fromWeb(upstreamRes.body).pipe(res);
+      }
+    }
+
+    return res.status(404).send('Loader source code package currently unavailable.');
+  } catch (err) {
+    console.error('[Loader Source Proxy Error]', err);
+    res.status(500).send('Download error occurred');
+  }
+});
+
 // =============================================================
 // PUBLIC FREE BETA SYSTEM (Dedicated URL, Device ID Binding & SDK .aar)
 // =============================================================
@@ -1839,6 +1873,7 @@ app.get('/api/public/beta-info', async (req, res) => {
       duration_days: settings?.free_access_duration || 3,
       aar_url: '/api/public/download/sdk-aar',
       apk_url: '/api/public/download/loader-apk',
+      source_zip_url: '/api/public/download/loader-source',
       version: settings?.update_version || '1.0.1'
     });
   } catch (err) {
@@ -1880,6 +1915,7 @@ app.get('/api/public/my-beta-key', async (req, res) => {
       expires_at: keyRow.expires_at,
       aar_url: '/api/public/download/sdk-aar',
       apk_url: '/api/public/download/loader-apk',
+      source_zip_url: '/api/public/download/loader-source',
       version: settings.update_version || '1.0.1'
     });
   } catch (err) {
@@ -1925,6 +1961,7 @@ app.post('/api/public/claim-beta-key', async (req, res) => {
           is_unlimited: true,
           aar_url: '/api/public/download/sdk-aar',
           apk_url: '/api/public/download/loader-apk',
+          source_zip_url: '/api/public/download/loader-source',
           version: settings.update_version || '1.0.1',
           message: 'Retrieved your persistent Beta key for this device.'
         });
@@ -1976,6 +2013,7 @@ app.post('/api/public/claim-beta-key', async (req, res) => {
       is_unlimited: true,
       aar_url: '/api/public/download/sdk-aar',
       apk_url: '/api/public/download/loader-apk',
+      source_zip_url: '/api/public/download/loader-source',
       version: settings.update_version || '1.0.1'
     });
   } catch (err) {

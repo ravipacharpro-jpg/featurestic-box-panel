@@ -1712,17 +1712,29 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-            <button class="btn btn-primary-neon" id="btn-beta-open-portal" style="padding:12px;font-size:0.88rem;display:flex;align-items:center;justify-content:center;gap:6px" onclick="openPortalWithBetaKey()">
-              🚀 Open Developer Portal (1-Click)
-            </button>
-            <a id="beta-aar-btn" href="https://github.com/ravipacharpro-jpg/Fbox/releases/latest/download/featurestic-box.aar" target="_blank" class="btn btn-ghost" style="padding:12px;font-size:0.88rem;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;border-color:var(--neon);color:var(--neon);background:rgba(0,255,136,0.06)">
-              📦 Download Latest SDK (.aar)
-            </a>
+            <!-- Left Column: Portal & Pre-built APK -->
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <button class="btn btn-primary-neon" id="btn-beta-open-portal" style="padding:13px;font-size:0.88rem;display:flex;align-items:center;justify-content:center;gap:6px" onclick="openPortalWithBetaKey()">
+                🚀 Open Developer Portal (1-Click)
+              </button>
+              <a id="beta-apk-btn" href="/api/public/download/loader-apk" class="btn btn-ghost" style="padding:11px;font-size:0.82rem;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;border-color:var(--border);color:var(--t2)">
+                📱 Download Pre-built Loader APK
+              </a>
+            </div>
+
+            <!-- Right Column: SDK .aar & Loader Source directly underneath! -->
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <a id="beta-aar-btn" href="/api/public/download/sdk-aar" class="btn btn-ghost" style="padding:13px;font-size:0.88rem;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;border-color:var(--neon);color:var(--neon);background:rgba(0,255,136,0.06);font-weight:700">
+                📦 Download Latest SDK (.aar)
+              </a>
+              <a id="beta-src-btn" href="/api/public/download/loader-source" class="btn btn-ghost" style="padding:11px;font-size:0.82rem;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;border-color:var(--cyan,#00d9ff);color:var(--cyan,#00d9ff);background:rgba(0,217,255,0.06);font-weight:700">
+                📂 Download Loader APK Source (.zip)
+              </a>
+            </div>
           </div>
 
-          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--t3);padding:10px 14px;background:var(--bg2);border-radius:var(--r-sm)">
-            <span>💡 Integrate <code>.aar</code> into Android Studio libs/ directory for live loader testing.</span>
-            <a id="beta-apk-btn" href="https://github.com/ravipacharpro-jpg/Fbox/releases/download/Floader/FeaturesticLoader-v1.0.1.apk" target="_blank" style="color:var(--t3);text-decoration:underline">Download Loader APK</a>
+          <div style="font-size:11px;color:var(--t3);padding:10px 14px;background:var(--bg2);border-radius:var(--r-sm);text-align:center">
+            💡 <strong>Loader Developers:</strong> Download the Loader APK Source (.zip) & drop the latest <code>FeaturesticBox.aar</code> into <code>app/libs/</code> to build your custom loader.
           </div>
         </div>
 
@@ -2425,6 +2437,15 @@ async function checkFreeBetaStatus() {
               resBox.style.display = 'block';
               const badge = document.getElementById('beta-existing-badge');
               if (badge) badge.style.display = 'inline-block';
+              if (info.aar_url && document.getElementById('beta-aar-btn')) {
+                document.getElementById('beta-aar-btn').href = info.aar_url;
+              }
+              if (info.source_zip_url && document.getElementById('beta-src-btn')) {
+                document.getElementById('beta-src-btn').href = info.source_zip_url;
+              }
+              if (info.apk_url && document.getElementById('beta-apk-btn')) {
+                document.getElementById('beta-apk-btn').href = info.apk_url;
+              }
             }
           }
         }).catch(() => {});
@@ -3349,6 +3370,9 @@ async function claimBetaKey() {
 
     if (r.aar_url && document.getElementById('beta-aar-btn')) {
       document.getElementById('beta-aar-btn').href = r.aar_url;
+    }
+    if (r.source_zip_url && document.getElementById('beta-src-btn')) {
+      document.getElementById('beta-src-btn').href = r.source_zip_url;
     }
     if (r.apk_url && document.getElementById('beta-apk-btn')) {
       document.getElementById('beta-apk-btn').href = r.apk_url;
