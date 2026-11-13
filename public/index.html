@@ -1329,6 +1329,7 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
             <thead>
               <tr>
                 <th>Username</th>
+                <th>Client Password</th>
                 <th>Assigned Key</th>
                 <th>Key Status</th>
                 <th>Quota / Devices</th>
@@ -1907,6 +1908,25 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
     <div id="fields-client" style="display:none">
       <div class="form-row">
         <div class="f-group">
+          <label class="f-label">Client Target</label>
+          <select id="m-client-mode" class="f-select" onchange="onClientModeChange()">
+            <option value="new">+ Create Brand New Client Account</option>
+            <option value="existing">Assign Key To Existing Client</option>
+          </select>
+        </div>
+        <div class="f-group">
+          <label class="f-label">Key Prefix</label>
+          <input type="text" id="m-client-prefix" class="f-input" value="FB" maxlength="8" placeholder="FB">
+        </div>
+      </div>
+
+      <div id="m-client-existing-wrap" class="f-group" style="display:none">
+        <label class="f-label">Select Registered Client Developer</label>
+        <select id="m-client-existing-select" class="f-select"></select>
+      </div>
+
+      <div id="m-client-new-fields" class="form-row">
+        <div class="f-group">
           <label class="f-label">Client Username</label>
           <input type="text" id="m-client-user" class="f-input" placeholder="e.g. rohit_buyer">
         </div>
@@ -2457,9 +2477,12 @@ async function loadKeys() {
 }
 
 /* ─── Admin Clients ─── */
+let _cachedClients = [];
+
 async function loadClients() {
   const clients = await api('/api/admin/clients');
   const list = clients || [];
+  _cachedClients = list;
   document.getElementById('clients-sub').textContent = `${list.length} registered client${list.length !== 1 ? 's' : ''}`;
   const tbody = document.getElementById('clients-body');
 
@@ -2473,12 +2496,20 @@ async function loadClients() {
 
   tbody.innerHTML = list.length
     ? list.map(c => {
-        const soSnippet = c.plugin_url ? `<span class="tag-so" title="${esc(c.plugin_url)}">Custom .so active</span>` : '<span style="color:var(--t4);font-size:0.72rem">Default</span>';
+        const soSnippet = c.plugin_url ? `<span class="tag-so" title="${esc(c.plugin_url)}">Custom .so</span>` : '<span style="color:var(--t4);font-size:0.72rem">Default</span>';
         const apkSnippet = c.update_apk_url ? `<span class="badge tag-client" title="${esc(c.update_apk_url)}">v${c.update_version || '1.0.0'}</span>` : '<span style="color:var(--t4);font-size:0.72rem">None</span>';
+        const passHtml = c.password 
+          ? `<code style="cursor:pointer;background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;color:var(--t2);font-size:0.75rem" title="Click to copy password" onclick="copyPlain('${esc(c.password)}')">${esc(c.password)} 📋</code>`
+          : '<span style="color:var(--t4)">—</span>';
+        const keyHtml = c.user_key 
+          ? `<span class="key-pill" style="cursor:pointer" title="Click to copy key" onclick="copyPlain('${esc(c.user_key)}')">${c.user_key} 📋</span>`
+          : '<span style="color:var(--red);font-size:0.75rem">No Key</span>';
+        const isBanned = (c.key_status === 'banned');
 
         return `<tr>
           <td><strong style="color:var(--t1)">@${c.username}</strong></td>
-          <td><span class="key-pill">${c.user_key || '—'}</span></td>
+          <td>${passHtml}</td>
+          <td>${keyHtml}</td>
           <td>${badge(c.key_status || 'active')}</td>
           <td><span style="color:var(--neon);font-weight:700">${c.unique_devices || 0}</span> devices</td>
           <td>${soSnippet}</td>
@@ -2486,12 +2517,44 @@ async function loadClients() {
           <td style="color:var(--t3);font-size:0.72rem">${fmtDate(c.created_at)}</td>
           <td>
             <div class="acts">
-              <button class="act-btn act-red" onclick="delClient(${c.id})">Delete Account</button>
+              ${c.user_key ? `<button class="act-btn act-neon" title="Copy Key" onclick="copyPlain('${esc(c.user_key)}')">Copy Key</button>` : ''}
+              <button class="act-btn act-orange" title="Generate New Key" onclick="adminRegenClientKey(${c.id}, '${esc(c.username)}')">New Key</button>
+              ${c.user_key ? `<button class="act-btn act-ghost" onclick="adminToggleClientStatus(${c.id})">${isBanned ? 'Resume' : 'Pause'}</button>` : ''}
+              <button class="act-btn act-red" onclick="delClient(${c.id})">Delete</button>
             </div>
           </td>
         </tr>`;
       }).join('')
-    : emptyRow(8, 'No client accounts created yet. Click "Add Client Account" to issue one.', 'users');
+    : emptyRow(9, 'No client accounts created yet. Click "Add Client Account" to issue one.', 'users');
+}
+
+function copyPlain(text) {
+  if (!text) return;
+  navigator.clipboard.writeText(text);
+  toast('Copied to clipboard: ' + text);
+}
+
+async function adminRegenClientKey(id, username) {
+  if (!confirm(`Generate a brand new SDK License Key for @${username}? The old key will be revoked.`)) return;
+  const r = await api(`/api/admin/clients/${id}/regenerate-key`, 'POST', {});
+  if (r && r.success) {
+    toast(`New key generated for @${username}: ${r.key}`);
+    loadClients();
+    loadKeys();
+  } else {
+    toast((r && r.error) ? r.error : 'Failed to regenerate key', 'error');
+  }
+}
+
+async function adminToggleClientStatus(id) {
+  const r = await api(`/api/admin/clients/${id}/toggle-status`, 'POST', {});
+  if (r && r.success) {
+    toast(`Client key status updated to: ${r.status}`);
+    loadClients();
+    loadKeys();
+  } else {
+    toast((r && r.error) ? r.error : 'Failed to toggle status', 'error');
+  }
 }
 
 async function delClient(id) {
@@ -2848,14 +2911,32 @@ async function delKey(id) {
 /* ─── Create Key Modal ─── */
 let _currentCreateType = 'own';
 
+function onClientModeChange() {
+  const mode = document.getElementById('m-client-mode')?.value || 'new';
+  const existWrap = document.getElementById('m-client-existing-wrap');
+  const newWrap = document.getElementById('m-client-new-fields');
+  if (existWrap) existWrap.style.display = mode === 'existing' ? 'block' : 'none';
+  if (newWrap) newWrap.style.display = mode === 'new' ? 'grid' : 'none';
+}
+
 function openCreateModal(forClient = false) {
   document.getElementById('modal-result').style.display = 'none';
+  if (document.getElementById('m-client-mode')) document.getElementById('m-client-mode').value = 'new';
+  if (document.getElementById('m-client-prefix')) document.getElementById('m-client-prefix').value = 'FB';
   if (document.getElementById('m-client-user')) document.getElementById('m-client-user').value = '';
   if (document.getElementById('m-client-pass')) document.getElementById('m-client-pass').value = '';
   if (document.getElementById('m-client-so')) document.getElementById('m-client-so').value = '';
   if (document.getElementById('m-client-apk')) document.getElementById('m-client-apk').value = '';
   if (document.getElementById('m-pkg')) document.getElementById('m-pkg').value = '';
   if (document.getElementById('m-note')) document.getElementById('m-note').value = '';
+
+  const sel = document.getElementById('m-client-existing-select');
+  if (sel) {
+    sel.innerHTML = _cachedClients.length 
+      ? _cachedClients.map(c => `<option value="${c.username}">@${c.username} (${c.user_key || 'No Key'})</option>`).join('')
+      : '<option value="">No existing clients found</option>';
+  }
+  onClientModeChange();
 
   document.getElementById('modal-create').classList.add('open');
   if (forClient) {
@@ -2893,17 +2974,30 @@ async function createKeys() {
   };
 
   if (_currentCreateType === 'client') {
-    const client_username = document.getElementById('m-client-user').value.trim();
-    const client_password = document.getElementById('m-client-pass').value.trim();
+    const mode = document.getElementById('m-client-mode')?.value || 'new';
+    const prefix = document.getElementById('m-client-prefix')?.value.trim() || 'FB';
+    let client_username = '';
+    let client_password = '';
+
+    if (mode === 'existing') {
+      client_username = document.getElementById('m-client-existing-select')?.value || '';
+      if (!client_username) {
+        return toast('Please select an existing client', 'error');
+      }
+    } else {
+      client_username = document.getElementById('m-client-user').value.trim();
+      client_password = document.getElementById('m-client-pass').value.trim();
+      if (!client_username || !client_password) {
+        return toast('Client username & password are required for new accounts', 'error');
+      }
+    }
+
     const plugin_url = document.getElementById('m-client-so').value.trim();
     const update_apk_url = document.getElementById('m-client-apk').value.trim();
 
-    if (!client_username || !client_password) {
-      return toast('Client username & password are required', 'error');
-    }
-
     payload = {
       ...payload,
+      prefix,
       client_username,
       client_password,
       plugin_url,
@@ -2923,8 +3017,9 @@ async function createKeys() {
   if (r && r.success) {
     document.getElementById('modal-result').style.display = '';
     if (r.client) {
-      document.getElementById('result-keys').textContent = `Client Username: ${r.client.username}\nClient Password: ${r.client.password}\nAssigned Key: ${r.client.user_key}`;
-      toast(`Client account @${r.client.username} created!`);
+      const isNew = r.client.is_new;
+      document.getElementById('result-keys').textContent = `Client: @${r.client.username}\nPassword: ${r.client.password}\nAssigned Key: ${r.client.user_key}`;
+      toast(isNew ? `Client account @${r.client.username} created!` : `New key generated for @${r.client.username}!`);
     } else {
       document.getElementById('result-keys').textContent = r.keys.join('\n');
       toast(`${r.keys.length} key(s) generated!`);
