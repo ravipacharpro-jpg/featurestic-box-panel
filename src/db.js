@@ -106,7 +106,8 @@ export async function initDb() {
       )
     `;
 
-    await sql`ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS crash_category VARCHAR(16) DEFAULT 'java'`;
+    await sql`ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS crash_category VARCHAR(32) DEFAULT 'java'`;
+    try { await sql`ALTER TABLE crash_reports ALTER COLUMN crash_category TYPE VARCHAR(32)`; } catch (e) {}
     await sql`ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS so_name VARCHAR(128) DEFAULT NULL`;
     await sql`ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS fault_offset VARCHAR(64) DEFAULT NULL`;
     await sql`ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS user_key VARCHAR(64) DEFAULT NULL`;

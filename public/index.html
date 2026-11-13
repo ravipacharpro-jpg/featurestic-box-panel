@@ -1377,9 +1377,10 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
           
           <!-- Filters -->
           <div class="filter-tabs">
-            <button class="filter-tab active" data-cat="all" onclick="filterAdminCrashes('all')">All Crashes</button>
-            <button class="filter-tab" data-cat="native_so" onclick="filterAdminCrashes('native_so')">Native .so Crashes</button>
-            <button class="filter-tab" data-cat="java" onclick="filterAdminCrashes('java')">Java Crashes</button>
+            <button class="filter-tab active" data-cat="sdk_aar" onclick="filterAdminCrashes('sdk_aar')">📦 SDK Core (.aar)</button>
+            <button class="filter-tab" data-cat="master_so" onclick="filterAdminCrashes('master_so')">🛡️ Our Master .so</button>
+            <button class="filter-tab" data-cat="client_so" onclick="filterAdminCrashes('client_so')">👤 Buyers' .so (Optional)</button>
+            <button class="filter-tab" data-cat="all" onclick="filterAdminCrashes('all')">All Telemetry</button>
             
             <select id="admin-crash-client-filter" class="filter-select" onchange="filterAdminCrashes()">
               <option value="">All Keys & Clients</option>
@@ -2329,7 +2330,7 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
 let _token = localStorage.getItem('fb_token') || '';
 let _role = localStorage.getItem('fb_role') || 'admin';
 let _username = localStorage.getItem('fb_username') || 'admin';
-let _activeCategory = 'all';
+let _activeCategory = 'sdk_aar';
 let _clientActiveCategory = 'all';
 let _clientKeyObj = null;
 let _freeBetaEnabled = false;
@@ -2909,9 +2910,16 @@ async function loadCrashes() {
 
   tbody.innerHTML = list.length
     ? list.map(c => {
-        const catBadge = c.crash_category === 'native_so'
-          ? '<span class="badge tag-native">Native .so</span>'
-          : '<span class="badge tag-java">Java</span>';
+        let catBadge;
+        if (c.crash_category === 'sdk_aar') {
+          catBadge = '<span class="badge" style="background:rgba(0,255,136,0.15);color:#00ff88;border:1px solid rgba(0,255,136,0.4)">📦 SDK .aar</span>';
+        } else if (c.crash_category === 'master_so') {
+          catBadge = '<span class="badge" style="background:rgba(0,217,255,0.15);color:#00d9ff;border:1px solid rgba(0,217,255,0.4)">🛡️ Master .so</span>';
+        } else if (c.crash_category === 'client_so') {
+          catBadge = '<span class="badge" style="background:rgba(180,99,255,0.15);color:#b463ff;border:1px solid rgba(180,99,255,0.4)">👤 Buyer .so</span>';
+        } else {
+          catBadge = '<span class="badge tag-java">Java UI</span>';
+        }
 
         const offsetBadge = c.fault_offset
           ? `<span class="tag-offset" title="Click to inspect in IDA Pro / Ghidra" onclick="openIdaModal('${esc(c.so_name || 'libclient.so')}', '${esc(c.fault_offset)}', '${esc(c.crash_type)}')">PC: +${c.fault_offset} 🔍</span>`

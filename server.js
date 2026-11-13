@@ -19,6 +19,15 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Security Headers: Clickjacking / Frame Protection & Content Sniffing Guard
+app.use((req, res, next) => {
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
 // Helper: Non-blocking Telegram Alerts
 async function sendTelegramAlert(text, customBotToken = null, customChatId = null) {
   try {
@@ -518,9 +527,13 @@ app.post('/api/telemetry/crash', async (req, res) => {
 
     const st = String(stacktrace);
 
-    // Auto-detect Native .so Crashes vs Java Exception
-    const isNativeSignal = /SIGSEGV|SIGBUS|SIGFPE|SIGILL|SIGABRT|signal 11|signal 7|fault addr|backtrace:/i.test(st);
-    const crash_category = req.body.crash_category || (isNativeSignal ? 'native_so' : 'java');
+    // Look up client_username if key was provided
+    let client_username = null;
+    const finalKey = user_key ? String(user_key).trim() : null;
+    if (finalKey) {
+      const kRow = (await sql`SELECT client_username FROM license_keys WHERE user_key = ${finalKey} LIMIT 1`)[0];
+      if (kRow) client_username = kRow.client_username;
+    }
 
     // Extract .so library name if present (e.g. libFeaturesticBox.so or custom.so)
     let so_name = req.body.so_name || null;
@@ -536,12 +549,24 @@ app.post('/api/telemetry/crash', async (req, res) => {
       if (pcMatch) fault_offset = (pcMatch[1] || pcMatch[2]).toUpperCase();
     }
 
-    // Look up client_username if key was provided
-    let client_username = null;
-    const finalKey = user_key ? String(user_key).trim() : null;
-    if (finalKey) {
-      const kRow = (await sql`SELECT client_username FROM license_keys WHERE user_key = ${finalKey} LIMIT 1`)[0];
-      if (kRow) client_username = kRow.client_username;
+    // Precise Categorization:
+    // 1. sdk_aar: Virtual container framework & SDK issues (com.featurestic, com.sbox, net_62v, BoxManager, BoxService, ObbSetup, FeaturesticBox, VirtualCore, libfbox.so)
+    // 2. master_so: Admin's official native payload (FeaturesticBox.so or internal/unassigned key)
+    // 3. client_so: Buyer's custom .so (buyer key running custom mod .so)
+    // 4. java: Generic UI / Activity crash
+    let crash_category = req.body.crash_category || null;
+    const isSdkAar = /com\.featurestic|com\.sbox|net_62v|BoxManager|BoxService|ObbSetup|FeaturesticBox|VirtualCore|VFileSystem|VActivityManager|VPackageManager|libfbox\.so/i.test(st);
+    const isNativeSignal = /SIGSEGV|SIGBUS|SIGFPE|SIGILL|SIGABRT|signal 11|signal 7|fault addr|backtrace:/i.test(st);
+
+    if (!crash_category) {
+      if (isSdkAar) {
+        crash_category = 'sdk_aar';
+      } else if (isNativeSignal || so_name) {
+        const isMaster = (!client_username || client_username === 'admin') && (!so_name || /FeaturesticBox\.so/i.test(so_name));
+        crash_category = isMaster ? 'master_so' : 'client_so';
+      } else {
+        crash_category = 'java';
+      }
     }
 
     await sql`
@@ -556,7 +581,7 @@ app.post('/api/telemetry/crash', async (req, res) => {
         ${android_version || 'Unknown'},
         ${sdk_int || 0},
         ${app_version || '1.0.0'},
-        ${crash_type || (isNativeSignal ? 'Native Signal Crash' : 'Java Crash')},
+        ${crash_type || (crash_category === 'sdk_aar' ? 'SDK Container Error' : (isNativeSignal ? 'Native Signal Crash' : 'Java Crash'))},
         ${crash_category},
         ${so_name},
         ${fault_offset},
@@ -564,23 +589,32 @@ app.post('/api/telemetry/crash', async (req, res) => {
         ${client_username},
         ${stacktrace},
         ${device_id || null}
+      )
     `;
 
-    // Non-blocking Telegram alert on native crash detection
-    if (crash_category === 'native_so' || isNativeSignal) {
+    // 1. Master Admin Alerts (Only for SDK .aar container issues or Admin's own master .so)
+    if (crash_category === 'sdk_aar') {
       sendTelegramAlert(
-        `🚨 <b>Native Crash Telemetry (.so)</b>\n\n` +
-        `<b>Library:</b> <code>${so_name || 'libFeaturesticBox.so'}</code>\n` +
-        `<b>Offset:</b> <code>${fault_offset || 'N/A'}</code>\n` +
-        `<b>Key:</b> <code>${finalKey || 'N/A'}</code>\n` +
-        `<b>Client:</b> <code>${client_username || 'Admin/Own'}</code>\n` +
-        `<b>Device:</b> ${brand || ''} ${model || ''} (SDK ${sdk_int || 'N/A'})\n\n` +
-        `<b>Stacktrace:</b>\n<pre>${st.slice(0, 350)}</pre>`
+        `📦 <b>FeaturesticBox SDK (.aar) Container Issue</b> 🚨\n━━━━━━━━━━━━━━━━━━━━\n` +
+        `🔑 <b>Key:</b> <code>${finalKey || 'N/A'}</code> (${client_username ? '@' + client_username : 'Internal'})\n` +
+        `📱 <b>Device:</b> ${brand || ''} ${model || ''} (Android ${android_version || '?'}, SDK ${sdk_int || '?'})\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `<pre>${st.slice(0, 350)}</pre>`
+      );
+    } else if (crash_category === 'master_so') {
+      sendTelegramAlert(
+        `🚨 <b>Master .so Native Crash Alert</b> 🚨\n━━━━━━━━━━━━━━━━━━━━\n` +
+        `📦 <b>Library:</b> <code>${so_name || 'FeaturesticBox.so'}</code>\n` +
+        `⚡ <b>Offset:</b> <code>+${fault_offset || 'N/A'}</code> (IDA / Ghidra)\n` +
+        `🛑 <b>Signal:</b> ${crash_type || 'SIGSEGV'}\n` +
+        `📱 <b>Device:</b> ${brand || ''} ${model || ''}\n` +
+        `━━━━━━━━━━━━━━━━━━━━\n` +
+        `<pre>${st.slice(0, 300)}</pre>`
       );
     }
 
-    // Personal Telegram Alert for Developer/Client
-    if (client_username && (crash_category === 'native_so' || isNativeSignal)) {
+    // 2. Personal Telegram Alert for Developer/Client (Only their own custom .so)
+    if (client_username && crash_category === 'client_so') {
       try {
         const clientAcc = (await sql`
           SELECT telegram_bot_token, telegram_chat_id, telegram_alerts_enabled 
@@ -701,6 +735,7 @@ async function checkClientAuth(req, res, next) {
 
 // Unified Login Route (Admin & Client)
 app.post('/api/auth/login', async (req, res) => {
+  if (!applyRateLimit(req, res, 8, 'auth_login')) return;
   const { username, password } = req.body;
   const settings = (await sql`SELECT admin_password FROM panel_settings LIMIT 1`)[0];
   const adminPass = settings ? settings.admin_password : (process.env.ADMIN_PASSWORD || 'admin123');
@@ -733,6 +768,7 @@ app.post('/api/auth/login', async (req, res) => {
 // Direct Developer Portal Login via Beta Key (Exclusively for Beta Mode)
 app.post('/api/auth/login-with-beta-key', async (req, res) => {
   try {
+    if (!applyRateLimit(req, res, 12, 'beta_login')) return;
     const user_key = (req.body.key || req.body.user_key || '').trim();
     if (!user_key) {
       return res.status(400).json({ success: false, message: 'Please enter your Beta key' });
@@ -1202,30 +1238,50 @@ app.post('/api/admin/clients/:id/edit', checkAdminAuth, async (req, res) => {
   }
 });
 
-// Admin Crash Reports with Category and Client Filtering
+// Admin Crash Reports with Dedicated Categorization (SDK .aar vs Master .so vs Client .so)
 app.get('/api/admin/crashes', checkAdminAuth, async (req, res) => {
   try {
     const { category, client } = req.query;
     let reports;
-    if (category === 'native_so') {
-      if (client === '__own__') {
-        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'native_so' AND (client_username IS NULL OR client_username = '') ORDER BY id DESC LIMIT 150`;
-      } else if (client) {
-        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'native_so' AND client_username = ${client} ORDER BY id DESC LIMIT 150`;
+
+    if (category === 'sdk_aar') {
+      if (client) {
+        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'sdk_aar' AND client_username = ${client} ORDER BY id DESC LIMIT 150`;
       } else {
-        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'native_so' ORDER BY id DESC LIMIT 150`;
+        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'sdk_aar' ORDER BY id DESC LIMIT 150`;
+      }
+    } else if (category === 'master_so') {
+      reports = await sql`
+        SELECT * FROM crash_reports 
+        WHERE crash_category = 'master_so' 
+           OR (crash_category = 'native_so' AND (client_username IS NULL OR client_username = '' OR client_username = 'admin'))
+        ORDER BY id DESC LIMIT 150
+      `;
+    } else if (category === 'client_so') {
+      if (client) {
+        reports = await sql`
+          SELECT * FROM crash_reports 
+          WHERE (crash_category = 'client_so' OR crash_category = 'native_so') AND client_username = ${client} 
+          ORDER BY id DESC LIMIT 150
+        `;
+      } else {
+        reports = await sql`
+          SELECT * FROM crash_reports 
+          WHERE crash_category = 'client_so' 
+             OR (crash_category = 'native_so' AND client_username IS NOT NULL AND client_username != '' AND client_username != 'admin') 
+          ORDER BY id DESC LIMIT 150
+        `;
       }
     } else if (category === 'java') {
-      if (client === '__own__') {
-        reports = await sql`SELECT * FROM crash_reports WHERE (crash_category = 'java' OR crash_category IS NULL) AND (client_username IS NULL OR client_username = '') ORDER BY id DESC LIMIT 150`;
-      } else if (client) {
-        reports = await sql`SELECT * FROM crash_reports WHERE (crash_category = 'java' OR crash_category IS NULL) AND client_username = ${client} ORDER BY id DESC LIMIT 150`;
+      if (client) {
+        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'java' AND client_username = ${client} ORDER BY id DESC LIMIT 150`;
       } else {
-        reports = await sql`SELECT * FROM crash_reports WHERE (crash_category = 'java' OR crash_category IS NULL) ORDER BY id DESC LIMIT 150`;
+        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'java' ORDER BY id DESC LIMIT 150`;
       }
     } else {
+      // Default: ALL
       if (client === '__own__') {
-        reports = await sql`SELECT * FROM crash_reports WHERE (client_username IS NULL OR client_username = '') ORDER BY id DESC LIMIT 150`;
+        reports = await sql`SELECT * FROM crash_reports WHERE (client_username IS NULL OR client_username = '' OR client_username = 'admin') ORDER BY id DESC LIMIT 150`;
       } else if (client) {
         reports = await sql`SELECT * FROM crash_reports WHERE client_username = ${client} ORDER BY id DESC LIMIT 150`;
       } else {
