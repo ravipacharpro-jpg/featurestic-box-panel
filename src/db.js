@@ -57,6 +57,7 @@ export async function initDb() {
     await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS update_apk_url TEXT DEFAULT ''`;
     await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS update_version VARCHAR(32) DEFAULT '1.0.0'`;
     await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS update_changelog TEXT DEFAULT ''`;
+    await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS package_configs TEXT DEFAULT '[]'`;
 
     // 3. Client Accounts Table (for Resellers & Buyers)
     await sql`
@@ -150,11 +151,28 @@ export async function initDb() {
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS update_version TEXT DEFAULT '1.0.1'`;
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS update_changelog TEXT DEFAULT 'Latest performance updates & bug fixes'`;
 
-    // 12. High-Performance B-Tree Indexes (Zero server CPU load even at high scale)
+    // 12. System Audit & Debug Logs Table (Detect bugs & loader failures)
+    await sql`
+      CREATE TABLE IF NOT EXISTS system_logs (
+        id SERIAL PRIMARY KEY,
+        level VARCHAR(16) DEFAULT 'info', -- 'info', 'warn', 'error', 'connect'
+        action VARCHAR(64) NOT NULL,
+        message TEXT NOT NULL,
+        details TEXT DEFAULT '',
+        ip VARCHAR(64) DEFAULT '',
+        user_key VARCHAR(64) DEFAULT NULL,
+        username VARCHAR(64) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // 13. High-Performance B-Tree Indexes (Zero server CPU load even at high scale)
     await sql`CREATE INDEX IF NOT EXISTS idx_license_keys_user_key ON license_keys(user_key)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_hwid_blacklist_device_id ON hwid_blacklist(device_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_sdk_devices_user_key ON sdk_devices(user_key)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_crash_reports_cat_user ON crash_reports(crash_category, client_username)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_system_logs_created ON system_logs(created_at DESC)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_system_logs_level ON system_logs(level)`;
 
     // 4. Initial Settings row
     const settings = await sql`SELECT * FROM panel_settings LIMIT 1`;

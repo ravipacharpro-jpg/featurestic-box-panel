@@ -369,10 +369,29 @@ body {
 .btn-warning:hover { background: rgba(255,149,0,0.28); }
 
 .btn-beta-active {
-  background: rgba(0,255,136,0.15); color: var(--neon);
-  border: 1px solid rgba(0,255,136,0.3);
+  background: #00ff88 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+  border: 1px solid #00ff88 !important;
+  box-shadow: 0 0 16px rgba(0,255,136,0.6) !important;
 }
-.btn-beta-active:hover { background: rgba(0,255,136,0.25); }
+.btn-beta-active:hover { background: #00e67a !important; }
+
+.btn-safe-active {
+  background: #ff3b30 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 1px solid #ff3b30 !important;
+  box-shadow: 0 0 16px rgba(255,59,48,0.6) !important;
+}
+
+.btn-safe-normal {
+  background: rgba(0,255,136,0.15) !important;
+  color: #00ff88 !important;
+  font-weight: 600 !important;
+  border: 1px solid rgba(0,255,136,0.4) !important;
+  box-shadow: 0 0 10px rgba(0,255,136,0.25) !important;
+}
 
 /* ─── Pages ─── */
 .page { display: none; padding: 26px 28px; animation: fadeIn 0.2s ease; }
@@ -660,15 +679,15 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
   flex-shrink: 0;
 }
 .toggle.on {
-  background: var(--neon); border-color: var(--neon);
-  box-shadow: 0 0 10px rgba(0,255,136,0.3);
+  background: #00ff88 !important; border-color: #00ff88 !important;
+  box-shadow: 0 0 14px rgba(0,255,136,0.6) !important;
 }
 .toggle::after {
   content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%;
   background: rgba(255,255,255,0.9); top: 2px; left: 2px;
   transition: transform var(--transition);
 }
-.toggle.on::after { transform: translateX(16px); background: #000; }
+.toggle.on::after { transform: translateX(16px); background: #000 !important; }
 
 .toggle-label { font-size: 0.82rem; font-weight: 600; }
 .toggle-desc { font-size: 0.7rem; color: var(--t3); margin-top: 1px; }
@@ -736,9 +755,9 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
 
 /* ─── Toast ─── */
 #toast-wrap {
-  position: fixed; bottom: 24px; left: 50%;
-  transform: translateX(-50%) translateY(80px);
-  z-index: 9999; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  position: fixed; top: 20px; left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  z-index: 999999; transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
   pointer-events: none;
 }
 #toast-wrap.show { transform: translateX(-50%) translateY(0); }
@@ -1088,6 +1107,12 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
             <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
           HWID Blacklist
+        </button>
+        <button class="nav-link" data-page="logs" onclick="showPage('logs')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+          </svg>
+          System & Debug Logs
         </button>
 
         <div class="nav-label">System</div>
@@ -1612,6 +1637,90 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
     </div>
 
     <!-- ════════════════════════════════════════════
+         ADMIN PAGE: SYSTEM AUDIT & DEBUG LOGS
+    ════════════════════════════════════════════ -->
+    <div id="page-logs" class="page">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-left">
+            <div class="card-title">System Audit & Bug Telemetry Logs</div>
+            <div class="card-sub">Real-time log stream of loader connects, key activations, errors, and system events</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div class="filter-tabs">
+              <button class="filter-tab active" data-log-filter="all" onclick="filterLogs('all')">All</button>
+              <button class="filter-tab" data-log-filter="connect" onclick="filterLogs('connect')">Connects</button>
+              <button class="filter-tab" data-log-filter="error" onclick="filterLogs('error')">Errors</button>
+              <button class="filter-tab" data-log-filter="warn" onclick="filterLogs('warn')">Warnings</button>
+              <button class="filter-tab" data-log-filter="info" onclick="filterLogs('info')">Info</button>
+            </div>
+            <button class="btn btn-ghost" onclick="loadLogs()" title="Refresh Logs">🔄 Refresh</button>
+            <button class="btn btn-danger" onclick="clearLogs()" title="Clear all logs">Clear Logs</button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Level</th>
+                <th>Action</th>
+                <th>Message & Payload Details</th>
+                <th>Target Key / User</th>
+                <th>IP Address</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="logs-body">
+              <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--t3)">Loading logs…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+         PUBLIC PAGE: DEDICATED FREE BETA PORTAL
+    ════════════════════════════════════════════ -->
+    <div id="page-beta" class="page">
+      <div class="card" style="max-width:680px;margin:20px auto;text-align:center;padding:36px 24px">
+        <div style="font-size:3rem;margin-bottom:12px">🚀</div>
+        <div class="card-title" style="font-size:1.6rem;color:var(--neon)">Featurestic Box • Free Public Beta</div>
+        <div class="card-sub" style="font-size:0.88rem;margin:8px 0 20px;line-height:1.5">
+          Experience next-generation loader bypass with unlimited package builds and full features unlocked.
+        </div>
+
+        <div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.25);border-radius:var(--r-lg);padding:18px;margin-bottom:24px;text-align:left;line-height:1.7;font-size:0.82rem">
+          <div>✨ <strong>Unlimited Loaders Quota:</strong> Test any Android package without restrictions.</div>
+          <div>🛡️ <strong>Live Anti-Cheat Bypass:</strong> Full 120Hz synthetic engine and native hooks active.</div>
+          <div>⚠️ <strong style="color:var(--orange)">Beta Watermark:</strong> Free test keys render on-screen watermark: <code>FEATURESTIC BOX • FREE BETA VERSION</code>.</div>
+        </div>
+
+        <div id="beta-claim-box">
+          <button class="btn btn-primary-neon" style="font-size:1rem;padding:14px 32px" onclick="claimBetaKey()">
+            ⚡ Claim Instant Free Beta Key
+          </button>
+        </div>
+
+        <div id="beta-result-box" style="display:none;margin-top:24px;text-align:left">
+          <div style="font-size:0.75rem;font-weight:700;color:var(--neon);margin-bottom:6px">🎉 Your Beta License Key:</div>
+          <div style="display:flex;gap:10px;align-items:center;background:var(--bg3);border:1px solid var(--neon);border-radius:var(--r-md);padding:12px 16px;margin-bottom:14px">
+            <span id="beta-key-display" style="font-family:var(--font-mono);font-size:1.15rem;font-weight:800;color:#00ff88;letter-spacing:0.04em"></span>
+            <button class="btn btn-primary-neon" style="margin-left:auto;font-size:0.75rem" onclick="copyPlain(document.getElementById('beta-key-display').textContent)">📋 Copy</button>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:center;margin-top:14px">
+            <a id="beta-apk-btn" href="https://github.com/ravipacharpro-jpg/Fbox/releases/download/Floader/FeaturesticLoader-v1.0.1.apk" target="_blank" class="btn btn-ghost" style="text-decoration:none">
+              📥 Download Loader APK (v1.0.1)
+            </a>
+          </div>
+        </div>
+
+        <div id="beta-closed-alert" style="display:none;margin-top:20px;padding:16px;background:rgba(255,59,48,0.1);border:1px solid var(--red);border-radius:var(--r-md);color:var(--red);font-weight:600">
+          ⚠️ Public Free Beta testing is currently CLOSED by administrator.
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
          CLIENT PORTAL PAGE: MY KEY & LOADER
     ════════════════════════════════════════════ -->
     <div id="page-client-dashboard" class="page">
@@ -1670,13 +1779,36 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
           </div>
         </div>
 
-        <!-- Bound Package(s) Section -->
-        <div style="margin-top:16px;padding:12px 16px;background:rgba(0,0,0,0.3);border-radius:var(--r-md);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-          <div>
-            <div style="font-size:0.68rem;color:var(--t3);text-transform:uppercase;font-weight:600">Bound Package Name(s)</div>
-            <div id="cl-bound-packages" style="font-size:0.8rem;color:var(--t1);margin-top:3px">Loading…</div>
+        <!-- My Multi-Package Slots & Quota Management -->
+        <div style="margin-top:20px;padding:16px 20px;background:rgba(0,0,0,0.3);border:1px solid var(--border2);border-radius:var(--r-lg)">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+            <div>
+              <div style="font-size:0.95rem;font-weight:700;color:var(--t1)">My Loader Package Slots & Quota</div>
+              <div id="cl-packages-sub" style="font-size:0.75rem;color:var(--t3);margin-top:2px">Manage which packages can run on your key. Only Active packages launch loaders.</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary-neon" onclick="openAddPackageModal()">+ Add Package Name</button>
+              <button class="btn btn-ghost" onclick="resetClientPackages()">Reset All</button>
+            </div>
           </div>
-          <button class="btn btn-ghost" onclick="resetClientPackages()">Reset Bound Package</button>
+
+          <div class="tbl-wrap" style="margin-top:10px">
+            <table>
+              <thead>
+                <tr>
+                  <th>Package Name</th>
+                  <th>Status</th>
+                  <th>Custom .so Plugin</th>
+                  <th>SHA-256 Checksum</th>
+                  <th>APK Auto-Update</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="cl-packages-body">
+                <tr><td colspan="6" style="text-align:center;padding:16px;color:var(--t3)">Loading configured packages…</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -1990,7 +2122,75 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
 
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal()">Close</button>
-      <button class="btn btn-primary-neon" onclick="createKeys()">Generate</button>
+      <button class="btn btn-primary-neon" id="btn-create-submit" onclick="createKeys()">Generate</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL: GENERATION SUCCESS POPUP
+════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-success">
+  <div class="modal" style="max-width:500px;text-align:center">
+    <div style="font-size:2.6rem;margin-bottom:6px">🎉</div>
+    <div class="modal-title" id="succ-title" style="color:var(--neon);font-size:1.25rem">Account & Key Generated!</div>
+    <div class="modal-sub" id="succ-sub" style="margin-bottom:16px">Credentials have been issued and saved to database.</div>
+
+    <div id="succ-body" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-md);padding:16px;text-align:left;margin-bottom:18px;font-size:0.82rem;line-height:1.7">
+    </div>
+
+    <div class="modal-foot" style="justify-content:center;gap:12px">
+      <button class="btn btn-primary-neon" onclick="copySuccessText()">📋 Copy All (Telegram Format)</button>
+      <button class="btn btn-ghost" onclick="closeSuccessModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     MODAL: ADD / EDIT LOADER PACKAGE
+════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-add-package">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-title">Add / Edit Loader Package</div>
+    <div class="modal-sub">Configure a package name and its custom .so and APK update URLs.</div>
+
+    <div class="f-group">
+      <label class="f-label">Android Package Name *</label>
+      <input type="text" id="m-pkg-name" class="f-input" placeholder="e.g. com.pubg.imobile or com.tencent.ig">
+    </div>
+
+    <div class="toggle-row" style="margin-bottom:14px">
+      <div>
+        <div class="toggle-label">Active Status</div>
+        <div class="toggle-desc">Whether this package is currently allowed to launch loaders</div>
+      </div>
+      <div class="toggle on" id="m-pkg-active-toggle" onclick="this.classList.toggle('on')"></div>
+    </div>
+
+    <div class="f-group">
+      <label class="f-label">Custom .so Plugin URL (Optional)</label>
+      <input type="text" id="m-pkg-so" class="f-input" placeholder="https://.../libplugin.so">
+    </div>
+
+    <div class="f-group">
+      <label class="f-label">Custom .so SHA-256 Checksum (Optional)</label>
+      <input type="text" id="m-pkg-sha" class="f-input" placeholder="e.g. 7d7a20095c57...">
+    </div>
+
+    <div class="form-row">
+      <div class="f-group">
+        <label class="f-label">Update APK URL (Optional)</label>
+        <input type="text" id="m-pkg-apk" class="f-input" placeholder="https://.../loader.apk">
+      </div>
+      <div class="f-group">
+        <label class="f-label">Update Version</label>
+        <input type="text" id="m-pkg-ver" class="f-input" placeholder="1.0.1">
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeAddPackageModal()">Cancel</button>
+      <button class="btn btn-primary-neon" onclick="savePackageFromModal()">Save Package</button>
     </div>
   </div>
 </div>
@@ -2137,8 +2337,12 @@ async function checkFreeBetaStatus() {
     if (topBtn) {
       topBtn.className = _freeBetaEnabled ? 'btn btn-beta-active' : 'btn btn-ghost';
       topBtn.innerHTML = _freeBetaEnabled
-        ? '<span class="status-dot"></span><span class="btn-text-full">Open Beta: ON</span><span class="btn-text-mob">Beta: ON</span>'
+        ? '<span class="status-dot" style="background:#000"></span><span class="btn-text-full">Open Beta: ON</span><span class="btn-text-mob">Beta: ON</span>'
         : '<span style="color:var(--t4)">●</span><span class="btn-text-full">Open Beta: OFF</span><span class="btn-text-mob">Beta: OFF</span>';
+    }
+    const togFree = document.getElementById('s-free-toggle');
+    if (togFree) {
+      _freeBetaEnabled ? togFree.classList.add('on') : togFree.classList.remove('on');
     }
   } catch(e) {
     console.error('Failed to check free beta status', e);
@@ -2313,18 +2517,23 @@ async function checkSafeModeStatus() {
   if (_role !== 'admin') return;
   const s = await api('/api/admin/settings');
   const btn = document.getElementById('btn-toggle-safe-mode');
+  const togSafe = document.getElementById('s-safemode-toggle');
   if (!btn || !s) return;
   btn.style.display = 'inline-flex';
   if (s.emergency_safe_mode) {
-    btn.innerHTML = '<span style="color:var(--red)">●</span> <span class="btn-text-full">Safe Mode: ACTIVE</span><span class="btn-text-mob">Safe: ON</span>';
-    btn.style.color = 'var(--red)';
-    btn.style.border = '1px solid rgba(255,59,48,0.4)';
-    btn.style.background = 'rgba(255,59,48,0.12)';
+    btn.className = 'btn btn-safe-active';
+    btn.innerHTML = '🚨 <span class="btn-text-full">Safe Mode: ACTIVE</span><span class="btn-text-mob">Safe: ON</span>';
+    btn.style.color = '#ffffff';
+    btn.style.border = '1px solid #ff3b30';
+    btn.style.background = '#ff3b30';
+    if (togSafe) togSafe.classList.add('on');
   } else {
-    btn.innerHTML = '<span style="color:var(--t4)">●</span> <span class="btn-text-full">Safe Mode: OFF</span><span class="btn-text-mob">Safe: OFF</span>';
-    btn.style.color = 'var(--t2)';
-    btn.style.border = '1px solid var(--border)';
-    btn.style.background = 'transparent';
+    btn.className = 'btn btn-safe-normal';
+    btn.innerHTML = '<span style="color:#00ff88">●</span> <span class="btn-text-full">Safe Mode: OFF (Normal)</span><span class="btn-text-mob">Safe: OFF</span>';
+    btn.style.color = '#00ff88';
+    btn.style.border = '1px solid #00ff88';
+    btn.style.background = 'rgba(0,255,136,0.15)';
+    if (togSafe) togSafe.classList.remove('on');
   }
 }
 
@@ -2355,7 +2564,9 @@ const PAGE_TITLES = {
   clients: 'Client & Reseller Accounts',
   crashes: 'Crash Analytics & Native Offsets',
   blacklist: 'Global Hardware ID (HWID) Blacklist',
+  logs: 'System Audit & Debug Logs',
   settings: 'Global App Settings',
+  beta: 'Free Public Beta Testing Portal',
   'client-dashboard': 'Client Portal — Key & Fleet',
   'client-crashes': 'Client Portal — Scoped Telemetry'
 };
@@ -2387,8 +2598,9 @@ function showPage(name) {
   if (name === 'clients') loadClients();
   if (name === 'crashes') loadCrashes();
   if (name === 'blacklist') loadBlacklist();
+  if (name === 'logs') loadLogs();
   if (name === 'settings') loadSettings();
-  if (name === 'client-dashboard') loadClientDashboard();
+  if (name === 'client-dashboard') { loadClientDashboard(); loadClientPackages(); }
   if (name === 'client-crashes') loadClientCrashes();
 }
 
@@ -2959,75 +3171,175 @@ function switchCreateType(type) {
   document.getElementById('modal-create-title').textContent = type === 'own' ? 'Generate Internal Keys' : 'Create Client / Buyer Account';
 }
 
-async function createKeys() {
-  const duration_days = parseInt(document.getElementById('m-dur').value);
-  const max_loaders = parseInt(document.getElementById('m-loaders').value);
-  const package_name = document.getElementById('m-pkg').value.trim();
-  const note = document.getElementById('m-note').value.trim();
+let _lastSuccessText = '';
 
-  let payload = {
-    account_type: _currentCreateType,
-    duration_days,
-    max_loaders,
-    package_name,
-    note
-  };
+function openSuccessModal(r) {
+  const modal = document.getElementById('modal-success');
+  const body = document.getElementById('succ-body');
+  const title = document.getElementById('succ-title');
+  if (!modal || !body) return;
 
-  if (_currentCreateType === 'client') {
-    const mode = document.getElementById('m-client-mode')?.value || 'new';
-    const prefix = document.getElementById('m-client-prefix')?.value.trim() || 'FB';
-    let client_username = '';
-    let client_password = '';
+  if (r.client) {
+    title.textContent = r.client.is_new ? 'Client Account Created!' : 'New Key Issued to Client!';
+    const t = `💎 Featurestic Box Client Access 💎\n━━━━━━━━━━━━━━━━━━━━\n👤 Username: ${r.client.username}\n🔒 Password: ${r.client.password}\n🔑 SDK Key: ${r.client.user_key}\n🌐 Login URL: ${window.location.origin}\n━━━━━━━━━━━━━━━━━━━━\n⚡ Fast • 120Hz Anti-Ban • Auto-Updating`;
+    _lastSuccessText = t;
 
-    if (mode === 'existing') {
-      client_username = document.getElementById('m-client-existing-select')?.value || '';
-      if (!client_username) {
-        return toast('Please select an existing client', 'error');
-      }
-    } else {
-      client_username = document.getElementById('m-client-user').value.trim();
-      client_password = document.getElementById('m-client-pass').value.trim();
-      if (!client_username || !client_password) {
-        return toast('Client username & password are required for new accounts', 'error');
-      }
-    }
-
-    const plugin_url = document.getElementById('m-client-so').value.trim();
-    const update_apk_url = document.getElementById('m-client-apk').value.trim();
-
-    payload = {
-      ...payload,
-      prefix,
-      client_username,
-      client_password,
-      plugin_url,
-      update_apk_url
-    };
+    body.innerHTML = `
+      <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+        <span><strong>Client Username:</strong> <span style="color:var(--neon)">@${r.client.username}</span></span>
+        <button class="act-btn act-neon" onclick="copyPlain('${r.client.username}')">Copy</button>
+      </div>
+      <div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+        <span><strong>Client Password:</strong> <code style="color:var(--orange)">${r.client.password}</code></span>
+        <button class="act-btn act-neon" onclick="copyPlain('${r.client.password}')">Copy</button>
+      </div>
+      <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+        <span><strong>Assigned SDK Key:</strong> <span class="key-pill">${r.client.user_key}</span></span>
+        <button class="act-btn act-neon" onclick="copyPlain('${r.client.user_key}')">Copy</button>
+      </div>
+      <div style="font-size:0.72rem;color:var(--t3);line-height:1.5">
+        Buyer credentials saved! The buyer can now log in to the Client Portal to manage their loader package names and configure custom .so.
+      </div>
+    `;
   } else {
-    const prefix = document.getElementById('m-prefix').value.trim() || 'FB';
-    const count = parseInt(document.getElementById('m-count').value) || 1;
-    payload = {
-      ...payload,
-      prefix,
-      count
-    };
+    title.textContent = `${r.keys.length} Key(s) Generated!`;
+    _lastSuccessText = r.keys.join('\n');
+    body.innerHTML = `
+      <div style="margin-bottom:8px"><strong>Generated Operational Key(s):</strong></div>
+      <div class="result-box" style="margin-bottom:12px">${r.keys.join('\n')}</div>
+      <button class="btn btn-primary-neon" style="width:100%;font-size:0.78rem" onclick="copyPlain(_lastSuccessText)">📋 Copy All Generated Keys</button>
+    `;
   }
 
-  const r = await api('/api/admin/keys/create', 'POST', payload);
+  modal.classList.add('open');
+}
+
+function closeSuccessModal() {
+  const modal = document.getElementById('modal-success');
+  if (modal) modal.classList.remove('open');
+}
+
+function copySuccessText() {
+  if (!_lastSuccessText) return;
+  copyPlain(_lastSuccessText);
+  toast('Complete details copied to clipboard!');
+}
+
+function copyBetaUrl() {
+  const url = `${window.location.origin}/#beta`;
+  copyPlain(url);
+  toast('Public Beta link copied: ' + url);
+}
+
+async function claimBetaKey() {
+  const btn = document.querySelector('#beta-claim-box button');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Generating Beta Key…';
+  }
+
+  const r = await api('/api/public/claim-beta-key', 'POST', {}, true);
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = '⚡ Claim Instant Free Beta Key';
+  }
+
   if (r && r.success) {
-    document.getElementById('modal-result').style.display = '';
-    if (r.client) {
-      const isNew = r.client.is_new;
-      document.getElementById('result-keys').textContent = `Client: @${r.client.username}\nPassword: ${r.client.password}\nAssigned Key: ${r.client.user_key}`;
-      toast(isNew ? `Client account @${r.client.username} created!` : `New key generated for @${r.client.username}!`);
-    } else {
-      document.getElementById('result-keys').textContent = r.keys.join('\n');
-      toast(`${r.keys.length} key(s) generated!`);
+    document.getElementById('beta-claim-box').style.display = 'none';
+    document.getElementById('beta-result-box').style.display = 'block';
+    document.getElementById('beta-key-display').textContent = r.key;
+    if (r.apk_url) {
+      document.getElementById('beta-apk-btn').href = r.apk_url;
     }
-    loadKeys(); loadDashboard();
-    if (_currentCreateType === 'client') loadClients();
+    toast(`Beta Key Claimed: ${r.key}`);
   } else {
-    toast((r && r.error) ? r.error : 'Failed to create keys', 'error');
+    toast((r && r.message) ? r.message : 'Beta registration is currently closed', 'error');
+    document.getElementById('beta-closed-alert').style.display = 'block';
+  }
+}
+
+async function createKeys() {
+  const btn = document.getElementById('btn-create-submit');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Generating...';
+  }
+
+  try {
+    const duration_days = parseInt(document.getElementById('m-dur').value);
+    const max_loaders = parseInt(document.getElementById('m-loaders').value);
+    const package_name = document.getElementById('m-pkg').value.trim();
+    const note = document.getElementById('m-note').value.trim();
+
+    let payload = {
+      account_type: _currentCreateType,
+      duration_days,
+      max_loaders,
+      package_name,
+      note
+    };
+
+    if (_currentCreateType === 'client') {
+      const mode = document.getElementById('m-client-mode')?.value || 'new';
+      const prefix = document.getElementById('m-client-prefix')?.value.trim() || 'FB';
+      let client_username = '';
+      let client_password = '';
+
+      if (mode === 'existing') {
+        client_username = document.getElementById('m-client-existing-select')?.value || '';
+        if (!client_username) {
+          if (btn) { btn.disabled = false; btn.textContent = 'Generate'; }
+          return toast('Please select an existing client', 'error');
+        }
+      } else {
+        client_username = document.getElementById('m-client-user').value.trim();
+        client_password = document.getElementById('m-client-pass').value.trim();
+        if (!client_username || !client_password) {
+          if (btn) { btn.disabled = false; btn.textContent = 'Generate'; }
+          return toast('Client username & password are required for new accounts', 'error');
+        }
+      }
+
+      const plugin_url = document.getElementById('m-client-so').value.trim();
+      const update_apk_url = document.getElementById('m-client-apk').value.trim();
+
+      payload = {
+        ...payload,
+        prefix,
+        client_username,
+        client_password,
+        plugin_url,
+        update_apk_url
+      };
+    } else {
+      const prefix = document.getElementById('m-prefix').value.trim() || 'FB';
+      const count = parseInt(document.getElementById('m-count').value) || 1;
+      payload = {
+        ...payload,
+        prefix,
+        count
+      };
+    }
+
+    const r = await api('/api/admin/keys/create', 'POST', payload);
+    if (btn) { btn.disabled = false; btn.textContent = 'Generate'; }
+
+    if (r && r.success) {
+      closeModal();
+      openSuccessModal(r);
+      loadKeys(); loadDashboard();
+      if (_currentCreateType === 'client') {
+        loadClients();
+        showPage('clients');
+      } else {
+        showPage('keys');
+      }
+    } else {
+      toast((r && r.error) ? r.error : 'Failed to create keys', 'error');
+    }
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Generate'; }
+    toast(e.message || 'Error creating key', 'error');
   }
 }
 
@@ -3307,6 +3619,210 @@ function copyGhidraJump() {
     toast(`Address: ${addr}`);
   });
 }
+/* ─── System Audit & Bug Telemetry Logs ─── */
+let _currentLogFilter = 'all';
+
+async function loadLogs() {
+  const filter = _currentLogFilter;
+  let url = `/api/admin/logs?limit=150`;
+  if (filter && filter !== 'all') url += `&level=${filter}`;
+  const logs = await api(url);
+  const tbody = document.getElementById('logs-body');
+  if (!tbody) return;
+
+  const list = logs || [];
+  tbody.innerHTML = list.length ? list.map(l => {
+    let lvlBadge = '';
+    if (l.level === 'error') lvlBadge = '<span class="badge badge-banned">ERROR</span>';
+    else if (l.level === 'warn') lvlBadge = '<span class="badge" style="background:rgba(255,149,0,0.15);color:var(--orange);border:1px solid rgba(255,149,0,0.3)">WARN</span>';
+    else if (l.level === 'connect') lvlBadge = '<span class="badge badge-active">CONNECT</span>';
+    else lvlBadge = '<span class="badge tag-own">INFO</span>';
+
+    const detailsStr = l.details && l.details !== '{}' ? `<button class="act-btn act-neon" style="margin-left:6px" onclick="copyPlain('${esc(l.details)}')">📋 Details</button>` : '';
+
+    return `<tr>
+      <td>${lvlBadge}</td>
+      <td><strong>${esc(l.action)}</strong></td>
+      <td><span style="color:var(--t1)">${esc(l.message)}</span> ${detailsStr}</td>
+      <td>${l.user_key ? `<span class="key-pill" style="font-size:0.68rem">${esc(l.user_key)}</span>` : (l.username ? `@${esc(l.username)}` : '—')}</td>
+      <td style="color:var(--t3);font-size:0.72rem">${esc(l.ip || '—')}</td>
+      <td style="color:var(--t3);font-size:0.72rem">${fmtDate(l.created_at)}</td>
+    </tr>`;
+  }).join('') : emptyRow(6, 'No system logs recorded yet');
+}
+
+function filterLogs(level) {
+  _currentLogFilter = level;
+  document.querySelectorAll('[data-log-filter]').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-log-filter') === level);
+  });
+  loadLogs();
+}
+
+async function clearLogs() {
+  if (!confirm('Clear all system & debug logs?')) return;
+  await api('/api/admin/logs/clear', 'DELETE');
+  toast('System logs cleared');
+  loadLogs();
+}
+
+/* ─── Client Multi-Package Management ─── */
+let _clientPackages = [];
+let _editingPkgIndex = -1;
+
+async function loadClientPackages() {
+  const r = await api('/api/client/packages');
+  if (!r || !r.packages) return;
+  _clientPackages = r.packages;
+  const tbody = document.getElementById('cl-packages-body');
+  if (!tbody) return;
+
+  const quota = r.max_loaders === 0 ? 'Unlimited' : r.max_loaders;
+  const activeCount = _clientPackages.filter(p => p.is_active).length;
+  const subEl = document.getElementById('cl-packages-sub');
+  if (subEl) {
+    subEl.textContent = `Allowed Quota: ${activeCount}/${quota} Active Package(s). Only Active packages launch loaders.`;
+  }
+
+  tbody.innerHTML = _clientPackages.length ? _clientPackages.map((p, idx) => {
+    const isAct = Boolean(p.is_active);
+    const soHtml = p.plugin_url ? `<span class="tag-so" title="${esc(p.plugin_url)}">Custom .so</span>` : '<span style="color:var(--t4);font-size:0.75rem">Key Default</span>';
+    const apkHtml = p.update_apk_url ? `<span class="badge tag-client" title="${esc(p.update_apk_url)}">v${p.update_version || '1.0.0'}</span>` : '<span style="color:var(--t4);font-size:0.75rem">Default</span>';
+    const shaHtml = p.so_sha256 ? `<span class="tag-offset" title="${esc(p.so_sha256)}">${p.so_sha256.slice(0, 8)}…</span>` : '<span style="color:var(--t4);font-size:0.75rem">—</span>';
+
+    return `<tr>
+      <td><strong style="color:var(--t1)">${esc(p.package_name)}</strong></td>
+      <td>
+        <button class="act-btn ${isAct ? 'act-neon' : 'act-ghost'}" onclick="toggleClientPkgActive(${idx})">
+          ${isAct ? '🟢 Active' : '⚪ Inactive'}
+        </button>
+      </td>
+      <td>${soHtml}</td>
+      <td>${shaHtml}</td>
+      <td>${apkHtml}</td>
+      <td>
+        <div class="acts">
+          <button class="act-btn act-orange" onclick="openAddPackageModal(${idx})">Edit</button>
+          <button class="act-btn act-red" onclick="deletePackage(${idx})">Delete</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') : emptyRow(6, 'No packages added yet. Click "+ Add Package Name" to bind your loader package.');
+}
+
+async function toggleClientPkgActive(idx) {
+  const p = _clientPackages[idx];
+  if (!p) return;
+  const willBeActive = !p.is_active;
+
+  const maxLoaders = _clientKeyObj?.max_loaders ?? 1;
+  if (willBeActive && maxLoaders === 1) {
+    _clientPackages.forEach(pkg => pkg.is_active = false);
+    p.is_active = true;
+  } else if (willBeActive && maxLoaders > 0) {
+    const activeCount = _clientPackages.filter(pkg => pkg.is_active).length;
+    if (activeCount >= maxLoaders) {
+      return toast(`Allowed quota is max ${maxLoaders} package(s). Please deactivate another package first.`, 'error');
+    }
+    p.is_active = true;
+  } else {
+    p.is_active = willBeActive;
+  }
+
+  await savePackagesToServer();
+}
+
+async function savePackagesToServer() {
+  const r = await api('/api/client/packages/save', 'POST', { packages: _clientPackages });
+  if (r && r.success) {
+    _clientPackages = r.packages;
+    toast('Package configuration updated successfully!');
+    loadClientPackages();
+  } else {
+    toast((r && r.error) ? r.error : 'Failed to save packages', 'error');
+  }
+}
+
+function openAddPackageModal(isEdit = false) {
+  _editingPkgIndex = isEdit;
+  document.getElementById('modal-add-package').classList.add('open');
+  if (typeof isEdit === 'number' && _clientPackages[isEdit]) {
+    const p = _clientPackages[isEdit];
+    document.getElementById('m-pkg-name').value = p.package_name || '';
+    document.getElementById('m-pkg-so').value = p.plugin_url || '';
+    document.getElementById('m-pkg-sha').value = p.so_sha256 || '';
+    document.getElementById('m-pkg-apk').value = p.update_apk_url || '';
+    document.getElementById('m-pkg-ver').value = p.update_version || '1.0.1';
+    const tog = document.getElementById('m-pkg-active-toggle');
+    p.is_active ? tog.classList.add('on') : tog.classList.remove('on');
+  } else {
+    _editingPkgIndex = -1;
+    document.getElementById('m-pkg-name').value = '';
+    document.getElementById('m-pkg-so').value = '';
+    document.getElementById('m-pkg-sha').value = '';
+    document.getElementById('m-pkg-apk').value = '';
+    document.getElementById('m-pkg-ver').value = '1.0.1';
+    document.getElementById('m-pkg-active-toggle').classList.add('on');
+  }
+}
+
+function closeAddPackageModal() {
+  document.getElementById('modal-add-package').classList.remove('open');
+}
+
+async function deletePackage(idx) {
+  if (!confirm(`Remove package "${_clientPackages[idx].package_name}"?`)) return;
+  _clientPackages.splice(idx, 1);
+  await savePackagesToServer();
+}
+
+async function savePackageFromModal() {
+  const name = document.getElementById('m-pkg-name').value.trim();
+  if (!name) return toast('Package name is required', 'error');
+
+  const isActive = document.getElementById('m-pkg-active-toggle').classList.contains('on');
+  const so = document.getElementById('m-pkg-so').value.trim();
+  const sha = document.getElementById('m-pkg-sha').value.trim();
+  const apk = document.getElementById('m-pkg-apk').value.trim();
+  const ver = document.getElementById('m-pkg-ver').value.trim() || '1.0.1';
+
+  const entry = {
+    package_name: name,
+    is_active: isActive,
+    plugin_url: so,
+    so_sha256: sha,
+    update_apk_url: apk,
+    update_version: ver
+  };
+
+  if (typeof _editingPkgIndex === 'number' && _editingPkgIndex >= 0) {
+    _clientPackages[_editingPkgIndex] = entry;
+  } else {
+    if (_clientPackages.some(p => p.package_name.toLowerCase() === name.toLowerCase())) {
+      return toast('This package name is already added', 'error');
+    }
+    const maxLoaders = _clientKeyObj?.max_loaders ?? 1;
+    if (isActive && maxLoaders === 1) {
+      _clientPackages.forEach(p => p.is_active = false);
+    }
+    _clientPackages.push(entry);
+  }
+
+  closeAddPackageModal();
+  await savePackagesToServer();
+}
+
+/* ─── Route Hash Listener for Public Beta Link ─── */
+function checkHashRoute() {
+  if (window.location.hash === '#beta' || window.location.pathname === '/beta') {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    showPage('beta');
+  }
+}
+
+window.addEventListener('hashchange', checkHashRoute);
+setTimeout(checkHashRoute, 200);
 </script>
 </body>
 </html>

@@ -52,6 +52,20 @@ async function sendTelegramAlert(text, customBotToken = null, customChatId = nul
   }
 }
 
+// Helper: System Audit & Error Logging
+async function logSystem(action, message, level = 'info', details = {}, req = null, user_key = null, username = null) {
+  try {
+    const ip = req ? (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '') : '';
+    const detailsStr = typeof details === 'object' ? JSON.stringify(details) : String(details);
+    await sql`
+      INSERT INTO system_logs (level, action, message, details, ip, user_key, username)
+      VALUES (${level}, ${action}, ${message}, ${detailsStr}, ${String(ip).slice(0, 64)}, ${user_key}, ${username})
+    `;
+  } catch (e) {
+    console.error('[logSystem Error]', e.message);
+  }
+}
+
 // -------------------------------------------------------------
 // 1. Loader & SDK Connect API (/connect & /api/public/connect)
 // -------------------------------------------------------------
@@ -128,30 +142,105 @@ async function handleConnect(req, res) {
       }
     }
 
-    // 2. Package Binding & Multi-Loader Quota Check
+    // 2. Package Binding, Multi-Loader Quota & Per-Package Config Check
     const pkg = (params.pkg || params.package || params.package_name || '').trim();
-    let boundPackages = [];
+    let packageConfigs = [];
     try {
-      boundPackages = JSON.parse(key.bound_packages || '[]');
+      packageConfigs = JSON.parse(key.package_configs || '[]');
     } catch (e) {
-      boundPackages = [];
+      packageConfigs = [];
     }
 
     const maxLoaders = key.max_loaders === undefined || key.max_loaders === null ? 1 : key.max_loaders;
+    const isBetaKey = key.account_type === 'beta' || (key.user_key && key.user_key.startsWith('FB-BETA-'));
+
+    // Check if this is a Public Beta Key
+    if (isBetaKey && !settings?.free_access_enabled) {
+      return res.json({
+        status: false,
+        reason: 'BETA_CLOSED',
+        message: 'Public Free Beta testing period has ended or is closed by the administrator.'
+      });
+    }
+
+    let activePkgConfig = null;
 
     if (pkg) {
-      if (!boundPackages.includes(pkg)) {
-        // 0 = unlimited loaders
-        if (maxLoaders === 0 || boundPackages.length < maxLoaders) {
-          boundPackages.push(pkg);
-          await sql`UPDATE license_keys SET bound_packages = ${JSON.stringify(boundPackages)} WHERE id = ${key.id}`;
-        } else {
-          return res.json({
-            status: false,
-            reason: 'LOADER LIMIT REACHED',
-            message: `SDK Key allows ${maxLoaders} loader(s). Already bound to: ${boundPackages.join(', ')}. Contact administrator.`
-          });
+      if (isBetaKey) {
+        // Public Beta Mode: Unlimited packages, auto-allow without restrictions
+        activePkgConfig = packageConfigs.find(p => p.package_name && p.package_name.toLowerCase() === pkg.toLowerCase());
+        if (!activePkgConfig) {
+          activePkgConfig = {
+            package_name: pkg,
+            is_active: true,
+            plugin_url: key.plugin_url || '',
+            so_sha256: key.so_sha256 || '',
+            update_apk_url: key.update_apk_url || '',
+            update_version: key.update_version || '1.0.0'
+          };
+          packageConfigs.push(activePkgConfig);
+          await sql`UPDATE license_keys SET package_configs = ${JSON.stringify(packageConfigs)} WHERE id = ${key.id}`;
         }
+      } else if (packageConfigs.length > 0) {
+        // Registered Client with structured package configs
+        activePkgConfig = packageConfigs.find(p => p.package_name && p.package_name.toLowerCase() === pkg.toLowerCase());
+        if (activePkgConfig) {
+          if (!activePkgConfig.is_active) {
+            return res.json({
+              status: false,
+              reason: 'PACKAGE_INACTIVE',
+              message: `Package "${pkg}" is currently INACTIVE in your Client Portal. Please switch it to Active to run.`
+            });
+          }
+        } else {
+          // Package not found in client's package configs
+          const activeCount = packageConfigs.filter(p => Boolean(p.is_active)).length;
+          if (maxLoaders > 0 && activeCount >= maxLoaders) {
+            return res.json({
+              status: false,
+              reason: 'LOADER LIMIT REACHED',
+              message: `Active loader limit reached (${maxLoaders} package(s) allowed). Please manage your packages in your Client Portal.`
+            });
+          } else {
+            // Under quota: auto-add as active
+            activePkgConfig = {
+              package_name: pkg,
+              is_active: true,
+              plugin_url: key.plugin_url || '',
+              so_sha256: key.so_sha256 || '',
+              update_apk_url: key.update_apk_url || '',
+              update_version: key.update_version || '1.0.0'
+            };
+            packageConfigs.push(activePkgConfig);
+            await sql`UPDATE license_keys SET package_configs = ${JSON.stringify(packageConfigs)} WHERE id = ${key.id}`;
+          }
+        }
+      } else {
+        // Fallback for legacy bound_packages
+        let boundPackages = [];
+        try { boundPackages = JSON.parse(key.bound_packages || '[]'); } catch(e) { boundPackages = []; }
+        if (!boundPackages.includes(pkg)) {
+          if (maxLoaders === 0 || boundPackages.length < maxLoaders) {
+            boundPackages.push(pkg);
+            await sql`UPDATE license_keys SET bound_packages = ${JSON.stringify(boundPackages)} WHERE id = ${key.id}`;
+          } else {
+            return res.json({
+              status: false,
+              reason: 'LOADER LIMIT REACHED',
+              message: `SDK Key allows ${maxLoaders} loader(s). Already bound to: ${boundPackages.join(', ')}. Contact administrator.`
+            });
+          }
+        }
+        activePkgConfig = {
+          package_name: pkg,
+          is_active: true,
+          plugin_url: key.plugin_url || '',
+          so_sha256: key.so_sha256 || '',
+          update_apk_url: key.update_apk_url || '',
+          update_version: key.update_version || '1.0.0'
+        };
+        packageConfigs = [activePkgConfig];
+        await sql`UPDATE license_keys SET package_configs = ${JSON.stringify(packageConfigs)} WHERE id = ${key.id}`;
       }
     }
 
@@ -178,35 +267,35 @@ async function handleConnect(req, res) {
       : '2099-12-31 23:59:59';
 
     // Determine effective .so plugin URL:
-    // User key-specific .so has full isolation. DO NOT leak admin global .so to client users!
-    // If key.plugin_url is configured, deliver it.
-    // Otherwise return "" so the user's loader falls back to their own built-in Git/local link!
+    // Prioritize package-specific .so plugin URL -> Key plugin URL -> Global Admin (for internal keys only)
     let effectivePluginUrl = '';
-    if (key.plugin_url && key.plugin_url.trim()) {
+    if (activePkgConfig && activePkgConfig.plugin_url && activePkgConfig.plugin_url.trim()) {
+      effectivePluginUrl = activePkgConfig.plugin_url.trim();
+    } else if (key.plugin_url && key.plugin_url.trim()) {
       effectivePluginUrl = key.plugin_url.trim();
     } else if (key.account_type === 'own' && settings?.plugin_url && settings.plugin_url.trim()) {
       effectivePluginUrl = settings.plugin_url.trim();
     }
 
-    // Determine effective APK update URL & version (fallback to admin global settings)
-    const effectiveApkUrl = (key.update_apk_url && key.update_apk_url.trim())
-      ? key.update_apk_url.trim()
-      : (settings?.update_apk_url || '');
+    // Determine effective APK update URL & version (prioritize package-specific -> key -> settings)
+    const effectiveApkUrl = (activePkgConfig && activePkgConfig.update_apk_url && activePkgConfig.update_apk_url.trim())
+      ? activePkgConfig.update_apk_url.trim()
+      : ((key.update_apk_url && key.update_apk_url.trim()) ? key.update_apk_url.trim() : (settings?.update_apk_url || ''));
 
-    const effectiveApkVer = (key.update_apk_url && key.update_apk_url.trim() && key.update_version && key.update_version.trim())
-      ? key.update_version.trim()
-      : (settings?.update_version || '1.0.1');
+    const effectiveApkVer = (activePkgConfig && activePkgConfig.update_version && activePkgConfig.update_version.trim())
+      ? activePkgConfig.update_version.trim()
+      : ((key.update_version && key.update_version.trim()) ? key.update_version.trim() : (settings?.update_version || '1.0.1'));
 
-    const effectiveChangelog = (key.update_apk_url && key.update_apk_url.trim() && key.update_changelog && key.update_changelog.trim())
+    const effectiveChangelog = (key.update_changelog && key.update_changelog.trim())
       ? key.update_changelog.trim()
       : (settings?.update_changelog || 'Latest performance updates & bug fixes');
 
     const hasApkUpdate = Boolean(effectiveApkUrl);
 
-    // Determine .so SHA-256 Anti-Tamper Checksum
-    const effectiveSoSha256 = (key.so_sha256 && key.so_sha256.trim())
-      ? key.so_sha256.trim()
-      : (key.account_type === 'own' ? (settings?.so_sha256 || '') : '');
+    // Determine .so SHA-256 Anti-Tamper Checksum (package-specific -> key -> settings)
+    const effectiveSoSha256 = (activePkgConfig && activePkgConfig.so_sha256 && activePkgConfig.so_sha256.trim())
+      ? activePkgConfig.so_sha256.trim()
+      : ((key.so_sha256 && key.so_sha256.trim()) ? key.so_sha256.trim() : (key.account_type === 'own' ? (settings?.so_sha256 || '') : ''));
 
     // Developer Remote Config & Feature Flags
     let devConfig = {};
@@ -215,6 +304,27 @@ async function handleConnect(req, res) {
     } catch(e) {
       devConfig = {};
     }
+
+    // On-Screen Watermark for Beta Testing Keys
+    const watermark = {
+      enabled: Boolean(isBetaKey),
+      text: isBetaKey ? 'FEATURESTIC BOX • FREE BETA VERSION' : '',
+      subtext: isBetaKey ? 'Trial & Evaluation Only • Not For Resale' : '',
+      position: 'top-center',
+      color: '#00FF88',
+      opacity: 0.85
+    };
+
+    if (isBetaKey) {
+      devConfig.is_beta = true;
+      devConfig.watermark_enabled = true;
+      devConfig.watermark_text = 'FEATURESTIC BOX • FREE BETA VERSION';
+    }
+
+    // Log connection for audit
+    await logSystem('CONNECT_SUCCESS', `Loader connected for key ${user_key} (${pkg || 'unknown pkg'})`, 'connect', {
+      pkg, serial, is_beta: isBetaKey, effectivePluginUrl
+    }, req, user_key, key.client_username);
 
     return res.json({
       status: true,
@@ -228,8 +338,10 @@ async function handleConnect(req, res) {
         so_sha256: effectiveSoSha256,
         so_token: `SO_${Buffer.from(user_key).toString('base64')}_${Date.now()}`,
         config: devConfig,
+        watermark: watermark,
+        is_beta: isBetaKey,
         max_loaders: maxLoaders,
-        bound_packages: boundPackages,
+        bound_packages: (activePkgConfig ? [activePkgConfig.package_name] : []),
         unique_devices: devCount,
         update: {
           has_update: hasApkUpdate,
@@ -619,13 +731,22 @@ app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
       const rand = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
       const user_key = `${cleanPrefix}-${rand}`;
 
+      const initialConfigs = package_name && package_name.trim() ? JSON.stringify([{
+        package_name: package_name.trim(),
+        is_active: true,
+        plugin_url: plugin_url.trim(),
+        so_sha256: (req.body.so_sha256 || '').trim(),
+        update_apk_url: update_apk_url.trim(),
+        update_version: update_version.trim()
+      }]) : '[]';
+
       await sql`
         INSERT INTO license_keys (
-          user_key, duration_days, note, max_loaders, bound_packages,
+          user_key, duration_days, note, max_loaders, bound_packages, package_configs,
           account_type, client_username, plugin_url, update_apk_url, update_version, update_changelog
         )
         VALUES (
-          ${user_key}, ${duration_days}, ${note}, ${isNaN(loadersQuota) ? 1 : loadersQuota}, ${initialBound},
+          ${user_key}, ${duration_days}, ${note}, ${isNaN(loadersQuota) ? 1 : loadersQuota}, ${initialBound}, ${initialConfigs},
           'client', ${u}, ${plugin_url.trim()}, ${update_apk_url.trim()}, ${update_version.trim()}, ${update_changelog.trim()}
         )
       `;
@@ -1268,6 +1389,230 @@ app.delete('/api/client/crashes/clear', checkClientAuth, async (req, res) => {
     const client = req.client;
     await sql`DELETE FROM crash_reports WHERE user_key = ${client.user_key} OR client_username = ${client.username}`;
     res.json({ success: true, message: 'Crash logs cleared' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================================================
+// PACKAGE CONFIGS MANAGEMENT (Per-Package .so & APK Update)
+// =============================================================
+app.get('/api/client/packages', checkClientAuth, async (req, res) => {
+  try {
+    const client = req.client;
+    const key = (await sql`SELECT user_key, max_loaders, package_configs, plugin_url, update_apk_url, update_version, so_sha256 FROM license_keys WHERE user_key = ${client.user_key} LIMIT 1`)[0];
+    if (!key) return res.status(404).json({ error: 'Assigned key not found' });
+
+    let configs = [];
+    try { configs = JSON.parse(key.package_configs || '[]'); } catch(e) { configs = []; }
+
+    res.json({
+      success: true,
+      max_loaders: key.max_loaders === undefined ? 1 : key.max_loaders,
+      packages: configs,
+      default_plugin_url: key.plugin_url || '',
+      default_apk_url: key.update_apk_url || ''
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/client/packages/save', checkClientAuth, async (req, res) => {
+  try {
+    const client = req.client;
+    const key = (await sql`SELECT id, user_key, max_loaders FROM license_keys WHERE user_key = ${client.user_key} LIMIT 1`)[0];
+    if (!key) return res.status(404).json({ error: 'Assigned key not found' });
+
+    const packages = req.body.packages;
+    if (!Array.isArray(packages)) {
+      return res.status(400).json({ error: 'Packages must be an array' });
+    }
+
+    const maxLoaders = key.max_loaders === undefined ? 1 : key.max_loaders;
+    let activeCount = packages.filter(p => Boolean(p.is_active)).length;
+
+    // Enforce quota
+    if (maxLoaders > 0 && activeCount > maxLoaders) {
+      if (maxLoaders === 1) {
+        let seen = false;
+        for (let i = packages.length - 1; i >= 0; i--) {
+          if (packages[i].is_active && !seen) {
+            seen = true;
+          } else if (packages[i].is_active && seen) {
+            packages[i].is_active = false;
+          }
+        }
+      } else {
+        return res.status(400).json({ 
+          error: `Quota exceeded: Your license key allows maximum ${maxLoaders} active loader package(s). Please deactivate one first.` 
+        });
+      }
+    }
+
+    const cleaned = packages.map(p => ({
+      package_name: (p.package_name || '').trim(),
+      is_active: Boolean(p.is_active),
+      plugin_url: (p.plugin_url || '').trim(),
+      so_sha256: (p.so_sha256 || '').trim(),
+      update_apk_url: (p.update_apk_url || '').trim(),
+      update_version: (p.update_version || '1.0.0').trim()
+    })).filter(p => p.package_name.length > 0);
+
+    const boundNames = cleaned.filter(p => p.is_active).map(p => p.package_name);
+
+    await sql`
+      UPDATE license_keys 
+      SET package_configs = ${JSON.stringify(cleaned)},
+          bound_packages = ${JSON.stringify(boundNames)}
+      WHERE id = ${key.id}
+    `;
+
+    await logSystem('CLIENT_PACKAGES_UPDATED', `Client @${client.username} updated loader packages`, 'info', { active: boundNames }, req, client.user_key, client.username);
+
+    res.json({ success: true, packages: cleaned });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin Client Package Configs
+app.get('/api/admin/clients/:id/packages', checkAdminAuth, async (req, res) => {
+  try {
+    const client = (await sql`SELECT * FROM client_accounts WHERE id = ${req.params.id}`)[0];
+    if (!client) return res.status(404).json({ error: 'Client account not found' });
+    const key = (await sql`SELECT * FROM license_keys WHERE user_key = ${client.user_key}`)[0];
+    if (!key) return res.status(404).json({ error: 'Assigned key not found' });
+
+    let configs = [];
+    try { configs = JSON.parse(key.package_configs || '[]'); } catch(e) { configs = []; }
+    res.json({ success: true, client, key, packages: configs });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/clients/:id/packages', checkAdminAuth, async (req, res) => {
+  try {
+    const client = (await sql`SELECT * FROM client_accounts WHERE id = ${req.params.id}`)[0];
+    if (!client) return res.status(404).json({ error: 'Client account not found' });
+    const key = (await sql`SELECT * FROM license_keys WHERE user_key = ${client.user_key}`)[0];
+    if (!key) return res.status(404).json({ error: 'Assigned key not found' });
+
+    const packages = req.body.packages;
+    if (!Array.isArray(packages)) return res.status(400).json({ error: 'Packages must be an array' });
+
+    const cleaned = packages.map(p => ({
+      package_name: (p.package_name || '').trim(),
+      is_active: Boolean(p.is_active),
+      plugin_url: (p.plugin_url || '').trim(),
+      so_sha256: (p.so_sha256 || '').trim(),
+      update_apk_url: (p.update_apk_url || '').trim(),
+      update_version: (p.update_version || '1.0.0').trim()
+    })).filter(p => p.package_name.length > 0);
+
+    const boundNames = cleaned.filter(p => p.is_active).map(p => p.package_name);
+
+    await sql`
+      UPDATE license_keys 
+      SET package_configs = ${JSON.stringify(cleaned)},
+          bound_packages = ${JSON.stringify(boundNames)}
+      WHERE id = ${key.id}
+    `;
+
+    await logSystem('ADMIN_PACKAGES_UPDATED', `Admin updated packages for client @${client.username}`, 'info', { active: boundNames }, req, client.user_key, client.username);
+
+    res.json({ success: true, packages: cleaned });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =============================================================
+// PUBLIC FREE BETA SYSTEM (Dedicated URL & 1-Click Key Claim)
+// =============================================================
+app.get('/api/public/beta-info', async (req, res) => {
+  try {
+    const settings = (await sql`SELECT free_access_enabled, free_access_duration, update_apk_url, update_version FROM panel_settings LIMIT 1`)[0];
+    res.json({
+      enabled: Boolean(settings?.free_access_enabled),
+      duration_days: settings?.free_access_duration || 3,
+      apk_url: settings?.update_apk_url || 'https://github.com/ravipacharpro-jpg/Fbox/releases/download/Floader/FeaturesticLoader-v1.0.1.apk',
+      version: settings?.update_version || '1.0.1'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/public/claim-beta-key', async (req, res) => {
+  try {
+    const settings = (await sql`SELECT free_access_enabled, free_access_duration, update_apk_url, update_version FROM panel_settings LIMIT 1`)[0];
+    if (!settings || !settings.free_access_enabled) {
+      return res.status(403).json({
+        success: false,
+        message: 'Public Free Beta testing is currently closed by the administrator.'
+      });
+    }
+
+    const duration = settings.free_access_duration || 3;
+    const rand = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+    const user_key = `FB-BETA-${rand}`;
+    const now = new Date();
+    const exp = new Date(now.getTime() + (duration * 24 * 60 * 60 * 1000));
+
+    await sql`
+      INSERT INTO license_keys (
+        user_key, duration_days, note, max_loaders, bound_packages, package_configs, account_type,
+        status, first_used_at, expires_at
+      )
+      VALUES (
+        ${user_key}, ${duration}, 'Public Free Beta Key (Unlimited Loaders)', 0, '[]', '[]', 'beta',
+        'active', ${now.toISOString()}, ${exp.toISOString()}
+      )
+    `;
+
+    await logSystem('BETA_KEY_CLAIMED', `New Beta Key claimed: ${user_key}`, 'info', { duration, expires_at: exp }, req, user_key);
+
+    res.json({
+      success: true,
+      key: user_key,
+      duration_days: duration,
+      expires_at: exp.toISOString(),
+      max_loaders: 0,
+      is_unlimited: true,
+      apk_url: settings.update_apk_url || 'https://github.com/ravipacharpro-jpg/Fbox/releases/download/Floader/FeaturesticLoader-v1.0.1.apk',
+      version: settings.update_version || '1.0.1'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// =============================================================
+// SYSTEM & AUDIT LOGS (Detect bugs & loader failures)
+// =============================================================
+app.get('/api/admin/logs', checkAdminAuth, async (req, res) => {
+  try {
+    const { level, limit = 150 } = req.query;
+    let logs;
+    const lim = Math.min(parseInt(limit) || 150, 300);
+    if (level && level !== 'all') {
+      logs = await sql`SELECT * FROM system_logs WHERE level = ${level} ORDER BY id DESC LIMIT ${lim}`;
+    } else {
+      logs = await sql`SELECT * FROM system_logs ORDER BY id DESC LIMIT ${lim}`;
+    }
+    res.json(logs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/admin/logs/clear', checkAdminAuth, async (req, res) => {
+  try {
+    await sql`TRUNCATE TABLE system_logs`;
+    await logSystem('LOGS_CLEARED', 'System logs cleared by Admin', 'info', {}, req);
+    res.json({ success: true, message: 'System logs cleared' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
