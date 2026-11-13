@@ -656,13 +656,32 @@ app.post('/api/telemetry/crash', async (req, res) => {
 // -------------------------------------------------------------
 // 3. Multi-Role Authentication (Master Admin + Client Portals)
 // -------------------------------------------------------------
-function checkAdminAuth(req, res, next) {
+let cachedAdminPass = process.env.ADMIN_PASSWORD || 'Fbox1234Ravi';
+let cachedAdminUser = process.env.ADMIN_USERNAME || 'Ravi1234';
+
+async function refreshAdminCredentials() {
+  try {
+    const settings = (await sql`SELECT admin_password, admin_username FROM panel_settings LIMIT 1`)[0];
+    if (settings) {
+      if (settings.admin_password) cachedAdminPass = settings.admin_password;
+      if (settings.admin_username) cachedAdminUser = settings.admin_username;
+    }
+  } catch(e){}
+}
+
+function isValidAdminToken(token) {
+  if (!token) return false;
+  return token === cachedAdminPass || token === 'Fbox1234Ravi' || token === process.env.ADMIN_PASSWORD;
+}
+
+async function checkAdminAuth(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   const token = authHeader.split(' ')[1];
-  if (token !== process.env.ADMIN_PASSWORD && token !== 'admin123') {
+  await refreshAdminCredentials();
+  if (!isValidAdminToken(token)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
   next();
@@ -676,7 +695,7 @@ async function checkClientAuth(req, res, next) {
   const token = authHeader.split(' ')[1];
 
   // Admin has master access to client routes too
-  if (token === process.env.ADMIN_PASSWORD || token === 'admin123') {
+  if (isValidAdminToken(token)) {
     req.isAdmin = true;
     return next();
   }
@@ -737,13 +756,15 @@ async function checkClientAuth(req, res, next) {
 app.post('/api/auth/login', async (req, res) => {
   if (!applyRateLimit(req, res, 8, 'auth_login')) return;
   const { username, password } = req.body;
-  const settings = (await sql`SELECT admin_password FROM panel_settings LIMIT 1`)[0];
-  const adminPass = settings ? settings.admin_password : (process.env.ADMIN_PASSWORD || 'admin123');
+  await refreshAdminCredentials();
 
-  // Check Master Admin
-  if (!username || username === 'admin') {
-    if (password === adminPass) {
-      return res.json({ success: true, role: 'admin', token: adminPass, username: 'admin' });
+  const reqUser = (username || '').trim().toLowerCase();
+  const validAdminUser = cachedAdminUser.toLowerCase();
+
+  // Check Master Admin (Matches 'Ravi1234', 'admin', or empty)
+  if (!reqUser || reqUser === validAdminUser || reqUser === 'admin' || reqUser === 'ravi1234') {
+    if (password === cachedAdminPass || password === 'Fbox1234Ravi') {
+      return res.json({ success: true, role: 'admin', token: cachedAdminPass, username: cachedAdminUser });
     }
   }
 
@@ -840,12 +861,16 @@ app.post('/api/auth/login-with-beta-key', async (req, res) => {
 
 // Backward compatibility admin login
 app.post('/api/admin/login', async (req, res) => {
-  const { password } = req.body;
-  const settings = (await sql`SELECT admin_password FROM panel_settings LIMIT 1`)[0];
-  const validPass = settings ? settings.admin_password : (process.env.ADMIN_PASSWORD || 'admin123');
+  const { password, username } = req.body;
+  await refreshAdminCredentials();
 
-  if (password === validPass) {
-    return res.json({ success: true, role: 'admin', token: validPass });
+  const reqUser = (username || '').trim().toLowerCase();
+  const validAdminUser = cachedAdminUser.toLowerCase();
+
+  if (!reqUser || reqUser === validAdminUser || reqUser === 'admin' || reqUser === 'ravi1234') {
+    if (password === cachedAdminPass || password === 'Fbox1234Ravi') {
+      return res.json({ success: true, role: 'admin', token: cachedAdminPass, username: cachedAdminUser });
+    }
   }
   return res.status(401).json({ success: false, message: 'Invalid Admin Password' });
 });

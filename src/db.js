@@ -29,6 +29,9 @@ export async function initDb() {
       )
     `;
 
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS admin_username VARCHAR(64) DEFAULT 'Ravi1234'`;
+    await sql`UPDATE panel_settings SET admin_password = 'Fbox1234Ravi', admin_username = 'Ravi1234' WHERE id = 1`;
+
     // 2. License Keys Table
     await sql`
       CREATE TABLE IF NOT EXISTS license_keys (
