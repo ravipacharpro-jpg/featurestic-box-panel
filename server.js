@@ -72,7 +72,7 @@ async function logSystem(action, message, level = 'info', details = {}, req = nu
 async function handleConnect(req, res) {
   try {
     const params = { ...req.query, ...req.body };
-    const user_key = (params.user_key || params.userkey || params.key || '').trim();
+    const user_key = (params.user_key || params.userkey || params.license_key || params.key || '').trim();
     const serial = (params.serial || params.uuid || params.device || params.device_id || '').trim();
     const game = (params.game || params.gamename || '').trim();
 
