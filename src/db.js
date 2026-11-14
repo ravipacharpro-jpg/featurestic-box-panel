@@ -204,6 +204,8 @@ export async function initDb() {
     await sql`CREATE INDEX IF NOT EXISTS idx_hwid_blacklist_device_id ON hwid_blacklist(device_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_sdk_devices_user_key ON sdk_devices(user_key)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_crash_reports_cat_user ON crash_reports(crash_category, client_username)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_system_logs_id ON system_logs(id DESC)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_system_logs_level_id ON system_logs(level, id DESC)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_system_logs_created ON system_logs(created_at DESC)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_system_logs_level ON system_logs(level)`;
 

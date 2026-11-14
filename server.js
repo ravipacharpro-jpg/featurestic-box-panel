@@ -79,9 +79,20 @@ async function sendTelegramAlert(text, customBotToken = null, customChatId = nul
   }
 }
 
+// -------------------------------------------------------------
+// High-Speed In-Memory Cache for Logs & Stats (Instant <10ms rendering)
+// -------------------------------------------------------------
+const _logsCache = new Map();
+let _statsCache = { ts: 0, data: null };
+function invalidateLogCache() {
+  _logsCache.clear();
+  _statsCache.ts = 0;
+}
+
 // Helper: System Audit & Error Logging
 async function logSystem(action, message, level = 'info', details = {}, req = null, user_key = null, username = null) {
   try {
+    invalidateLogCache();
     const ip = req ? (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '') : '';
     const detailsStr = typeof details === 'object' ? JSON.stringify(details) : String(details);
     await sql`
@@ -611,12 +622,15 @@ app.post('/api/telemetry/crash', async (req, res) => {
 let cachedAdminPass = process.env.ADMIN_PASSWORD || 'Fbox1234Ravi';
 let cachedAdminUser = process.env.ADMIN_USERNAME || 'Ravi1234';
 
+let _lastAdminRefresh = 0;
 async function refreshAdminCredentials() {
+  if (Date.now() - _lastAdminRefresh < 60000) return;
   try {
     const settings = (await sql`SELECT admin_password, admin_username FROM panel_settings LIMIT 1`)[0];
     if (settings) {
       if (settings.admin_password) cachedAdminPass = settings.admin_password;
       if (settings.admin_username) cachedAdminUser = settings.admin_username;
+      _lastAdminRefresh = Date.now();
     }
   } catch(e){}
 }
@@ -931,16 +945,26 @@ app.post('/api/public/register-free-tester', async (req, res) => {
 // Admin Stats
 app.get('/api/admin/stats', checkAdminAuth, async (req, res) => {
   try {
-    const totalKeys = (await sql`SELECT COUNT(*) FROM license_keys`)[0].count;
-    const activeKeys = (await sql`SELECT COUNT(*) FROM license_keys WHERE status = 'active'`)[0].count;
-    const totalCrashes = (await sql`SELECT COUNT(*) FROM crash_reports`)[0].count;
-    const todayCrashes = (await sql`
-      SELECT COUNT(*) FROM crash_reports 
-      WHERE created_at >= CURRENT_DATE
-    `)[0].count;
-    const totalDevices = (await sql`SELECT COUNT(*) FROM sdk_devices`)[0]?.count || 0;
+    if (_statsCache.data && (Date.now() - _statsCache.ts < 10000)) {
+      return res.json(_statsCache.data);
+    }
+    const [tKeys, aKeys, tCrashes, todCrashes, tDevs] = await Promise.all([
+      sql`SELECT COUNT(*) FROM license_keys`,
+      sql`SELECT COUNT(*) FROM license_keys WHERE status = 'active'`,
+      sql`SELECT COUNT(*) FROM crash_reports`,
+      sql`SELECT COUNT(*) FROM crash_reports WHERE created_at >= CURRENT_DATE`,
+      sql`SELECT COUNT(*) FROM sdk_devices`
+    ]);
 
-    res.json({ totalKeys, activeKeys, totalCrashes, todayCrashes, totalDevices });
+    const result = {
+      totalKeys: tKeys[0]?.count || 0,
+      activeKeys: aKeys[0]?.count || 0,
+      totalCrashes: tCrashes[0]?.count || 0,
+      todayCrashes: todCrashes[0]?.count || 0,
+      totalDevices: tDevs[0]?.count || 0
+    };
+    _statsCache = { ts: Date.now(), data: result };
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2029,13 +2053,20 @@ app.post('/api/public/register-with-referral', async (req, res) => {
 app.get('/api/admin/logs', checkAdminAuth, async (req, res) => {
   try {
     const { level, limit = 150 } = req.query;
-    let logs;
+    const cacheKey = `${level || 'all'}_${limit}`;
+    const cached = _logsCache.get(cacheKey);
+    if (cached && (Date.now() - cached.ts < 12000)) {
+      return res.json(cached.data);
+    }
+
     const lim = Math.min(parseInt(limit) || 150, 300);
+    let logs;
     if (level && level !== 'all') {
       logs = await sql`SELECT * FROM system_logs WHERE level = ${level} ORDER BY id DESC LIMIT ${lim}`;
     } else {
       logs = await sql`SELECT * FROM system_logs ORDER BY id DESC LIMIT ${lim}`;
     }
+    _logsCache.set(cacheKey, { ts: Date.now(), data: logs });
     res.json(logs);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2045,11 +2076,17 @@ app.get('/api/admin/logs', checkAdminAuth, async (req, res) => {
 app.delete('/api/admin/logs/clear', checkAdminAuth, async (req, res) => {
   try {
     await sql`TRUNCATE TABLE system_logs`;
+    invalidateLogCache();
     await logSystem('LOGS_CLEARED', 'System logs cleared by Admin', 'info', {}, req);
     res.json({ success: true, message: 'System logs cleared' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// System Health & Liveness Probe
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', uptime: Math.round(process.uptime()), timestamp: Date.now() });
 });
 
 // Fallback to SPA
@@ -2062,12 +2099,12 @@ initDb().then(() => {
   app.listen(PORT, () => {
     console.log(`[Featurestic Box Panel] Running on port ${PORT}`);
 
-    // Render Keep-Alive Self-Ping Worker (Prevents free tier sleep)
-    const PING_INTERVAL = 10 * 60 * 1000; // 10 minutes
+    // Render Keep-Alive Self-Ping Worker (Pings every 4 mins to prevent free tier sleep)
+    const PING_INTERVAL = 4 * 60 * 1000;
     setInterval(() => {
       try {
         const host = process.env.RENDER_EXTERNAL_URL || 'https://featurestic-box-panel.onrender.com';
-        fetch(`${host}/api/public/beta-info`, { signal: AbortSignal.timeout(5000) })
+        fetch(`${host}/api/health`, { signal: AbortSignal.timeout(6000) })
           .then(() => {})
           .catch(() => {});
       } catch (e) {}
