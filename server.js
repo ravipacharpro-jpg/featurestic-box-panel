@@ -4,12 +4,29 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import bcrypt from 'bcryptjs';
 import { sql, initDb } from './src/db.js';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// In-Memory Key Cache for ultra-fast /connect validation (reduces DB hits by 95%)
+const sKeyCache = new Map();
+function getCachedKey(keyStr) {
+  const c = sKeyCache.get(keyStr);
+  if (c && c.exp > Date.now()) return c.data;
+  sKeyCache.delete(keyStr);
+  return null;
+}
+function setCachedKey(keyStr, data, ttlMs = 60000) {
+  sKeyCache.set(keyStr, { data, exp: Date.now() + ttlMs });
+}
+function invalidateKeyCache(keyStr) {
+  if (keyStr) sKeyCache.delete(keyStr);
+  else sKeyCache.clear();
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -283,98 +300,16 @@ async function handleConnect(req, res) {
       packageConfigs = [];
     }
 
-    const maxLoaders = key.max_loaders === undefined || key.max_loaders === null ? 1 : key.max_loaders;
-    const isBetaKey = key.account_type === 'beta' || (key.user_key && key.user_key.startsWith('FB-BETA-'));
-
-    // Check if this is a Public Beta Key
-    if (isBetaKey && !settings?.free_access_enabled) {
-      return res.json({
-        status: false,
-        reason: 'BETA_CLOSED',
-        message: 'Public Free Beta testing period has ended or is closed by the administrator.'
-      });
-    }
-
-    let activePkgConfig = null;
-
-    if (pkg) {
-      if (isBetaKey) {
-        // Public Beta Mode: Unlimited packages, auto-allow without restrictions
-        activePkgConfig = packageConfigs.find(p => p.package_name && p.package_name.toLowerCase() === pkg.toLowerCase());
-        if (!activePkgConfig) {
-          activePkgConfig = {
-            package_name: pkg,
-            is_active: true,
-            plugin_url: key.plugin_url || '',
-            so_sha256: key.so_sha256 || '',
-            update_apk_url: key.update_apk_url || '',
-            update_version: key.update_version || '1.0.0'
-          };
-          packageConfigs.push(activePkgConfig);
-          await sql`UPDATE license_keys SET package_configs = ${JSON.stringify(packageConfigs)} WHERE id = ${key.id}`;
-        }
-      } else if (packageConfigs.length > 0) {
-        // Registered Client with structured package configs
-        activePkgConfig = packageConfigs.find(p => p.package_name && p.package_name.toLowerCase() === pkg.toLowerCase());
-        if (activePkgConfig) {
-          if (!activePkgConfig.is_active) {
-            return res.json({
-              status: false,
-              reason: 'PACKAGE_INACTIVE',
-              message: `Package "${pkg}" is currently INACTIVE in your Client Portal. Please switch it to Active to run.`
-            });
-          }
-        } else {
-          // Package not found in client's package configs
-          const activeCount = packageConfigs.filter(p => Boolean(p.is_active)).length;
-          if (maxLoaders > 0 && activeCount >= maxLoaders) {
-            return res.json({
-              status: false,
-              reason: 'LOADER LIMIT REACHED',
-              message: `Active loader limit reached (${maxLoaders} package(s) allowed). Please manage your packages in your Client Portal.`
-            });
-          } else {
-            // Under quota: auto-add as active
-            activePkgConfig = {
-              package_name: pkg,
-              is_active: true,
-              plugin_url: key.plugin_url || '',
-              so_sha256: key.so_sha256 || '',
-              update_apk_url: key.update_apk_url || '',
-              update_version: key.update_version || '1.0.0'
-            };
-            packageConfigs.push(activePkgConfig);
-            await sql`UPDATE license_keys SET package_configs = ${JSON.stringify(packageConfigs)} WHERE id = ${key.id}`;
-          }
-        }
-      } else {
-        // Fallback for legacy bound_packages
-        let boundPackages = [];
-        try { boundPackages = JSON.parse(key.bound_packages || '[]'); } catch(e) { boundPackages = []; }
-        if (!boundPackages.includes(pkg)) {
-          if (maxLoaders === 0 || boundPackages.length < maxLoaders) {
-            boundPackages.push(pkg);
-            await sql`UPDATE license_keys SET bound_packages = ${JSON.stringify(boundPackages)} WHERE id = ${key.id}`;
-          } else {
-            return res.json({
-              status: false,
-              reason: 'LOADER LIMIT REACHED',
-              message: `SDK Key allows ${maxLoaders} loader(s). Already bound to: ${boundPackages.join(', ')}. Contact administrator.`
-            });
-          }
-        }
-        activePkgConfig = {
-          package_name: pkg,
-          is_active: true,
-          plugin_url: key.plugin_url || '',
-          so_sha256: key.so_sha256 || '',
-          update_apk_url: key.update_apk_url || '',
-          update_version: key.update_version || '1.0.0'
-        };
-        packageConfigs = [activePkgConfig];
-        await sql`UPDATE license_keys SET package_configs = ${JSON.stringify(packageConfigs)} WHERE id = ${key.id}`;
-      }
-    }
+    const maxLoaders = 0; // Open package name mode: developers can test any loader package
+    const isBetaKey = false;
+    let activePkgConfig = {
+      package_name: pkg || 'any',
+      is_active: true,
+      plugin_url: key.plugin_url || '',
+      so_sha256: key.so_sha256 || '',
+      update_apk_url: key.update_apk_url || '',
+      update_version: key.update_version || '1.0.0'
+    };
 
     // 3. Track Unique Devices / Live Active Sessions
     let devCount = key.unique_devices || 0;
@@ -785,18 +720,29 @@ app.post('/api/auth/login', async (req, res) => {
     }
   }
 
-  // Check Client Account
+  // Check Client / Buyer Account
   if (username) {
-    const client = (await sql`SELECT * FROM client_accounts WHERE username = ${username.trim()} LIMIT 1`)[0];
-    if (client && client.password === password) {
-      const token = `CLT_${client.username}_${client.id}`;
-      return res.json({ 
-        success: true, 
-        role: 'client', 
-        token, 
-        username: client.username,
-        user_key: client.user_key
-      });
+    const client = (await sql`SELECT * FROM client_accounts WHERE LOWER(username) = ${username.trim().toLowerCase()} LIMIT 1`)[0];
+    if (client) {
+      let isMatch = false;
+      if (client.password && (client.password.startsWith('$2a$') || client.password.startsWith('$2b$'))) {
+        isMatch = await bcrypt.compare(password, client.password);
+      } else {
+        isMatch = (client.password === password);
+      }
+      if (isMatch) {
+        if (client.status === 'banned') {
+          return res.status(403).json({ success: false, message: 'Account is suspended. Please contact administrator.' });
+        }
+        const token = `CLT_${client.username}_${client.id}`;
+        return res.json({ 
+          success: true, 
+          role: 'client', 
+          token, 
+          username: client.username,
+          user_key: client.user_key
+        });
+      }
     }
   }
 
@@ -1913,265 +1859,167 @@ app.post('/api/admin/clients/:id/packages', checkAdminAuth, async (req, res) => 
 });
 
 // =============================================================
-// SECURE DOWNLOAD PROXIES (Protects GitHub Repo & Masks Source Code)
+// REFERRAL CODES & BUYER SELF-SERVICE PORTAL APIS
 // =============================================================
-app.get('/api/public/download/sdk-aar', async (req, res) => {
+
+// Admin: Create Referral Code
+app.post('/api/admin/referrals/create', checkAdminAuth, async (req, res) => {
   try {
-    const settings = (await sql`SELECT free_access_enabled, sdk_aar_url FROM panel_settings LIMIT 1`)[0];
-    if (!settings || !settings.free_access_enabled) {
-      return res.status(403).send('Free Beta access is currently closed.');
+    const { duration_preset, custom_days, usage_limit = 1, note = '' } = req.body;
+    let days = 30;
+    if (duration_preset === 'custom') {
+      days = parseInt(custom_days, 10) || 30;
+    } else {
+      days = parseInt(duration_preset, 10) || 30;
     }
+    if (days <= 0) days = 30;
 
-    const targetUrl = settings.sdk_aar_url;
-    if (targetUrl) {
-      try {
-        const upstreamRes = await fetch(targetUrl, {
-          headers: { 'User-Agent': 'FeaturesticBox-Panel/1.0' },
-          redirect: 'follow'
-        });
-        if (upstreamRes.ok) {
-          res.setHeader('Content-Disposition', 'attachment; filename="FeaturesticBox-SDK.aar"');
-          res.setHeader('Content-Type', 'application/octet-stream');
-          const cl = upstreamRes.headers.get('content-length');
-          if (cl) res.setHeader('Content-Length', cl);
+    const limit = Math.max(1, parseInt(usage_limit, 10) || 1);
+    const randPart1 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const randPart2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const code = `REF-${days}D-${randPart1}${randPart2}`;
 
-          const { Readable } = await import('stream');
-          return Readable.fromWeb(upstreamRes.body).pipe(res);
-        }
-      } catch (upstreamErr) {
-        console.warn('[SDK AAR Upstream Warning]', upstreamErr.message);
-      }
-    }
-
-    const localAar = path.join(__dirname, 'public', 'downloads', 'FeaturesticBox.aar');
-    if (fs.existsSync(localAar)) {
-      res.setHeader('Content-Disposition', 'attachment; filename="FeaturesticBox-SDK.aar"');
-      res.setHeader('Content-Type', 'application/octet-stream');
-      return res.sendFile(localAar);
-    }
-
-    return res.status(502).send('SDK library currently unavailable. Please check back shortly.');
-  } catch (err) {
-    console.error('[SDK AAR Proxy Error]', err);
-    res.status(500).send('Download error occurred');
-  }
-});
-
-app.get('/api/public/download/loader-apk', async (req, res) => {
-  try {
-    const settings = (await sql`SELECT update_apk_url FROM panel_settings LIMIT 1`)[0];
-    const targetUrl = settings?.update_apk_url || 'https://github.com/ravipacharpro-jpg/Fbox/releases/download/Floader/FeaturesticLoader-v1.0.1.apk';
-    const upstreamRes = await fetch(targetUrl, {
-      headers: { 'User-Agent': 'FeaturesticBox-Panel/1.0' },
-      redirect: 'follow'
-    });
-
-    if (!upstreamRes.ok) {
-      return res.status(502).send('Loader APK currently unavailable.');
-    }
-
-    res.setHeader('Content-Disposition', 'attachment; filename="FeaturesticLoader.apk"');
-    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
-    const cl = upstreamRes.headers.get('content-length');
-    if (cl) res.setHeader('Content-Length', cl);
-
-    const { Readable } = await import('stream');
-    Readable.fromWeb(upstreamRes.body).pipe(res);
-  } catch (err) {
-    console.error('[APK Proxy Error]', err);
-    res.status(500).send('Download error occurred');
-  }
-});
-
-app.get('/api/public/download/loader-source', async (req, res) => {
-  try {
-    const localZip = path.join(__dirname, 'public', 'downloads', 'FeaturesticLoader-Source.zip');
-    if (fs.existsSync(localZip)) {
-      res.setHeader('Content-Disposition', 'attachment; filename="FeaturesticLoader-Source.zip"');
-      res.setHeader('Content-Type', 'application/zip');
-      return res.sendFile(localZip);
-    }
-
-    const settings = (await sql`SELECT loader_source_url FROM panel_settings LIMIT 1`)[0];
-    const targetUrl = settings?.loader_source_url;
-    if (targetUrl) {
-      const upstreamRes = await fetch(targetUrl, {
-        headers: { 'User-Agent': 'FeaturesticBox-Panel/1.0' },
-        redirect: 'follow'
-      });
-      if (upstreamRes.ok) {
-        res.setHeader('Content-Disposition', 'attachment; filename="FeaturesticLoader-Source.zip"');
-        res.setHeader('Content-Type', 'application/zip');
-        const cl = upstreamRes.headers.get('content-length');
-        if (cl) res.setHeader('Content-Length', cl);
-        const { Readable } = await import('stream');
-        return Readable.fromWeb(upstreamRes.body).pipe(res);
-      }
-    }
-
-    return res.status(404).send('Loader source code package currently unavailable.');
-  } catch (err) {
-    console.error('[Loader Source Proxy Error]', err);
-    res.status(500).send('Download error occurred');
-  }
-});
-
-// =============================================================
-// PUBLIC FREE BETA SYSTEM (Dedicated URL, Device ID Binding & SDK .aar)
-// =============================================================
-app.get('/api/public/beta-info', async (req, res) => {
-  try {
-    const settings = (await sql`SELECT free_access_enabled, free_access_duration, update_version FROM panel_settings LIMIT 1`)[0];
-    res.json({
-      enabled: Boolean(settings?.free_access_enabled),
-      duration_days: settings?.free_access_duration || 3,
-      aar_url: '/api/public/download/sdk-aar',
-      apk_url: '/api/public/download/loader-apk',
-      source_zip_url: '/api/public/download/loader-source',
-      version: settings?.update_version || '1.0.1'
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Check if browser device already has an active Beta key
-app.get('/api/public/my-beta-key', async (req, res) => {
-  try {
-    const device_id = (req.query.device_id || '').trim();
-    if (!device_id) return res.json({ found: false });
-
-    const settings = (await sql`SELECT free_access_enabled, update_version FROM panel_settings LIMIT 1`)[0];
-    if (!settings || !settings.free_access_enabled) {
-      return res.json({ found: false, beta_closed: true });
-    }
-
-    const keyRow = (await sql`
-      SELECT * FROM license_keys 
-      WHERE device_id = ${device_id} 
-        AND user_key LIKE 'FB-BETA-%' 
-        AND status = 'active'
-        AND (expires_at IS NULL OR expires_at > NOW())
-      ORDER BY id DESC LIMIT 1
+    const newRef = (await sql`
+      INSERT INTO referral_codes (code, duration_days, usage_limit, used_count, note, status)
+      VALUES (${code}, ${days}, ${limit}, 0, ${note ? note.trim() : ''}, 'active')
+      RETURNING *
     `)[0];
 
-    if (!keyRow) return res.json({ found: false });
-
-    let clientRow = (await sql`SELECT * FROM client_accounts WHERE user_key = ${keyRow.user_key} LIMIT 1`)[0];
-    const token = `KEY_${keyRow.user_key}_${clientRow ? clientRow.id : keyRow.id}`;
-
-    res.json({
-      found: true,
-      key: keyRow.user_key,
-      token,
-      username: clientRow?.username || keyRow.user_key,
-      duration_days: keyRow.duration_days,
-      expires_at: keyRow.expires_at,
-      aar_url: '/api/public/download/sdk-aar',
-      apk_url: '/api/public/download/loader-apk',
-      source_zip_url: '/api/public/download/loader-source',
-      version: settings.update_version || '1.0.1'
-    });
+    await logSystem('REFERRAL_CREATED', `Created referral ${code} for ${days} days (limit: ${limit})`, 'info', { code, days, limit }, req);
+    res.json({ success: true, referral: newRef });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post('/api/public/claim-beta-key', async (req, res) => {
+// Admin: List Referral Codes
+app.get('/api/admin/referrals/list', checkAdminAuth, async (req, res) => {
   try {
-    const settings = (await sql`SELECT free_access_enabled, free_access_duration, update_version FROM panel_settings LIMIT 1`)[0];
-    if (!settings || !settings.free_access_enabled) {
-      return res.status(403).json({
-        success: false,
-        message: 'Public Free Beta testing is currently closed by the administrator.'
-      });
+    const list = await sql`SELECT * FROM referral_codes ORDER BY id DESC`;
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin: Delete Referral Code
+app.delete('/api/admin/referrals/:id', checkAdminAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    await sql`DELETE FROM referral_codes WHERE id = ${id}`;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Public: Register Buyer Account with Referral Code
+app.post('/api/public/register-with-referral', async (req, res) => {
+  try {
+    const { username = '', password = '', referral_code = '' } = req.body;
+    const cleanUser = username.trim().toLowerCase();
+    const cleanPass = password.trim();
+    const cleanRef = referral_code.trim().toUpperCase();
+
+    if (!cleanUser || cleanUser.length < 3 || cleanUser.length > 32) {
+      return res.status(400).json({ error: 'Username must be between 3 and 32 characters' });
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(cleanUser)) {
+      return res.status(400).json({ error: 'Username can only contain letters, numbers, hyphens and underscores' });
+    }
+    if (!cleanPass || cleanPass.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    }
+    if (!cleanRef) {
+      return res.status(400).json({ error: 'Referral code is required' });
     }
 
-    const device_id = (req.body.device_id || '').trim();
-
-    // 1. If device_id provided, return existing active Beta key so device key is always persistent!
-    if (device_id) {
-      const existing = (await sql`
-        SELECT * FROM license_keys 
-        WHERE device_id = ${device_id} 
-          AND user_key LIKE 'FB-BETA-%' 
-          AND status = 'active'
-          AND (expires_at IS NULL OR expires_at > NOW())
-        ORDER BY id DESC LIMIT 1
-      `)[0];
-
-      if (existing) {
-        let clientRow = (await sql`SELECT * FROM client_accounts WHERE user_key = ${existing.user_key} LIMIT 1`)[0];
-        const token = `KEY_${existing.user_key}_${clientRow ? clientRow.id : existing.id}`;
-        return res.json({
-          success: true,
-          is_existing: true,
-          key: existing.user_key,
-          token: token,
-          username: clientRow?.username || existing.user_key,
-          duration_days: existing.duration_days,
-          expires_at: existing.expires_at,
-          max_loaders: 0,
-          is_unlimited: true,
-          aar_url: '/api/public/download/sdk-aar',
-          apk_url: '/api/public/download/loader-apk',
-          source_zip_url: '/api/public/download/loader-source',
-          version: settings.update_version || '1.0.1',
-          message: 'Retrieved your persistent Beta key for this device.'
-        });
-      }
+    // Check admin username collision
+    const adminSettings = (await sql`SELECT admin_username FROM panel_settings LIMIT 1`)[0];
+    if (adminSettings && adminSettings.admin_username && adminSettings.admin_username.toLowerCase() === cleanUser) {
+      return res.status(400).json({ error: 'Username is already taken' });
     }
 
-    // 2. Otherwise generate brand new Beta key tied permanently to this device
-    const duration = settings.free_access_duration || 3;
-    const rand = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
-    const user_key = `FB-BETA-${rand}`;
-    const now = new Date();
-    const exp = new Date(now.getTime() + (duration * 24 * 60 * 60 * 1000));
+    // Check existing client username
+    const existing = (await sql`SELECT id FROM client_accounts WHERE LOWER(username) = ${cleanUser} LIMIT 1`)[0];
+    if (existing) {
+      return res.status(400).json({ error: 'Username is already registered. Please choose another username or log in.' });
+    }
 
+    // Validate Referral Code
+    const ref = (await sql`
+      SELECT * FROM referral_codes 
+      WHERE UPPER(code) = ${cleanRef} 
+      LIMIT 1
+    `)[0];
+
+    if (!ref) {
+      return res.status(400).json({ error: 'Invalid referral code. Please check with your administrator.' });
+    }
+    if (ref.status !== 'active' || ref.used_count >= ref.usage_limit) {
+      return res.status(400).json({ error: 'This referral code has already been used or expired.' });
+    }
+
+    const durationDays = ref.duration_days || 30;
+    const expiresAt = new Date(Date.now() + durationDays * 86400000);
+
+    // Hash password with bcrypt
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(cleanPass, salt);
+
+    // Generate unique SDK License Key
+    const randPart = Math.random().toString(36).substring(2, 7).toUpperCase() + Math.random().toString(36).substring(2, 7).toUpperCase();
+    const randKey = `FBVIP-${randPart}`;
+
+    // Create Buyer Account in client_accounts
+    const newClient = (await sql`
+      INSERT INTO client_accounts (username, password, user_key, role, status, duration_days, expires_at, referral_code, note)
+      VALUES (${cleanUser}, ${hashedPassword}, ${randKey}, 'buyer', 'active', ${durationDays}, ${expiresAt.toISOString()}, ${cleanRef}, ${'Created via referral ' + cleanRef})
+      RETURNING *
+    `)[0];
+
+    // Create corresponding license_key in license_keys
     await sql`
       INSERT INTO license_keys (
-        user_key, device_id, duration_days, note, max_loaders, bound_packages, package_configs, account_type,
-        status, first_used_at, expires_at
-      )
-      VALUES (
-        ${user_key}, ${device_id || null}, ${duration}, 'Public Free Beta Key (Unlimited Loaders)', 0, '[]', '[]', 'beta',
-        'active', ${now.toISOString()}, ${exp.toISOString()}
+        user_key, duration_days, status, note, max_loaders, bound_packages, 
+        client_username, account_type, expires_at, first_used_at
+      ) VALUES (
+        ${randKey}, ${durationDays}, 'active', ${'Registered by buyer ' + cleanUser}, 1, '[]',
+        ${cleanUser}, 'client', ${expiresAt.toISOString()}, NOW()
       )
     `;
 
-    const u = `BetaDev_${rand.slice(0, 6)}`;
-    let clientRow;
-    try {
-      clientRow = (await sql`
-        INSERT INTO client_accounts (username, password, user_key, note)
-        VALUES (${u}, ${'beta_' + user_key}, ${user_key}, 'Free Beta Developer')
-        RETURNING id, username
-      `)[0];
-    } catch (e) {
-      clientRow = (await sql`SELECT id, username FROM client_accounts WHERE user_key = ${user_key} LIMIT 1`)[0];
-    }
+    // Increment Referral usage
+    const newCount = ref.used_count + 1;
+    const newRefStatus = newCount >= ref.usage_limit ? 'exhausted' : 'active';
+    await sql`
+      UPDATE referral_codes 
+      SET used_count = ${newCount}, status = ${newRefStatus} 
+      WHERE id = ${ref.id}
+    `;
 
-    const token = `KEY_${user_key}_${clientRow ? clientRow.id : 0}`;
-    await logSystem('BETA_KEY_CLAIMED', `New Beta Key claimed: ${user_key} (device: ${device_id || 'N/A'})`, 'info', { duration, expires_at: exp, device_id }, req, user_key);
+    // Invalidate in-memory key cache
+    invalidateKeyCache(randKey);
 
+    await logSystem('BUYER_REGISTERED', `Buyer ${cleanUser} registered via referral ${cleanRef} (duration: ${durationDays}d, key: ${randKey})`, 'info', { username: cleanUser, key: randKey }, req, randKey, cleanUser);
+
+    const token = `CLT_${cleanUser}_${newClient.id}`;
     res.json({
       success: true,
-      is_existing: false,
-      key: user_key,
-      token: token,
-      username: clientRow?.username || u,
-      duration_days: duration,
-      expires_at: exp.toISOString(),
-      max_loaders: 0,
-      is_unlimited: true,
-      aar_url: '/api/public/download/sdk-aar',
-      apk_url: '/api/public/download/loader-apk',
-      source_zip_url: '/api/public/download/loader-source',
-      version: settings.update_version || '1.0.1'
+      token,
+      user: {
+        id: newClient.id,
+        username: newClient.username,
+        role: 'buyer',
+        user_key: randKey,
+        duration_days: durationDays,
+        expires_at: expiresAt
+      },
+      message: 'Account created successfully! Welcome to your Developer Portal.'
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    console.error('[Register Error]', err);
+    res.status(500).json({ error: err.message });
   }
 });
 

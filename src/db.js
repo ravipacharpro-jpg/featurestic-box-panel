@@ -71,10 +71,36 @@ export async function initDb() {
         username VARCHAR(64) UNIQUE NOT NULL,
         password TEXT NOT NULL,
         user_key VARCHAR(64) DEFAULT NULL,
+        role VARCHAR(16) DEFAULT 'buyer',
+        status VARCHAR(16) DEFAULT 'active',
+        duration_days INT DEFAULT 30,
+        expires_at TIMESTAMP DEFAULT NULL,
+        referral_code VARCHAR(64) DEFAULT NULL,
         note VARCHAR(256) DEFAULT '',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+
+    await sql`ALTER TABLE client_accounts ADD COLUMN IF NOT EXISTS role VARCHAR(16) DEFAULT 'buyer'`;
+    await sql`ALTER TABLE client_accounts ADD COLUMN IF NOT EXISTS status VARCHAR(16) DEFAULT 'active'`;
+    await sql`ALTER TABLE client_accounts ADD COLUMN IF NOT EXISTS duration_days INT DEFAULT 30`;
+    await sql`ALTER TABLE client_accounts ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP DEFAULT NULL`;
+    await sql`ALTER TABLE client_accounts ADD COLUMN IF NOT EXISTS referral_code VARCHAR(64) DEFAULT NULL`;
+
+    // Referral Codes Table (Admin creates invites for buyers)
+    await sql`
+      CREATE TABLE IF NOT EXISTS referral_codes (
+        id SERIAL PRIMARY KEY,
+        code VARCHAR(64) UNIQUE NOT NULL,
+        duration_days INT NOT NULL DEFAULT 30,
+        usage_limit INT DEFAULT 1,
+        used_count INT DEFAULT 0,
+        note VARCHAR(256) DEFAULT '',
+        status VARCHAR(16) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_referral_codes_code ON referral_codes(code)`;
 
     // Unique devices tracking table
     await sql`

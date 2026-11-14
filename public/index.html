@@ -974,13 +974,14 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
       <h1>Featurestic Box</h1>
       <p id="login-subtext">Commercial Licensing & Analytics Portal</p>
 
-      <!-- Free Beta Live Notification Banner -->
-      <div class="free-beta-banner" id="login-beta-banner" style="display:none">
-        <div class="tag-live">
-          <span class="status-dot"></span>
-          Public Testing Beta is Live
-        </div>
-        <div class="tag-sub">Free SDK access is currently enabled. No registration required — claim or paste your Beta Key below!</div>
+      <!-- Tabs: Login vs Register -->
+      <div style="display:flex;gap:4px;background:var(--bg1);padding:4px;border-radius:var(--r-md);margin-bottom:20px;border:1px solid var(--border)">
+        <button type="button" id="tab-btn-login" class="btn btn-ghost" style="flex:1;font-size:0.8rem;padding:8px 0;background:var(--surface2);color:var(--neon);font-weight:700" onclick="switchAuthTab('login')">
+          🔐 Login
+        </button>
+        <button type="button" id="tab-btn-reg" class="btn btn-ghost" style="flex:1;font-size:0.8rem;padding:8px 0;color:var(--t3);font-weight:600" onclick="switchAuthTab('reg')">
+          🎟️ Register (Referral)
+        </button>
       </div>
 
       <!-- Official Account Login Form -->
@@ -1002,34 +1003,30 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
         <button class="btn-neon" onclick="doLogin()">Unlock Portal</button>
       </div>
 
-      <!-- Beta Developer Key Direct Login (Shown Only When Free Beta is Active) -->
-      <div id="login-beta-key-section" style="display:none;margin-top:20px;padding-top:16px;border-top:1px dashed rgba(0,255,136,0.22)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--neon);letter-spacing:0.5px">
-            <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--neon);box-shadow:0 0 8px var(--neon)"></span>
-            FREE BETA DEVELOPER ACCESS
-          </div>
-          <span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(0,255,136,0.1);color:var(--neon);border:1px solid rgba(0,255,136,0.3)">SDK KEY LOGIN</span>
+      <!-- Buyer Register with Referral Form -->
+      <div id="auth-form-reg" style="display:none">
+        <div class="field-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <input type="text" id="reg-user" placeholder="Choose Username" onkeydown="if(event.key==='Enter')doRegisterWithReferral()">
         </div>
-        <p style="font-size:11px;color:var(--t4);margin-bottom:12px;line-height:1.4">
-          Beta testers don't need a username/password. Enter your Beta Key to open your developer dashboard directly.
-        </p>
 
         <div class="field-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
-          <input type="text" id="login-beta-key" placeholder="Paste Beta Key (FB-BETA-XXXX)" onkeydown="if(event.key==='Enter')doBetaKeyLogin()">
+          <input type="password" id="reg-pass" placeholder="Choose Password" onkeydown="if(event.key==='Enter')doRegisterWithReferral()">
         </div>
 
-        <button class="btn-neon" id="btn-login-beta" onclick="doBetaKeyLogin()" style="width:100%;background:rgba(0,255,136,0.12);border-color:var(--neon);color:var(--neon)">
-          ⚡ Enter Developer Dashboard
-        </button>
-
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:11px">
-          <span style="color:var(--t4)">Don't have a Beta Key?</span>
-          <a href="#beta" onclick="showBetaPortal()" style="color:var(--neon);text-decoration:none;font-weight:600">⚡ Claim Free Beta Key →</a>
+        <div class="field-wrap" style="border-color:rgba(0,255,136,0.3)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--neon)">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          <input type="text" id="reg-ref" placeholder="Referral Code (e.g. REF-30D-...)" style="text-transform:uppercase;font-family:var(--font-mono);font-weight:700" onkeydown="if(event.key==='Enter')doRegisterWithReferral()">
         </div>
+
+        <button class="btn-neon" id="btn-do-reg" onclick="doRegisterWithReferral()">🚀 Register & Get SDK Key</button>
       </div>
 
       <div class="login-err" id="login-err"></div>
@@ -1082,6 +1079,12 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
             <circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/>
           </svg>
           License Keys
+        </button>
+        <button class="nav-link" data-page="referrals" onclick="showPage('referrals')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          Referral Codes
         </button>
         <button class="nav-link" data-page="clients" onclick="showPage('clients')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -1678,69 +1681,80 @@ tbody tr:hover td { background: var(--surface); color: var(--t1); }
     </div>
 
     <!-- ════════════════════════════════════════════
-         PUBLIC PAGE: DEDICATED FREE BETA PORTAL
+         ADMIN PAGE: REFERRAL CODES MANAGEMENT
     ════════════════════════════════════════════ -->
-    <div id="page-beta" class="page">
-      <div class="card" style="max-width:680px;margin:20px auto;text-align:center;padding:36px 24px">
-        <div style="font-size:3rem;margin-bottom:12px">🚀</div>
-        <div class="card-title" style="font-size:1.6rem;color:var(--neon)">Featurestic Box • Free Public Beta</div>
-        <div class="card-sub" style="font-size:0.88rem;margin:8px 0 20px;line-height:1.5">
-          Experience next-generation loader bypass with unlimited package builds, SDK library (.aar), and full developer features unlocked.
+    <div id="page-referrals" class="page">
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Generate Referral & Buyer Invite Codes</div>
+            <div class="card-sub">Create access tokens for buyers. Buyers register on the portal to get an auto-generated SDK key.</div>
+          </div>
         </div>
 
-        <div style="background:rgba(0,255,136,0.06);border:1px solid rgba(0,255,136,0.25);border-radius:var(--r-lg);padding:18px;margin-bottom:24px;text-align:left;line-height:1.7;font-size:0.82rem">
-          <div>✨ <strong>Unlimited Loaders Quota:</strong> Test any Android package without restrictions.</div>
-          <div>🛡️ <strong>Live Anti-Cheat Bypass:</strong> Full 120Hz synthetic engine and native hooks active.</div>
-          <div>📱 <strong>Device Bound Persistent Key:</strong> Your browser device always receives the same Beta Key.</div>
-          <div>⚠️ <strong style="color:var(--orange)">Beta Watermark:</strong> Free test keys render on-screen watermark: <code>FEATURESTIC BOX • FREE BETA VERSION</code>.</div>
-        </div>
+        <div style="padding:24px">
+          <!-- Duration Preset Buttons -->
+          <div style="margin-bottom:16px">
+            <label class="f-label" style="margin-bottom:8px;display:block">Select Duration (Preset or Custom)</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap" id="ref-preset-group">
+              <button type="button" class="btn btn-ghost ref-btn" data-days="1" onclick="selectRefPreset(1)">1 Day</button>
+              <button type="button" class="btn btn-ghost ref-btn" data-days="7" onclick="selectRefPreset(7)">7 Days</button>
+              <button type="button" class="btn btn-ghost ref-btn" data-days="15" onclick="selectRefPreset(15)">15 Days</button>
+              <button type="button" class="btn btn-ghost ref-btn active-preset" data-days="30" onclick="selectRefPreset(30)" style="border-color:var(--neon);color:var(--neon);background:var(--surface2)">30 Days</button>
+              <button type="button" class="btn btn-ghost ref-btn" data-days="60" onclick="selectRefPreset(60)">60 Days</button>
+              <button type="button" class="btn btn-ghost ref-btn" data-days="custom" onclick="selectRefPreset('custom')">⚡ Custom Days</button>
+            </div>
+          </div>
 
-        <div id="beta-claim-box">
-          <button class="btn btn-primary-neon" style="font-size:1rem;padding:14px 32px" onclick="claimBetaKey()">
-            ⚡ Claim Instant Free Beta Key
+          <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+            <!-- Custom Days Input (Hidden unless Custom is selected) -->
+            <div class="f-group" id="ref-custom-input-box" style="display:none">
+              <label class="f-label">Custom Duration (In Days)</label>
+              <input type="number" id="ref-custom-days" class="f-input" min="1" max="1000" placeholder="e.g. 45, 90, 180, 365">
+            </div>
+
+            <!-- Usage Limit -->
+            <div class="f-group">
+              <label class="f-label">Usage Limit (Accounts Allowed)</label>
+              <input type="number" id="ref-usage-limit" class="f-input" min="1" value="1" placeholder="Default: 1 account">
+            </div>
+
+            <!-- Note / Buyer Memo -->
+            <div class="f-group">
+              <label class="f-label">Buyer Note / Memo (Optional)</label>
+              <input type="text" id="ref-note" class="f-input" placeholder="e.g. Buyer John (Telegram: @john)">
+            </div>
+          </div>
+
+          <button class="btn btn-primary-neon" onclick="createReferralCode()" style="padding:12px 24px;font-size:0.85rem">
+            ⚡ Generate Referral Code
           </button>
         </div>
+      </div>
 
-        <div id="beta-result-box" style="display:none;margin-top:24px;text-align:left">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <div style="font-size:0.82rem;font-weight:700;color:var(--neon)">🎉 Your Dedicated Beta License Key (Device Bound):</div>
-            <span id="beta-existing-badge" style="display:none;font-size:10px;padding:3px 8px;border-radius:12px;background:rgba(0,255,136,0.15);color:var(--neon);border:1px solid var(--neon)">● Active Device Key</span>
-          </div>
-
-          <div style="display:flex;gap:10px;align-items:center;background:var(--bg3);border:1px solid var(--neon);border-radius:var(--r-md);padding:12px 16px;margin-bottom:16px">
-            <span id="beta-key-display" style="font-family:var(--font-mono);font-size:1.15rem;font-weight:800;color:#00ff88;letter-spacing:0.04em"></span>
-            <button class="btn btn-primary-neon" style="margin-left:auto;font-size:0.75rem" onclick="copyPlain(document.getElementById('beta-key-display').textContent)">📋 Copy Key</button>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-            <!-- Left Column: Portal & Pre-built APK -->
-            <div style="display:flex;flex-direction:column;gap:10px">
-              <button class="btn btn-primary-neon" id="btn-beta-open-portal" style="padding:13px;font-size:0.88rem;display:flex;align-items:center;justify-content:center;gap:6px" onclick="openPortalWithBetaKey()">
-                🚀 Open Developer Portal (1-Click)
-              </button>
-              <a id="beta-apk-btn" href="/api/public/download/loader-apk" class="btn btn-ghost" style="padding:11px;font-size:0.82rem;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;border-color:var(--border);color:var(--t2)">
-                📱 Download Pre-built Loader APK
-              </a>
-            </div>
-
-            <!-- Right Column: SDK .aar & Loader Source directly underneath! -->
-            <div style="display:flex;flex-direction:column;gap:10px">
-              <a id="beta-aar-btn" href="/api/public/download/sdk-aar" class="btn btn-ghost" style="padding:13px;font-size:0.88rem;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;border-color:var(--neon);color:var(--neon);background:rgba(0,255,136,0.06);font-weight:700">
-                📦 Download Latest SDK (.aar)
-              </a>
-              <a id="beta-src-btn" href="/api/public/download/loader-source" class="btn btn-ghost" style="padding:11px;font-size:0.82rem;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;border-color:var(--cyan,#00d9ff);color:var(--cyan,#00d9ff);background:rgba(0,217,255,0.06);font-weight:700">
-                📂 Download Loader APK Source (.zip)
-              </a>
-            </div>
-          </div>
-
-          <div style="font-size:11px;color:var(--t3);padding:10px 14px;background:var(--bg2);border-radius:var(--r-sm);text-align:center">
-            💡 <strong>Loader Developers:</strong> Download the Loader APK Source (.zip) & drop the latest <code>FeaturesticBox.aar</code> into <code>app/libs/</code> to build your custom loader.
-          </div>
+      <!-- Referral Codes Table -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">All Generated Referral Codes</div>
+          <button class="btn btn-ghost" onclick="loadReferrals()" style="font-size:0.75rem">🔄 Refresh</button>
         </div>
-
-        <div id="beta-closed-alert" style="display:none;margin-top:20px;padding:16px;background:rgba(255,59,48,0.1);border:1px solid var(--red);border-radius:var(--r-md);color:var(--red);font-weight:600">
-          ⚠️ Public Free Beta testing is currently CLOSED by administrator.
+        <div style="overflow-x:auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Referral Code</th>
+                <th>Duration</th>
+                <th>Usage</th>
+                <th>Status</th>
+                <th>Note / Memo</th>
+                <th>Created At</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="referrals-table-body">
+              <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--t3)">Loading referral codes…</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -2670,16 +2684,203 @@ function toggleMobileSidebar() {
   if (bd) bd.classList.toggle('show', isOpen);
 }
 
+/* ─── Auth Tabs & Referral Registration ─── */
+function switchAuthTab(tab) {
+  const loginForm = document.getElementById('auth-form-login');
+  const regForm = document.getElementById('auth-form-reg');
+  const btnLogin = document.getElementById('tab-btn-login');
+  const btnReg = document.getElementById('tab-btn-reg');
+  const err = document.getElementById('login-err');
+  if (err) err.textContent = '';
+
+  if (tab === 'login') {
+    if (loginForm) loginForm.style.display = 'block';
+    if (regForm) regForm.style.display = 'none';
+    if (btnLogin) { btnLogin.style.background = 'var(--surface2)'; btnLogin.style.color = 'var(--neon)'; }
+    if (btnReg) { btnReg.style.background = 'transparent'; btnReg.style.color = 'var(--t3)'; }
+  } else {
+    if (loginForm) loginForm.style.display = 'none';
+    if (regForm) regForm.style.display = 'block';
+    if (btnReg) { btnReg.style.background = 'var(--surface2)'; btnReg.style.color = 'var(--neon)'; }
+    if (btnLogin) { btnLogin.style.background = 'transparent'; btnLogin.style.color = 'var(--t3)'; }
+  }
+}
+
+async function doRegisterWithReferral() {
+  const user = (document.getElementById('reg-user')?.value || '').trim();
+  const pass = (document.getElementById('reg-pass')?.value || '').trim();
+  const refCode = (document.getElementById('reg-ref')?.value || '').trim();
+  const err = document.getElementById('login-err');
+
+  if (!user || user.length < 3) {
+    if (err) err.textContent = 'Username must be at least 3 characters';
+    return;
+  }
+  if (!pass || pass.length < 4) {
+    if (err) err.textContent = 'Password must be at least 4 characters';
+    return;
+  }
+  if (!refCode) {
+    if (err) err.textContent = 'Please enter your referral code';
+    return;
+  }
+  if (err) err.textContent = '';
+
+  const btn = document.getElementById('btn-do-reg');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating Account…'; }
+
+  try {
+    const res = await api('/api/public/register-with-referral', 'POST', {
+      username: user,
+      password: pass,
+      referral_code: refCode
+    }, true);
+
+    if (res && res.success) {
+      _token = res.token;
+      _role = 'client';
+      _username = res.user?.username || user;
+
+      localStorage.setItem('fb_token', _token);
+      localStorage.setItem('fb_role', _role);
+      localStorage.setItem('fb_username', _username);
+
+      toast('🎉 Account created! Welcome to your Developer Portal.');
+      bootApp();
+    } else {
+      if (err) err.textContent = res?.error || 'Registration failed';
+    }
+  } catch (e) {
+    if (err) err.textContent = 'Connection error: ' + e.message;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🚀 Register & Get SDK Key'; }
+  }
+}
+
+/* ─── Admin Referral Code Manager ─── */
+let _selectedRefDuration = 30;
+
+function selectRefPreset(days) {
+  _selectedRefDuration = days;
+  document.querySelectorAll('.ref-btn').forEach(b => {
+    b.classList.remove('active-preset');
+    b.style.borderColor = 'var(--border)';
+    b.style.color = 'var(--t2)';
+    b.style.background = 'transparent';
+  });
+
+  const target = document.querySelector(`.ref-btn[data-days="${days}"]`);
+  if (target) {
+    target.classList.add('active-preset');
+    target.style.borderColor = 'var(--neon)';
+    target.style.color = 'var(--neon)';
+    target.style.background = 'var(--surface2)';
+  }
+
+  const customBox = document.getElementById('ref-custom-input-box');
+  if (days === 'custom') {
+    if (customBox) customBox.style.display = 'block';
+  } else {
+    if (customBox) customBox.style.display = 'none';
+  }
+}
+
+async function createReferralCode() {
+  let days = _selectedRefDuration;
+  if (days === 'custom') {
+    const customVal = parseInt(document.getElementById('ref-custom-days')?.value, 10);
+    if (!customVal || customVal <= 0) {
+      toast('Please enter a valid number of days for custom duration', 'error');
+      return;
+    }
+    days = customVal;
+  }
+
+  const usageLimit = parseInt(document.getElementById('ref-usage-limit')?.value, 10) || 1;
+  const note = (document.getElementById('ref-note')?.value || '').trim();
+
+  try {
+    const res = await api('/api/admin/referrals/create', 'POST', {
+      duration_preset: days,
+      usage_limit: usageLimit,
+      note: note
+    });
+
+    if (res && res.success) {
+      toast(`Referral ${res.referral.code} generated successfully!`);
+      const noteInput = document.getElementById('ref-note');
+      if (noteInput) noteInput.value = '';
+      loadReferrals();
+    } else {
+      toast(res?.error || 'Failed to create referral', 'error');
+    }
+  } catch (e) {
+    toast('Error creating referral: ' + e.message, 'error');
+  }
+}
+
+async function loadReferrals() {
+  try {
+    const list = await api('/api/admin/referrals/list');
+    const tbody = document.getElementById('referrals-table-body');
+    if (!tbody) return;
+
+    if (!list || list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--t3)">No referral codes generated yet. Click "Generate Referral Code" above.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = list.map(r => {
+      const isExhausted = r.status === 'exhausted' || (r.used_count >= r.usage_limit);
+      const statusBadge = isExhausted
+        ? '<span class="badge badge-banned"><span class="badge-dot"></span>Exhausted</span>'
+        : '<span class="badge badge-active"><span class="badge-dot"></span>Active</span>';
+
+      return `<tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="key-pill" style="font-family:var(--font-mono);font-weight:700;letter-spacing:0.04em">${r.code}</span>
+            <button class="btn btn-ghost" style="padding:4px 8px;font-size:0.7rem" onclick="copyPlain('${r.code}')">📋 Copy</button>
+          </div>
+        </td>
+        <td><strong style="color:var(--neon)">${r.duration_days} Days</strong></td>
+        <td><span style="font-family:var(--font-mono)">${r.used_count} / ${r.usage_limit}</span></td>
+        <td>${statusBadge}</td>
+        <td style="color:var(--t2)">${r.note || '<span style="color:var(--t4)">—</span>'}</td>
+        <td style="color:var(--t3);font-size:0.75rem">${fmtDate(r.created_at)}</td>
+        <td>
+          <button class="btn btn-danger" style="padding:4px 8px;font-size:0.7rem" onclick="deleteReferral(${r.id})">🗑️ Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    toast('Failed to load referrals: ' + e.message, 'error');
+  }
+}
+
+async function deleteReferral(id) {
+  if (!confirm('Are you sure you want to delete this referral code?')) return;
+  try {
+    const res = await api(`/api/admin/referrals/${id}`, 'DELETE');
+    if (res && res.success) {
+      toast('Referral code deleted');
+      loadReferrals();
+    }
+  } catch (e) {
+    toast('Delete error: ' + e.message, 'error');
+  }
+}
+
 /* ─── Navigation ─── */
 const PAGE_TITLES = {
   dashboard: 'Dashboard',
   keys: 'License Keys',
-  clients: 'Client & Reseller Accounts',
+  referrals: 'Referral & Buyer Invite Codes',
+  clients: 'Client & Buyer Accounts',
   crashes: 'Crash Analytics & Native Offsets',
   blacklist: 'Global Hardware ID (HWID) Blacklist',
   logs: 'System Audit & Debug Logs',
   settings: 'Global App Settings',
-  beta: 'Free Public Beta Testing Portal',
   'client-dashboard': 'Client Portal — Key & Fleet',
   'client-crashes': 'Client Portal — Scoped Telemetry'
 };
@@ -2708,6 +2909,7 @@ function showPage(name) {
 
   if (name === 'dashboard') loadDashboard();
   if (name === 'keys') loadKeys();
+  if (name === 'referrals') loadReferrals();
   if (name === 'clients') loadClients();
   if (name === 'crashes') loadCrashes();
   if (name === 'blacklist') loadBlacklist();
