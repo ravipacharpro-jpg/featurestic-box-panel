@@ -432,10 +432,10 @@ async function handleConnect(req, res) {
         bound_packages: (activePkgConfig ? [activePkgConfig.package_name] : []),
         unique_devices: devCount,
         update: {
-          has_update: hasApkUpdate,
-          latest_version: effectiveApkVer,
-          apk_url: effectiveApkUrl,
-          changelog: effectiveChangelog,
+          has_update: false,
+          latest_version: '1.0.4',
+          apk_url: '',
+          changelog: '',
           force_update: false
         },
         notice: {
