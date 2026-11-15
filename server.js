@@ -2097,22 +2097,25 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start Server
-initDb().then(() => {
-  app.listen(PORT, () => {
-    console.log(`[Featurestic Box Panel] Running on port ${PORT}`);
+let _dbInitPromise = null;
+export function ensureDb() {
+  if (!_dbInitPromise) {
+    _dbInitPromise = initDb().catch(err => {
+      _dbInitPromise = null;
+      throw err;
+    });
+  }
+  return _dbInitPromise;
+}
 
-    // Render Keep-Alive Self-Ping Worker (Pings every 4 mins to prevent free tier sleep)
-    const PING_INTERVAL = 4 * 60 * 1000;
-    setInterval(() => {
-      try {
-        const host = process.env.RENDER_EXTERNAL_URL || 'https://featurestic-box-panel.onrender.com';
-        fetch(`${host}/api/health`, { signal: AbortSignal.timeout(6000) })
-          .then(() => {})
-          .catch(() => {});
-      } catch (e) {}
-    }, PING_INTERVAL);
+export default app;
+
+if (!process.env.VERCEL) {
+  initDb().then(() => {
+    app.listen(PORT, () => {
+      console.log(`[Featurestic Box Panel] Running on port ${PORT}`);
+    });
+  }).catch(err => {
+    console.error('[Featurestic Box Panel] Failed to start:', err);
   });
-}).catch(err => {
-  console.error('[Featurestic Box Panel] Failed to start:', err);
-});
+}

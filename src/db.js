@@ -2,11 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  console.error('FATAL: DATABASE_URL not set in .env');
-  process.exit(1);
-}
+const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_ft9EdR7DaPsZ@ep-blue-forest-berzr4o5-pooler.c-9.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
 
 export const sql = neon(connectionString);
 
