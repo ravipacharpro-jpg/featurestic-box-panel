@@ -10,35 +10,99 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('toxic_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
   <style>
     /* ============================================================
-       APPLE HUMAN INTERFACE GUIDELINES (DARK SYSTEM)
+       TOXIC VENOM — PREMIUM GAMING UI THEME
+       Acid-Green, Radioactive Lime & Deep Graphite Visual Identity
        ============================================================ */
-    :root {
-      --bg: #000000;
-      --bg-elevated: #0a0a0c;
-      --surface-1: rgba(255, 255, 255, 0.04);
-      --surface-2: rgba(255, 255, 255, 0.07);
-      --surface-3: rgba(255, 255, 255, 0.12);
-      --border: rgba(255, 255, 255, 0.08);
-      --border-strong: rgba(255, 255, 255, 0.16);
+    :root,
+    [data-theme="dark"] {
+      /* Background Colors */
+      --bg: #090E09;
+      --bg-secondary: #0D150D;
+      --bg-tertiary: #111C11;
+      --bg-sidebar: #080D08;
+      --bg-header: #0B120B;
+      --bg-elevated: #1A2819;
 
-      --apple-blue: #0A84FF;
-      --apple-blue-hover: #409CFF;
-      --apple-blue-tint: rgba(10, 132, 255, 0.14);
-      --apple-green: #30D158;
-      --apple-green-tint: rgba(48, 209, 88, 0.14);
-      --apple-orange: #FF9F0A;
-      --apple-orange-tint: rgba(255, 159, 10, 0.14);
-      --apple-red: #FF453A;
-      --apple-red-tint: rgba(255, 69, 58, 0.14);
-      --apple-purple: #BF5AF2;
-      --apple-purple-tint: rgba(191, 90, 242, 0.14);
+      /* Cards & Surfaces */
+      --card-primary: #111A11;
+      --card-secondary: #152015;
+      --card-elevated: #1A2819;
+      --input-bg: #101910;
+      --modal-bg: #121D12;
+      --hover-bg: #1D2B1B;
 
-      --text-1: #FFFFFF;
-      --text-2: rgba(255, 255, 255, 0.72);
-      --text-3: rgba(255, 255, 255, 0.44);
-      --text-4: rgba(255, 255, 255, 0.22);
+      /* Surface mapping for legacy classes */
+      --surface-1: #111A11;
+      --surface-2: #152015;
+      --surface-3: #1A2819;
+
+      /* Primary & Accent Colors */
+      --primary: #B7FF00;
+      --primary-hover: #8EFF00;
+      --secondary: #55D66B;
+      --accent: #D9FF70;
+      --highlight: #8EFF00;
+      --active-state: #A3FF12;
+      --focus-ring: #B7FF00;
+      --primary-tint: rgba(183, 255, 0, 0.14);
+      --secondary-tint: rgba(85, 214, 107, 0.14);
+
+      /* Brand/Legacy mappings */
+      --apple-blue: #B7FF00;
+      --apple-blue-hover: #8EFF00;
+      --apple-blue-tint: rgba(183, 255, 0, 0.16);
+      --apple-green: #55D66B;
+      --apple-green-tint: rgba(85, 214, 107, 0.16);
+      --apple-orange: #FACC15;
+      --apple-orange-tint: rgba(250, 204, 21, 0.16);
+      --apple-red: #EF4444;
+      --apple-red-tint: rgba(239, 68, 68, 0.16);
+      --apple-purple: #D9FF70;
+      --apple-purple-tint: rgba(217, 255, 112, 0.16);
+
+      /* Text Colors */
+      --text-1: #F2FFE8;
+      --text-2: #A6B99E;
+      --text-3: #70836A;
+      --text-4: #4E5E49;
+      --text-inverted: #101808;
+
+      /* Borders */
+      --border: #263B24;
+      --border-subtle: #1B2A1A;
+      --border-strong: #263B24;
+      --border-active: #8EFF00;
+      --border-hover: #55D66B;
+      --border-focus: #B7FF00;
+
+      /* Status Colors */
+      --status-success: #55D66B;
+      --status-warning: #FACC15;
+      --status-error: #EF4444;
+      --status-info: #38BDF8;
+
+      /* Gradients (Dark) */
+      --grad-primary: linear-gradient(135deg, #B7FF00 0%, #55D66B 100%);
+      --grad-secondary: linear-gradient(135deg, #55D66B 0%, #00C878 100%);
+      --grad-bg: linear-gradient(180deg, #090E09 0%, #101B10 100%);
+      --grad-glow: radial-gradient(circle, rgba(183, 255, 0, 0.22) 0%, rgba(85, 214, 107, 0.1) 50%, transparent 75%);
+
+      /* Shadows & Glows (Dark) */
+      --glow-ambient: 0 0 24px rgba(183, 255, 0, 0.18);
+      --glow-neon: 0 0 16px rgba(183, 255, 0, 0.42), 0 0 32px rgba(85, 214, 107, 0.22);
+      --shadow-deep: 0 16px 36px rgba(0, 0, 0, 0.75), 0 0 1px rgba(183, 255, 0, 0.2);
+      --shadow-card: 0 8px 24px rgba(4, 8, 4, 0.6), 0 0 1px rgba(38, 59, 36, 0.8);
+      --shadow-hover: 0 10px 28px rgba(0, 0, 0, 0.7), 0 0 14px rgba(85, 214, 107, 0.22);
 
       --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, system-ui, sans-serif;
       --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, Monaco, monospace;
@@ -51,10 +115,97 @@
       --ease: cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    [data-theme="light"] {
+      /* Background Colors */
+      --bg: #F5FAF0;
+      --bg-secondary: #EDF5E7;
+      --bg-tertiary: #E5EFDC;
+      --bg-sidebar: #F9FCF6;
+      --bg-header: #FFFFFF;
+      --bg-elevated: #FFFFFF;
+
+      /* Cards & Surfaces */
+      --card-primary: #FFFFFF;
+      --card-secondary: #F0F7E9;
+      --card-elevated: #FFFFFF;
+      --input-bg: #F4F9EF;
+      --modal-bg: #FFFFFF;
+      --hover-bg: #EAF5DF;
+
+      /* Surface mapping for legacy classes */
+      --surface-1: #FFFFFF;
+      --surface-2: #F0F7E9;
+      --surface-3: #EAF5DF;
+
+      /* Primary & Accent Colors */
+      --primary: #65A30D;
+      --primary-hover: #4D7C0F;
+      --secondary: #16A34A;
+      --accent: #84CC16;
+      --highlight: #4D7C0F;
+      --active-state: #65A30D;
+      --focus-ring: #84CC16;
+      --primary-tint: rgba(101, 163, 13, 0.12);
+      --secondary-tint: rgba(22, 163, 74, 0.12);
+
+      /* Brand/Legacy mappings */
+      --apple-blue: #65A30D;
+      --apple-blue-hover: #4D7C0F;
+      --apple-blue-tint: rgba(101, 163, 13, 0.14);
+      --apple-green: #16A34A;
+      --apple-green-tint: rgba(22, 163, 74, 0.14);
+      --apple-orange: #D97706;
+      --apple-orange-tint: rgba(217, 119, 6, 0.14);
+      --apple-red: #DC2626;
+      --apple-red-tint: rgba(220, 38, 38, 0.14);
+      --apple-purple: #84CC16;
+      --apple-purple-tint: rgba(132, 204, 22, 0.14);
+
+      /* Text Colors */
+      --text-1: #172512;
+      --text-2: #52664A;
+      --text-3: #82917A;
+      --text-4: #AAB5A3;
+      --text-inverted: #FFFFFF;
+
+      /* Borders */
+      --border: #D9E7CF;
+      --border-subtle: #E8F0E2;
+      --border-strong: #D9E7CF;
+      --border-active: #65A30D;
+      --border-hover: #84CC16;
+      --border-focus: #65A30D;
+
+      /* Status Colors */
+      --status-success: #16A34A;
+      --status-warning: #D97706;
+      --status-error: #DC2626;
+      --status-info: #0284C7;
+
+      /* Gradients (Light) */
+      --grad-primary: linear-gradient(135deg, #84CC16 0%, #16A34A 100%);
+      --grad-secondary: linear-gradient(135deg, #A3E635 0%, #65A30D 100%);
+      --grad-bg: linear-gradient(180deg, #F5FAF0 0%, #EAF5DF 100%);
+      --grad-glow: radial-gradient(circle, rgba(132, 204, 22, 0.18) 0%, rgba(22, 163, 74, 0.08) 50%, transparent 75%);
+
+      /* Shadows & Glows (Light) */
+      --glow-ambient: 0 0 20px rgba(101, 163, 13, 0.12);
+      --glow-neon: 0 0 14px rgba(101, 163, 13, 0.25);
+      --shadow-deep: 0 12px 32px rgba(23, 37, 18, 0.08), 0 0 1px rgba(101, 163, 13, 0.2);
+      --shadow-card: 0 4px 16px rgba(23, 37, 18, 0.04), 0 0 1px rgba(217, 231, 207, 0.8);
+      --shadow-hover: 0 8px 24px rgba(23, 37, 18, 0.08), 0 0 12px rgba(132, 204, 22, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+    }
 
     body {
-      background: var(--bg);
+      background: radial-gradient(ellipse 70% 45% at 50% 0%, var(--primary-tint) 0%, transparent 65%), var(--bg);
       color: var(--text-1);
       font-family: var(--font);
       font-size: 14px;
@@ -68,8 +219,8 @@
     /* Scrollbars */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 999px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
     /* SVG Icon base */
     .icon {
@@ -98,59 +249,84 @@
       font-weight: 500;
       padding: 8px 14px;
       border-radius: var(--radius-sm);
-      border: 1px solid transparent;
+      border: 1px solid var(--border);
       background: var(--surface-2);
       color: var(--text-1);
       cursor: pointer;
       text-decoration: none;
-      transition: all 0.16s var(--ease);
       white-space: nowrap;
       user-select: none;
+      transition: all 0.2s var(--ease);
     }
-    .btn:hover { background: var(--surface-3); border-color: var(--border-strong); }
+    .btn:hover {
+      background: var(--hover-bg);
+      border-color: var(--border-hover);
+      box-shadow: 0 0 10px var(--primary-tint);
+    }
     .btn:active { transform: scale(0.975); }
     .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
     .btn-primary {
-      background: var(--apple-blue);
-      color: #FFFFFF;
-      font-weight: 600;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.2), 0 0 16px rgba(10, 132, 255, 0.25);
+      background: var(--grad-primary);
+      color: var(--text-inverted);
+      font-weight: 700;
+      border: 1px solid var(--border-active);
+      box-shadow: var(--glow-neon);
+      text-shadow: none;
     }
-    .btn-primary:hover { background: var(--apple-blue-hover); border-color: transparent; }
+    .btn-primary:hover {
+      background: var(--grad-primary);
+      filter: brightness(1.1);
+      box-shadow: 0 0 24px rgba(183, 255, 0, 0.65), 0 0 40px rgba(85, 214, 107, 0.35);
+      border-color: var(--highlight);
+    }
 
     .btn-ghost {
-      background: transparent;
+      background: var(--surface-1);
       border-color: var(--border);
       color: var(--text-2);
     }
-    .btn-ghost:hover { background: var(--surface-2); color: var(--text-1); }
+    .btn-ghost:hover {
+      background: var(--hover-bg);
+      color: var(--text-1);
+      border-color: var(--border-hover);
+      box-shadow: 0 0 10px var(--primary-tint);
+    }
 
     .btn-success {
-      background: var(--apple-green-tint);
-      color: var(--apple-green);
-      border-color: rgba(48, 209, 88, 0.3);
+      background: var(--secondary-tint);
+      color: var(--status-success);
+      border-color: rgba(85, 214, 107, 0.4);
     }
-    .btn-success:hover { background: rgba(48, 209, 88, 0.25); }
+    .btn-success:hover {
+      background: rgba(85, 214, 107, 0.25);
+      border-color: var(--status-success);
+    }
 
     .btn-warning {
-      background: var(--apple-orange-tint);
-      color: var(--apple-orange);
-      border-color: rgba(255, 159, 10, 0.3);
+      background: rgba(250, 204, 21, 0.14);
+      color: var(--status-warning);
+      border-color: rgba(250, 204, 21, 0.4);
     }
-    .btn-warning:hover { background: rgba(255, 159, 10, 0.25); }
+    .btn-warning:hover {
+      background: rgba(250, 204, 21, 0.25);
+      border-color: var(--status-warning);
+    }
 
     .btn-danger {
-      background: var(--apple-red-tint);
-      color: var(--apple-red);
-      border-color: rgba(255, 69, 58, 0.3);
+      background: rgba(239, 68, 68, 0.14);
+      color: var(--status-error);
+      border-color: rgba(239, 68, 68, 0.4);
     }
-    .btn-danger:hover { background: rgba(255, 69, 58, 0.25); }
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: var(--status-error);
+    }
 
     /* Inputs */
     input[type="text"], input[type="password"], input[type="number"], textarea, select {
       width: 100%;
-      background: var(--surface-1);
+      background: var(--input-bg);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       color: var(--text-1);
@@ -158,12 +334,12 @@
       font-size: 13px;
       padding: 9px 12px;
       outline: none;
-      transition: all 0.16s var(--ease);
+      transition: all 0.18s var(--ease);
     }
     input:focus, textarea:focus, select:focus {
-      border-color: var(--apple-blue);
-      background: var(--surface-2);
-      box-shadow: 0 0 0 3px var(--apple-blue-tint);
+      border-color: var(--border-focus);
+      background: var(--hover-bg);
+      box-shadow: 0 0 0 3px var(--primary-tint), 0 0 14px var(--primary-tint);
     }
     input::placeholder, textarea::placeholder { color: var(--text-4); }
 
@@ -185,21 +361,21 @@
       border-radius: 50%;
       background: currentColor;
     }
-    .badge-active { background: var(--apple-green-tint); color: var(--apple-green); border: 1px solid rgba(48, 209, 88, 0.3); }
-    .badge-banned { background: var(--apple-red-tint); color: var(--apple-red); border: 1px solid rgba(255, 69, 58, 0.3); }
-    .badge-client { background: var(--apple-blue-tint); color: var(--apple-blue); border: 1px solid rgba(10, 132, 255, 0.3); }
+    .badge-active { background: var(--secondary-tint); color: var(--status-success); border: 1px solid rgba(85, 214, 107, 0.4); }
+    .badge-banned { background: rgba(239, 68, 68, 0.16); color: var(--status-error); border: 1px solid rgba(239, 68, 68, 0.4); }
+    .badge-client { background: var(--primary-tint); color: var(--primary); border: 1px solid rgba(183, 255, 0, 0.4); }
     .badge-own    { background: var(--surface-2); color: var(--text-2); border: 1px solid var(--border); }
-    .badge-warn   { background: var(--apple-orange-tint); color: var(--apple-orange); border: 1px solid rgba(255, 159, 10, 0.3); }
+    .badge-warn   { background: rgba(250, 204, 21, 0.16); color: var(--status-warning); border: 1px solid rgba(250, 204, 21, 0.4); }
 
     .key-pill {
       font-family: var(--font-mono);
       font-size: 12px;
       font-weight: 600;
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--surface-2);
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 3px 8px;
-      color: #FFFFFF;
+      color: var(--primary);
       letter-spacing: 0.02em;
     }
 
@@ -209,7 +385,7 @@
     /* Sidebar */
     .sidebar {
       width: 250px;
-      background: rgba(10, 10, 12, 0.85);
+      background: color-mix(in srgb, var(--bg-sidebar) 92%, transparent);
       backdrop-filter: blur(28px);
       -webkit-backdrop-filter: blur(28px);
       border-right: 1px solid var(--border);
@@ -220,7 +396,7 @@
       bottom: 0;
       left: 0;
       z-index: 100;
-      transition: transform 0.24s var(--ease);
+      transition: transform 0.24s var(--ease), background-color 0.3s ease, border-color 0.3s ease;
     }
     .brand {
       padding: 22px 20px;
@@ -233,13 +409,13 @@
       width: 34px;
       height: 34px;
       border-radius: 10px;
-      background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: var(--grad-primary);
+      border: 1px solid var(--border-active);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--apple-blue);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      color: var(--text-inverted);
+      box-shadow: var(--glow-neon);
     }
     .brand-text h2 { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-1); }
     .brand-text span { font-size: 11px; color: var(--text-3); }
@@ -270,18 +446,23 @@
       font-size: 13px;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.15s var(--ease);
       border: 1px solid transparent;
       user-select: none;
+      transition: all 0.18s var(--ease);
     }
-    .nav-link:hover { background: var(--surface-1); color: var(--text-1); }
-    .nav-link.active {
-      background: var(--surface-2);
+    .nav-link:hover {
+      background: var(--hover-bg);
       color: var(--text-1);
-      font-weight: 600;
-      border-color: var(--border);
+      border-color: var(--border-subtle);
     }
-    .nav-link.active .icon { color: var(--apple-blue); }
+    .nav-link.active {
+      background: var(--card-secondary);
+      color: var(--primary);
+      font-weight: 700;
+      border-color: var(--border-active);
+      box-shadow: 0 0 14px var(--primary-tint);
+    }
+    .nav-link.active .icon { color: var(--primary); }
 
     .sidebar-foot {
       padding: 16px;
@@ -301,8 +482,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--text-2);
-      font-weight: 600;
+      color: var(--primary);
+      font-weight: 700;
       font-size: 12px;
       flex-shrink: 0;
     }
@@ -324,7 +505,7 @@
     .topbar {
       height: 60px;
       padding: 0 28px;
-      background: rgba(0, 0, 0, 0.7);
+      background: color-mix(in srgb, var(--bg-header) 88%, transparent);
       backdrop-filter: blur(28px);
       -webkit-backdrop-filter: blur(28px);
       border-bottom: 1px solid var(--border);
@@ -334,9 +515,11 @@
       position: sticky;
       top: 0;
       z-index: 90;
+      box-shadow: var(--shadow-card);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
     }
     .topbar-left { display: flex; align-items: center; gap: 14px; }
-    .topbar-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
+    .topbar-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-1); }
     .topbar-right { display: flex; align-items: center; gap: 10px; }
     .mob-menu-btn { display: none; }
 
@@ -358,13 +541,19 @@
 
     /* Cards */
     .card {
-      background: var(--surface-1);
+      background: var(--card-primary);
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       padding: 22px;
       margin-bottom: 20px;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
+      box-shadow: var(--shadow-card);
+      transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), background-color 0.3s ease;
+    }
+    .card:hover {
+      border-color: var(--border-hover);
+      box-shadow: var(--shadow-hover);
     }
     .card-head {
       display: flex;
@@ -385,13 +574,18 @@
       margin-bottom: 24px;
     }
     .stat-card {
-      background: var(--surface-1);
+      background: var(--card-secondary);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       padding: 18px;
-      transition: all 0.16s var(--ease);
+      box-shadow: var(--shadow-card);
+      transition: all 0.2s var(--ease);
     }
-    .stat-card:hover { border-color: var(--border-strong); background: var(--surface-2); }
+    .stat-card:hover {
+      border-color: var(--border-hover);
+      background: var(--hover-bg);
+      box-shadow: var(--shadow-hover);
+    }
     .stat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
     .stat-label { font-size: 12px; color: var(--text-3); font-weight: 500; }
     .stat-icon {
@@ -401,8 +595,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--apple-blue);
-      background: var(--apple-blue-tint);
+      color: var(--primary);
+      background: var(--primary-tint);
+      border: 1px solid var(--border-subtle);
     }
     .stat-val { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-1); }
 
@@ -411,11 +606,11 @@
       overflow-x: auto;
       border-radius: var(--radius-md);
       border: 1px solid var(--border);
-      background: rgba(0, 0, 0, 0.2);
+      background: var(--card-primary);
     }
     table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
     th {
-      background: var(--surface-2);
+      background: var(--card-secondary);
       color: var(--text-3);
       font-size: 11px;
       font-weight: 600;
@@ -432,7 +627,7 @@
       vertical-align: middle;
     }
     tr:last-child td { border-bottom: none; }
-    tbody tr:hover { background: rgba(255, 255, 255, 0.025); }
+    tbody tr:hover { background: var(--hover-bg); }
 
     /* Filter Tabs */
     .filter-tabs {
@@ -456,15 +651,16 @@
     }
     .filter-tab.active {
       background: var(--surface-3);
-      color: var(--text-1);
-      font-weight: 600;
+      color: var(--primary);
+      font-weight: 700;
+      box-shadow: 0 0 8px var(--primary-tint);
     }
 
     /* Modal System */
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.72);
+      background: rgba(0, 0, 0, 0.76);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       display: flex;
@@ -483,13 +679,13 @@
     .modal-box {
       width: 100%;
       max-width: 520px;
-      background: #0d0d10;
-      border: 1px solid var(--border-strong);
+      background: var(--modal-bg);
+      border: 1px solid var(--border-active);
       border-radius: var(--radius-xl);
       padding: 26px;
-      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+      box-shadow: var(--shadow-deep), var(--glow-ambient);
       transform: scale(0.96);
-      transition: transform 0.2s var(--ease);
+      transition: transform 0.2s var(--ease), background-color 0.3s ease;
     }
     .modal-backdrop.open .modal-box { transform: scale(1); }
     .modal-head {
@@ -512,7 +708,7 @@
       cursor: pointer;
       transition: all 0.15s var(--ease);
     }
-    .modal-close:hover { background: var(--surface-3); color: var(--text-1); }
+    .modal-close:hover { background: var(--hover-bg); color: var(--primary); border-color: var(--border-hover); }
     .modal-body { margin-bottom: 22px; }
     .modal-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
 
@@ -530,8 +726,8 @@
       pointer-events: none;
     }
     .toast {
-      background: rgba(18, 18, 22, 0.95);
-      border: 1px solid var(--border-strong);
+      background: var(--card-elevated);
+      border: 1px solid var(--border-active);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-radius: var(--radius-md);
@@ -542,21 +738,21 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      box-shadow: var(--shadow-deep), var(--glow-ambient);
       opacity: 0;
       transform: translateY(10px);
       transition: all 0.22s var(--ease);
       pointer-events: auto;
     }
     .toast.show { opacity: 1; transform: translateY(0); }
-    .toast-success .icon { color: var(--apple-green); }
-    .toast-error .icon { color: var(--apple-red); }
+    .toast-success .icon { color: var(--status-success); }
+    .toast-error .icon { color: var(--status-error); }
 
     /* Login Screen */
     #login-screen {
       position: fixed;
       inset: 0;
-      background: #000000;
+      background: radial-gradient(ellipse 70% 50% at 50% 30%, var(--primary-tint) 0%, transparent 70%), var(--bg);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -566,27 +762,29 @@
     .login-card {
       width: 100%;
       max-width: 400px;
-      background: #0a0a0c;
+      background: var(--card-elevated);
       border: 1px solid var(--border-strong);
       border-radius: var(--radius-xl);
       padding: 34px 28px;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+      box-shadow: var(--shadow-deep), var(--glow-ambient);
       text-align: center;
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
     }
     .login-logo {
       width: 52px;
       height: 52px;
       margin: 0 auto 16px;
       border-radius: 14px;
-      background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: var(--grad-primary);
+      border: 1px solid var(--border-active);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--apple-blue);
-      box-shadow: 0 8px 24px rgba(10, 132, 255, 0.2);
+      color: var(--text-inverted);
+      box-shadow: var(--glow-neon);
     }
-    .login-card h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
+    .login-card h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; color: var(--text-1); }
     .login-card p { font-size: 12px; color: var(--text-3); margin-bottom: 24px; }
 
     .auth-tabs {
@@ -614,7 +812,7 @@
       gap: 6px;
       transition: all 0.15s var(--ease);
     }
-    .auth-tab.active { background: var(--surface-3); color: var(--text-1); }
+    .auth-tab.active { background: var(--surface-3); color: var(--primary); font-weight: 700; }
 
     .input-wrap {
       position: relative;
@@ -631,15 +829,16 @@
 
     /* Hero Key Card (Buyer View) */
     .hero-card {
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-      border: 1px solid var(--border-strong);
+      background: var(--card-primary);
+      border: 1px solid var(--border-active);
       border-radius: var(--radius-xl);
       padding: 26px;
       margin-bottom: 24px;
       backdrop-filter: blur(28px);
+      box-shadow: var(--shadow-deep), var(--glow-ambient);
     }
     .hero-key-box {
-      background: rgba(0, 0, 0, 0.4);
+      background: var(--card-secondary);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       padding: 16px 20px;
@@ -654,8 +853,9 @@
       font-family: var(--font-mono);
       font-size: 16px;
       font-weight: 700;
-      color: #FFFFFF;
+      color: var(--primary);
       letter-spacing: 0.05em;
+      text-shadow: 0 0 10px var(--primary-tint);
     }
 
     /* Mobile Bottom Navigation */
@@ -666,7 +866,7 @@
       left: 0;
       right: 0;
       height: 60px;
-      background: rgba(10, 10, 12, 0.94);
+      background: color-mix(in srgb, var(--bg-sidebar) 94%, transparent);
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
       border-top: 1px solid var(--border);
@@ -691,7 +891,7 @@
       background: transparent;
       transition: color 0.15s var(--ease);
     }
-    .mob-nav-item.active { color: var(--apple-blue); }
+    .mob-nav-item.active { color: var(--primary); }
     .mob-nav-item .icon { width: 18px; height: 18px; }
 
     /* Mobile Responsive */
@@ -733,6 +933,13 @@
   <!-- LOGIN & REGISTRATION SCREEN -->
   <div id="login-screen">
     <div class="login-card">
+      <div style="display:flex; justify-content:flex-end; margin-bottom:8px">
+        <button type="button" class="btn btn-ghost" onclick="toggleTheme()" style="padding:4px 8px; font-size:11px; gap:4px">
+          <svg class="icon theme-icon-sun" viewBox="0 0 24 24" style="display:none; width:13px; height:13px"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg class="icon theme-icon-moon" viewBox="0 0 24 24" style="width:13px; height:13px"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <span class="theme-text" style="font-size:11px">Theme</span>
+        </button>
+      </div>
       <div class="login-logo">
         <svg class="icon-xl" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
       </div>
@@ -886,6 +1093,12 @@
         </div>
 
         <div class="topbar-right">
+          <!-- TOXIC VENOM THEME TOGGLE -->
+          <button id="btn-theme-toggle" class="btn btn-ghost" onclick="toggleTheme()" title="Toggle Toxic Venom Dark / Light Mode" style="padding: 6px 12px; gap: 6px;">
+            <svg class="icon theme-icon-sun" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="icon theme-icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <span class="theme-text" style="font-size:12px; font-weight:600">Dark</span>
+          </button>
           <!-- Safe Mode Indicator / Toggle -->
           <button id="btn-toggle-safe-mode" class="btn btn-ghost" style="display:none" onclick="quickToggleSafeMode()">
             <span class="badge-dot" style="background:var(--apple-green)"></span>
@@ -1574,6 +1787,44 @@
        APPLICATION LOGIC & FAST ENGINE
        ========================================== -->
   <script>
+    /* ============================================================
+       TOXIC VENOM THEME CONTROLLER (DARK / LIGHT MODE)
+       ============================================================ */
+    function initTheme() {
+      const saved = localStorage.getItem('toxic_theme') || 'dark';
+      applyTheme(saved);
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('toxic_theme', theme);
+
+      const isLight = theme === 'light';
+      const sunIcons = document.querySelectorAll('.theme-icon-sun');
+      const moonIcons = document.querySelectorAll('.theme-icon-moon');
+      const themeTexts = document.querySelectorAll('.theme-text');
+
+      sunIcons.forEach(el => el.style.display = isLight ? 'inline-block' : 'none');
+      moonIcons.forEach(el => el.style.display = isLight ? 'none' : 'inline-block');
+      themeTexts.forEach(el => el.textContent = isLight ? 'Light Mode' : 'Dark Mode');
+
+      // Sync browser theme color
+      const metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (metaTheme) {
+        metaTheme.setAttribute('content', isLight ? '#F5FAF0' : '#090E09');
+      }
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const next = current === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      if (typeof toast === 'function') {
+        toast('Switched to Toxic Venom ' + (next === 'light' ? 'Light' : 'Dark') + ' Mode');
+      }
+    }
+    initTheme();
+
     /* Global State */
     let _token = localStorage.getItem('fb_token') || '';
     let _role = localStorage.getItem('fb_role') || 'admin';
