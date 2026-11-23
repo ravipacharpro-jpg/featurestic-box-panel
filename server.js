@@ -432,10 +432,10 @@ async function handleConnect(req, res) {
         bound_packages: (activePkgConfig ? [activePkgConfig.package_name] : []),
         unique_devices: devCount,
         update: {
-          has_update: false,
-          latest_version: '1.0.4',
-          apk_url: '',
-          changelog: '',
+          has_update: Boolean(hasApkUpdate),
+          latest_version: effectiveApkVer,
+          apk_url: effectiveApkUrl,
+          changelog: effectiveChangelog,
           force_update: false
         },
         notice: {
@@ -456,6 +456,31 @@ app.all('/connect', handleConnect);
 app.all('/api/public/connect', handleConnect);
 
 // -------------------------------------------------------------
+// 1b. In-App Auto-Update Check API (/api/public/update-check)
+//     Semantic version comparison ensures already-updated users NEVER see prompts
+// -------------------------------------------------------------
+app.get('/api/public/update-check', async (req, res) => {
+  try {
+    const clientVer = (req.query.version || '1.0.0').trim();
+    const settings = (await sql`SELECT * FROM panel_settings LIMIT 1`)[0];
+    const latestVer = (settings?.update_version || '1.0.4').trim();
+    const apkUrl = (settings?.update_apk_url || '').trim();
+    const changelog = (settings?.update_changelog || 'Latest performance updates & bug fixes').trim();
+    const hasUpdate = Boolean(apkUrl) && isNewerVersion(clientVer, latestVer);
+    res.json({
+      has_update: Boolean(hasUpdate),
+      latest_version: latestVer,
+      current_version: clientVer,
+      apk_url: apkUrl,
+      changelog: changelog,
+      force_update: false
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -------------------------------------------------------------
 // 2. Automated Crash Telemetry API (/api/telemetry/crash)
 //    Supports Java Exception Stacktraces & Native .so / Signal Offsets
 // -------------------------------------------------------------
@@ -471,7 +496,10 @@ app.post('/api/telemetry/crash', async (req, res) => {
       return res.status(400).json({ error: 'stacktrace is required' });
     }
 
-    const st = String(stacktrace);
+    let st = String(stacktrace);
+    if (st.length > 32768) {
+      st = st.slice(0, 32768) + '\n...[truncated by server limit to protect memory]';
+    }
 
     // Look up client_username if key was provided
     let client_username = null;
@@ -550,10 +578,22 @@ app.post('/api/telemetry/crash', async (req, res) => {
         ${fault_offset},
         ${finalKey},
         ${client_username},
-        ${stacktrace},
+        ${st},
         ${device_id || null}
       )
     `;
+
+    // Auto-prune old crash reports to keep table bounded (max 500 reports)
+    try {
+      await sql`
+        DELETE FROM crash_reports 
+        WHERE id < (
+          SELECT COALESCE(MIN(id), 0) FROM (
+            SELECT id FROM crash_reports ORDER BY id DESC LIMIT 500
+          ) AS s
+        )
+      `;
+    } catch (pruneErr) {}
 
     // 1. Master Admin Alerts (Only for SDK .aar container issues or Admin's own master .so)
     if (crash_category === 'sdk_aar') {
