@@ -473,7 +473,9 @@ app.get('/api/public/update-check', async (req, res) => {
       current_version: clientVer,
       apk_url: apkUrl,
       changelog: changelog,
-      force_update: false
+      force_update: false,
+      broadcast_notice: settings?.broadcast_notice || '',
+      broadcast_notice_id: settings?.broadcast_notice_id || 0
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1390,6 +1392,11 @@ app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
         updated_at = CURRENT_TIMESTAMP
     WHERE id = 1
   `;
+  if (update_version && update_version.trim()) {
+    try {
+      await sql`DELETE FROM crash_reports WHERE app_version != ${update_version.trim()}`;
+    } catch (e) {}
+  }
   res.json({ success: true });
 });
 
