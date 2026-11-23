@@ -499,8 +499,8 @@ app.post('/api/telemetry/crash', async (req, res) => {
     }
 
     let st = String(stacktrace);
-    if (st.length > 32768) {
-      st = st.slice(0, 32768) + '\n...[truncated by server limit to protect memory]';
+    if (st.length > 65536) {
+      st = st.slice(0, 2000) + '\n\n... [middle lines truncated for length] ...\n\n' + st.slice(-60000);
     }
 
     // Look up client_username if key was provided
