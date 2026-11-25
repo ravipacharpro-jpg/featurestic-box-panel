@@ -894,21 +894,28 @@ async function checkClientAuth(req, res, next) {
 
 // Unified Login Route (Admin & Client)
 app.post('/api/auth/login', async (req, res) => {
-  if (!applyRateLimit(req, res, 8, 'auth_login')) return;
   const { username, password } = req.body;
-
+  const cleanPass = (password || '').trim();
   const reqUser = (username || '').trim().toLowerCase();
   const validAdminUser = cachedAdminUser.toLowerCase();
 
-  // Instant fast-path check for Master Admin without blocking on DB
+  // Instant fast-path check for Master Admin (Zero DB latency, exempt from rate limit)
   if (!reqUser || reqUser === validAdminUser || reqUser === 'admin' || reqUser === 'ravi1234') {
-    if (password === cachedAdminPass || password === 'Fbox1234Ravi' || password === process.env.ADMIN_PASSWORD) {
+    if (cleanPass === cachedAdminPass || cleanPass === 'Fbox1234Ravi' || cleanPass === process.env.ADMIN_PASSWORD) {
       refreshAdminCredentials().catch(() => {});
       return res.json({ success: true, role: 'admin', token: cachedAdminPass || 'Fbox1234Ravi', username: cachedAdminUser || 'Ravi1234' });
     }
   }
 
+  // Rate limit other/failed attempts
+  if (!applyRateLimit(req, res, 40, 'auth_login')) return;
+
   await refreshAdminCredentials();
+  if (!reqUser || reqUser === cachedAdminUser.toLowerCase() || reqUser === 'admin' || reqUser === 'ravi1234') {
+    if (cleanPass === cachedAdminPass || cleanPass === 'Fbox1234Ravi' || cleanPass === process.env.ADMIN_PASSWORD) {
+      return res.json({ success: true, role: 'admin', token: cachedAdminPass, username: cachedAdminUser });
+    }
+  }
 
   // Check Client / Buyer Account
   if (username) {

@@ -1973,7 +1973,10 @@
         const opts = { method, headers };
         if (body) opts.body = JSON.stringify(body);
         const r = await fetch(path, opts);
-        if (r.status === 401 || r.status === 403) { doLogout(); return null; }
+        if (!noAuth && (r.status === 401 || r.status === 403)) {
+          doLogout();
+          return null;
+        }
         return await r.json();
       } catch (err) {
         console.error('API error:', err);
@@ -2098,28 +2101,45 @@
     }
 
     async function doLogin() {
-      const user = (document.getElementById('login-user')?.value || '').trim();
+      const userRaw = (document.getElementById('login-user')?.value || '').trim();
       const pass = (document.getElementById('login-pass')?.value || '').trim();
       const errEl = document.getElementById('login-err');
+      const btn = document.querySelector('#auth-form-login .btn-primary');
       if (errEl) errEl.textContent = '';
 
-      if (!user || !pass) {
-        if (errEl) errEl.textContent = 'Please enter both username and password';
+      if (!pass) {
+        if (errEl) errEl.textContent = 'Please enter password';
         return;
       }
 
-      const res = await api('/api/auth/login', 'POST', { username: user, password: pass }, true);
-      if (res && res.success) {
-        _token = res.token;
-        _role = res.role || 'client';
-        _username = res.username || user;
-        localStorage.setItem('fb_token', _token);
-        localStorage.setItem('fb_role', _role);
-        localStorage.setItem('fb_username', _username);
-        toast('Signed in successfully');
-        bootApp();
-      } else {
-        if (errEl) errEl.textContent = res?.error || res?.message || 'Invalid username or password';
+      const user = userRaw || 'Ravi1234';
+
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Signing in…';
+      }
+
+      try {
+        const res = await api('/api/auth/login', 'POST', { username: user, password: pass }, true);
+        if (res && res.success) {
+          _token = res.token;
+          _role = res.role || 'client';
+          _username = res.username || user;
+          localStorage.setItem('fb_token', _token);
+          localStorage.setItem('fb_role', _role);
+          localStorage.setItem('fb_username', _username);
+          toast('Signed in successfully');
+          bootApp();
+        } else {
+          if (errEl) errEl.textContent = res?.error || res?.message || 'Invalid username or password';
+        }
+      } catch (err) {
+        if (errEl) errEl.textContent = 'Connection error: ' + (err.message || 'Please check network');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Sign In';
+        }
       }
     }
 
@@ -2187,7 +2207,8 @@
     function renderDashboardKeys(keys) {
       const kbody = document.getElementById('d-keys-body');
       if (!kbody) return;
-      const recent = (keys || []).slice(0, 5);
+      const list = Array.isArray(keys) ? keys : [];
+      const recent = list.slice(0, 5);
       kbody.innerHTML = recent.length ? recent.map(k => `<tr>
         <td><span class="key-pill">${k.user_key}</span></td>
         <td>${k.account_type === 'client' ? `<span class="badge badge-client">@${esc(k.client_username || 'client')}</span>` : '<span class="badge badge-own">Internal</span>'}</td>
@@ -2200,7 +2221,8 @@
     function renderDashboardCrashes(crashes) {
       const cbody = document.getElementById('d-crash-body');
       if (!cbody) return;
-      const rcrash = (crashes || []).slice(0, 5);
+      const list = Array.isArray(crashes) ? crashes : [];
+      const rcrash = list.slice(0, 5);
       cbody.innerHTML = rcrash.length ? rcrash.map(c => `<tr>
         <td><strong>${esc(c.brand)}</strong> <span style="color:var(--text-3);font-size:12px">${esc(c.model)}</span></td>
         <td><span class="badge ${c.crash_category === 'client_so' ? 'badge-warn' : 'badge-client'}">${esc(c.crash_category || 'java')}</span></td>
@@ -2244,7 +2266,8 @@
     }
 
     /* Admin License Keys */
-    function renderKeysTable(list) {
+    function renderKeysTable(keys) {
+      const list = Array.isArray(keys) ? keys : [];
       const sub = document.getElementById('keys-sub');
       if (sub) sub.textContent = `${list.length} total keys issued`;
       const tbody = document.getElementById('keys-body');
@@ -2293,14 +2316,6 @@
         renderKeysTable(keys);
         updateSyncStatus(true);
       }
-    }
-              <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="toggleBan(${k.id})">${k.status === 'active' ? 'Pause' : 'Resume'}</button>
-              <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="resetPackages(${k.id})" title="Reset package locks">Reset</button>
-              <button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="delKey(${k.id})">Delete</button>
-            </div>
-          </td>
-        </tr>`;
-      }).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-3)">No license keys found. Click "Generate Key" above.</td></tr>';
     }
 
     async function toggleBan(id) {
