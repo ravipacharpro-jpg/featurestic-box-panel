@@ -219,8 +219,8 @@ async function runAutoRetentionCleanup(force = false) {
   if (!force && now - lastRetentionCleanupMs < 5 * 60 * 1000) return;
   lastRetentionCleanupMs = now;
   try {
-    await sql`DELETE FROM crash_reports WHERE created_at < NOW() - INTERVAL '1 day'`;
-    await sql`DELETE FROM system_logs WHERE created_at < NOW() - INTERVAL '1 day'`;
+    await sql`DELETE FROM crash_reports WHERE created_at < NOW() - INTERVAL '3 days'`;
+    await sql`DELETE FROM system_logs WHERE created_at < NOW() - INTERVAL '3 days'`;
     await sql`DELETE FROM license_keys WHERE expires_at IS NOT NULL AND expires_at < NOW()`;
     await sql`DELETE FROM sdk_devices WHERE user_key NOT IN (SELECT user_key FROM license_keys)`;
     const settings = (await sql`SELECT update_version FROM panel_settings LIMIT 1`)[0];

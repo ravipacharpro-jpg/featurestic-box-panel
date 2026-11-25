@@ -3,7 +3,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const { Pool } = pg;
-const connectionString = process.env.DATABASE_URL || '';
+const rawUrl = process.env.DATABASE_URL || '';
+const connectionString = rawUrl
+  .replace(/([?&])sslmode=[^&]*(&|$)/, (_, p1, p2) => (p2 === '&' ? p1 : ''))
+  .replace(/[?&]$/, '');
 
 const pool = new Pool({
   connectionString,
