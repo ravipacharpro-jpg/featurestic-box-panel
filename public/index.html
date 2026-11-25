@@ -523,6 +523,41 @@
     .topbar-right { display: flex; align-items: center; gap: 10px; }
     .mob-menu-btn { display: none; }
 
+    .live-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: var(--radius-pill);
+      background: var(--primary-tint);
+      border: 1px solid var(--border-active);
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      user-select: none;
+      transition: all 0.3s ease;
+    }
+    .live-status-pill.sync-stale {
+      border-color: var(--apple-orange);
+      color: var(--apple-orange);
+      background: var(--apple-orange-tint);
+    }
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+    }
+    .live-dot.pulse {
+      animation: livePulse 2s infinite ease-in-out;
+    }
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.8); }
+    }
+
     /* Pages Container */
     .content {
       flex: 1;
@@ -1089,6 +1124,12 @@
         </div>
 
         <div class="topbar-right">
+          <!-- LIVE ACTIVE ENGINE INDICATOR -->
+          <div id="topbar-sync-status" class="live-status-pill" title="Live Aiven PostgreSQL Real-time Connection">
+            <span class="live-dot pulse"></span>
+            <span>LIVE SYNCED</span>
+          </div>
+
           <!-- TOXIC VENOM THEME TOGGLE -->
           <button id="btn-theme-toggle" class="btn btn-ghost" onclick="toggleTheme()" title="Toggle Toxic Venom Dark / Light Mode" style="padding: 6px 12px; gap: 6px;">
             <svg class="icon theme-icon-sun" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -2121,46 +2162,89 @@
       }
     }
 
+    /* Real-Time Live Sync Status Pill */
+    function updateSyncStatus(isLive) {
+      const el = document.getElementById('topbar-sync-status');
+      if (!el) return;
+      if (isLive) {
+        el.innerHTML = '<span class="live-dot pulse"></span><span>LIVE SYNCED</span>';
+        el.className = 'live-status-pill';
+      } else {
+        el.innerHTML = '<span class="live-dot" style="background:var(--apple-orange)"></span><span>CONNECTING…</span>';
+        el.className = 'live-status-pill sync-stale';
+      }
+    }
+
     /* Admin Dashboard */
-    async function loadDashboard() {
-      const stats = await api('/api/admin/stats');
-      if (stats) {
-        document.getElementById('d-active').textContent = stats.activeKeys ?? '0';
-        document.getElementById('d-devices').textContent = stats.totalDevices ?? '0';
-        document.getElementById('d-today').textContent = stats.todayCrashes ?? '0';
-        document.getElementById('d-tcrash').textContent = stats.totalCrashes ?? '0';
-      }
+    function renderDashboardStats(stats) {
+      if (!stats) return;
+      if (document.getElementById('d-active')) document.getElementById('d-active').textContent = stats.activeKeys ?? '0';
+      if (document.getElementById('d-devices')) document.getElementById('d-devices').textContent = stats.totalDevices ?? '0';
+      if (document.getElementById('d-today')) document.getElementById('d-today').textContent = stats.todayCrashes ?? '0';
+      if (document.getElementById('d-tcrash')) document.getElementById('d-tcrash').textContent = stats.totalCrashes ?? '0';
+    }
 
-      const keys = await api('/api/admin/keys');
+    function renderDashboardKeys(keys) {
       const kbody = document.getElementById('d-keys-body');
+      if (!kbody) return;
       const recent = (keys || []).slice(0, 5);
-      if (kbody) {
-        kbody.innerHTML = recent.length ? recent.map(k => `<tr>
-          <td><span class="key-pill">${k.user_key}</span></td>
-          <td>${k.account_type === 'client' ? `<span class="badge badge-client">@${esc(k.client_username || 'client')}</span>` : '<span class="badge badge-own">Internal</span>'}</td>
-          <td>${k.status === 'active' ? '<span class="badge badge-active"><span class="badge-dot"></span>Active</span>' : '<span class="badge badge-banned"><span class="badge-dot"></span>Paused</span>'}</td>
-          <td style="color:var(--text-2)">${k.duration_days}d</td>
-          <td style="color:var(--text-3);font-size:12px">${fmtDate(k.created_at)}</td>
-        </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-3)">No license keys issued yet</td></tr>';
-      }
+      kbody.innerHTML = recent.length ? recent.map(k => `<tr>
+        <td><span class="key-pill">${k.user_key}</span></td>
+        <td>${k.account_type === 'client' ? `<span class="badge badge-client">@${esc(k.client_username || 'client')}</span>` : '<span class="badge badge-own">Internal</span>'}</td>
+        <td>${k.status === 'active' ? '<span class="badge badge-active"><span class="badge-dot"></span>Active</span>' : '<span class="badge badge-banned"><span class="badge-dot"></span>Paused</span>'}</td>
+        <td style="color:var(--text-2)">${k.duration_days}d</td>
+        <td style="color:var(--text-3);font-size:12px">${fmtDate(k.created_at)}</td>
+      </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-3)">No license keys issued yet</td></tr>';
+    }
 
-      const crashes = await api('/api/admin/crashes?limit=5');
+    function renderDashboardCrashes(crashes) {
       const cbody = document.getElementById('d-crash-body');
+      if (!cbody) return;
       const rcrash = (crashes || []).slice(0, 5);
-      if (cbody) {
-        cbody.innerHTML = rcrash.length ? rcrash.map(c => `<tr>
-          <td><strong>${esc(c.brand)}</strong> <span style="color:var(--text-3);font-size:12px">${esc(c.model)}</span></td>
-          <td><span class="badge ${c.crash_category === 'client_so' ? 'badge-warn' : 'badge-client'}">${esc(c.crash_category || 'java')}</span></td>
-          <td>${c.fault_offset ? `<span class="key-pill" style="cursor:pointer" onclick="openIdaModal('${esc(c.so_name || 'libclient.so')}', '${esc(c.fault_offset)}', '${esc(c.crash_type)}')">+${c.fault_offset}</span> ` : ''}${esc(c.so_name || c.crash_type)}</td>
-          <td style="color:var(--text-3);font-size:12px">${fmtDate(c.created_at)}</td>
-        </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-3)">No crash signals logged. System healthy.</td></tr>';
+      cbody.innerHTML = rcrash.length ? rcrash.map(c => `<tr>
+        <td><strong>${esc(c.brand)}</strong> <span style="color:var(--text-3);font-size:12px">${esc(c.model)}</span></td>
+        <td><span class="badge ${c.crash_category === 'client_so' ? 'badge-warn' : 'badge-client'}">${esc(c.crash_category || 'java')}</span></td>
+        <td>${c.fault_offset ? `<span class="key-pill" style="cursor:pointer" onclick="openIdaModal('${esc(c.so_name || 'libclient.so')}', '${esc(c.fault_offset)}', '${esc(c.crash_type)}')">+${c.fault_offset}</span> ` : ''}${esc(c.so_name || c.crash_type)}</td>
+        <td style="color:var(--text-3);font-size:12px">${fmtDate(c.created_at)}</td>
+      </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-3)">No crash signals logged. System healthy.</td></tr>';
+    }
+
+    async function loadDashboard(silent = false) {
+      // 1. Instant 0ms Paint from Local Cache (Stale-While-Revalidate)
+      try {
+        const cachedStats = localStorage.getItem('fb_cached_stats');
+        if (cachedStats) renderDashboardStats(JSON.parse(cachedStats));
+        const cachedKeys = localStorage.getItem('fb_cached_keys');
+        if (cachedKeys) renderDashboardKeys(JSON.parse(cachedKeys));
+      } catch (e) {}
+
+      // 2. Parallel Background Refresh
+      try {
+        const [stats, keys, crashes] = await Promise.all([
+          api('/api/admin/stats'),
+          api('/api/admin/keys'),
+          api('/api/admin/crashes?limit=5')
+        ]);
+
+        if (stats) {
+          localStorage.setItem('fb_cached_stats', JSON.stringify(stats));
+          renderDashboardStats(stats);
+        }
+        if (keys) {
+          localStorage.setItem('fb_cached_keys', JSON.stringify(keys));
+          renderDashboardKeys(keys);
+        }
+        if (crashes) {
+          renderDashboardCrashes(crashes);
+        }
+        updateSyncStatus(true);
+      } catch (err) {
+        updateSyncStatus(false);
       }
     }
 
     /* Admin License Keys */
-    async function loadKeys() {
-      const keys = await api('/api/admin/keys');
-      const list = keys || [];
+    function renderKeysTable(list) {
       const sub = document.getElementById('keys-sub');
       if (sub) sub.textContent = `${list.length} total keys issued`;
       const tbody = document.getElementById('keys-body');
@@ -2187,6 +2271,29 @@
           <td style="color:var(--text-3);font-size:12px">${fmtDate(k.expires_at)}</td>
           <td>
             <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="toggleBan(${k.id})">${k.status === 'active' ? 'Pause' : 'Resume'}</button>
+              <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="resetPackages(${k.id})" title="Reset package locks">Reset</button>
+              <button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="delKey(${k.id})">Delete</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-3)">No license keys found. Click "Generate Key" above.</td></tr>';
+    }
+
+    async function loadKeys(silent = false) {
+      // Instant render from cache
+      try {
+        const cachedKeys = localStorage.getItem('fb_cached_keys');
+        if (cachedKeys) renderKeysTable(JSON.parse(cachedKeys));
+      } catch (e) {}
+
+      const keys = await api('/api/admin/keys');
+      if (keys) {
+        localStorage.setItem('fb_cached_keys', JSON.stringify(keys));
+        renderKeysTable(keys);
+        updateSyncStatus(true);
+      }
+    }
               <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="toggleBan(${k.id})">${k.status === 'active' ? 'Pause' : 'Resume'}</button>
               <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="resetPackages(${k.id})" title="Reset package locks">Reset</button>
               <button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="delKey(${k.id})">Delete</button>
@@ -2441,8 +2548,7 @@
       }
     }
 
-    async function loadSettings() {
-      const s = await api('/api/admin/settings');
+    function applySettingsToForm(s) {
       if (!s) return;
       if (document.getElementById('s-broadcast-msg')) document.getElementById('s-broadcast-msg').value = s.broadcast_notice || '';
       if (document.getElementById('s-plugin-url')) document.getElementById('s-plugin-url').value = s.plugin_url || '';
@@ -2453,6 +2559,18 @@
       if (document.getElementById('s-anogs-target-pkg')) document.getElementById('s-anogs-target-pkg').value = s.anogs_target_package || 'com.pubg.imobile';
       if (document.getElementById('s-anogs-offsets')) document.getElementById('s-anogs-offsets').value = s.anogs_ret_offsets || '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4';
       if (document.getElementById('s-anogs-build-id')) document.getElementById('s-anogs-build-id').value = s.anogs_build_id || '';
+    }
+
+    async function loadSettings() {
+      try {
+        const cached = localStorage.getItem('fb_cached_settings');
+        if (cached) applySettingsToForm(JSON.parse(cached));
+      } catch (e) {}
+
+      const s = await api('/api/admin/settings');
+      if (!s) return;
+      localStorage.setItem('fb_cached_settings', JSON.stringify(s));
+      applySettingsToForm(s);
       checkSafeModeStatus();
     }
 
@@ -2811,6 +2929,19 @@
       const addr = document.getElementById('ida-calc-addr')?.textContent || '0x0';
       copyPlain(addr);
     }
+
+    /* Background Heartbeat & Keep-Warm (keeps serverless function warm & real-time live) */
+    setInterval(() => {
+      if (!_token) return;
+      const curPage = document.querySelector('.page.active')?.id?.replace('page-', '');
+      if (curPage === 'dashboard' && _role === 'admin') {
+        loadDashboard(true);
+      } else if (curPage === 'keys' && _role === 'admin') {
+        loadKeys(true);
+      } else {
+        api('/api/health', 'GET', null, true).catch(() => {});
+      }
+    }, 25000);
   </script>
 </body>
 </html>

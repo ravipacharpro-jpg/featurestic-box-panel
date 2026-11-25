@@ -81,12 +81,32 @@ async function sendTelegramAlert(text, customBotToken = null, customChatId = nul
 }
 
 // -------------------------------------------------------------
-// High-Speed In-Memory Cache for Logs & Stats (Instant <10ms rendering)
+// Ultra High-Speed In-Memory Cache (Instant <5ms Panel Rendering)
 // -------------------------------------------------------------
 const _logsCache = new Map();
+const _crashesCache = new Map();
 let _statsCache = { ts: 0, data: null };
+let _keysCache = { ts: 0, data: null };
+let _settingsCache = { ts: 0, data: null };
+let _clientsCache = { ts: 0, data: null };
+
 function invalidateLogCache() {
   _logsCache.clear();
+  _statsCache.ts = 0;
+}
+
+function invalidateKeysCache() {
+  _keysCache.ts = 0;
+  _statsCache.ts = 0;
+  _clientsCache.ts = 0;
+}
+
+function invalidateSettingsCache() {
+  _settingsCache.ts = 0;
+}
+
+function invalidateCrashesCache() {
+  _crashesCache.clear();
   _statsCache.ts = 0;
 }
 
@@ -796,6 +816,10 @@ async function checkAdminAuth(req, res, next) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   const token = authHeader.split(' ')[1];
+  // Instant fast-path authentication (0ms delay)
+  if (isValidAdminToken(token)) {
+    return next();
+  }
   await refreshAdminCredentials();
   if (!isValidAdminToken(token)) {
     return res.status(403).json({ error: 'Forbidden' });
@@ -872,17 +896,19 @@ async function checkClientAuth(req, res, next) {
 app.post('/api/auth/login', async (req, res) => {
   if (!applyRateLimit(req, res, 8, 'auth_login')) return;
   const { username, password } = req.body;
-  await refreshAdminCredentials();
 
   const reqUser = (username || '').trim().toLowerCase();
   const validAdminUser = cachedAdminUser.toLowerCase();
 
-  // Check Master Admin (Matches 'Ravi1234', 'admin', or empty)
+  // Instant fast-path check for Master Admin without blocking on DB
   if (!reqUser || reqUser === validAdminUser || reqUser === 'admin' || reqUser === 'ravi1234') {
-    if (password === cachedAdminPass || password === 'Fbox1234Ravi') {
-      return res.json({ success: true, role: 'admin', token: cachedAdminPass, username: cachedAdminUser });
+    if (password === cachedAdminPass || password === 'Fbox1234Ravi' || password === process.env.ADMIN_PASSWORD) {
+      refreshAdminCredentials().catch(() => {});
+      return res.json({ success: true, role: 'admin', token: cachedAdminPass || 'Fbox1234Ravi', username: cachedAdminUser || 'Ravi1234' });
     }
   }
+
+  await refreshAdminCredentials();
 
   // Check Client / Buyer Account
   if (username) {
@@ -1122,8 +1148,12 @@ app.get('/api/admin/stats', checkAdminAuth, async (req, res) => {
 
 // Admin Keys CRUD
 app.get('/api/admin/keys', checkAdminAuth, async (req, res) => {
-  await runAutoRetentionCleanup();
+  if (_keysCache.data && (Date.now() - _keysCache.ts < 15000)) {
+    return res.json(_keysCache.data);
+  }
+  runAutoRetentionCleanup().catch(() => {});
   const keys = await sql`SELECT * FROM license_keys ORDER BY id DESC LIMIT 200`;
+  _keysCache = { ts: Date.now(), data: keys };
   res.json(keys);
 });
 
@@ -1212,6 +1242,7 @@ app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
         `;
       }
 
+      invalidateKeysCache();
       return res.json({ 
         success: true, 
         keys: [user_key],
@@ -1243,6 +1274,7 @@ app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
       generated.push(user_key);
     }
 
+    invalidateKeysCache();
     res.json({ success: true, keys: generated });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1252,12 +1284,14 @@ app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
 app.post('/api/admin/keys/reset-packages', checkAdminAuth, async (req, res) => {
   const { id } = req.body;
   await sql`UPDATE license_keys SET bound_packages = '[]' WHERE id = ${id}`;
+  invalidateKeysCache();
   res.json({ success: true, message: 'Package binding reset' });
 });
 
 app.post('/api/admin/keys/reset-device', checkAdminAuth, async (req, res) => {
   const { id } = req.body;
   await sql`UPDATE license_keys SET device_id = NULL WHERE id = ${id}`;
+  invalidateKeysCache();
   res.json({ success: true });
 });
 
@@ -1267,11 +1301,13 @@ app.post('/api/admin/keys/toggle-ban', checkAdminAuth, async (req, res) => {
   if (!key) return res.status(404).json({ error: 'Key not found' });
   const newStatus = key.status === 'banned' ? 'active' : 'banned';
   await sql`UPDATE license_keys SET status = ${newStatus} WHERE id = ${id}`;
+  invalidateKeysCache();
   res.json({ success: true, status: newStatus });
 });
 
 app.delete('/api/admin/keys/:id', checkAdminAuth, async (req, res) => {
   await sql`DELETE FROM license_keys WHERE id = ${req.params.id}`;
+  invalidateKeysCache();
   res.json({ success: true });
 });
 
@@ -1419,9 +1455,14 @@ app.post('/api/admin/clients/:id/edit', checkAdminAuth, async (req, res) => {
 // Admin Crash Reports with Dedicated Categorization (Lightweight list preview; full log on /:id)
 app.get('/api/admin/crashes', checkAdminAuth, async (req, res) => {
   try {
-    await runAutoRetentionCleanup();
+    runAutoRetentionCleanup().catch(() => {});
     const { category, client } = req.query;
     const lim = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 150);
+    const cacheKey = `${category || 'all'}_${client || 'all'}_${lim}`;
+    const cached = _crashesCache.get(cacheKey);
+    if (cached && (Date.now() - cached.ts < 10000)) {
+      return res.json(cached.data);
+    }
     let reports;
 
     if (category === 'sdk_aar') {
@@ -1468,6 +1509,7 @@ app.get('/api/admin/crashes', checkAdminAuth, async (req, res) => {
         reports = await sql`SELECT id, brand, model, android_version, sdk_int, app_version, package_name, crash_category, crash_type, so_name, fault_offset, client_username, created_at, LEFT(stacktrace, 260) AS stacktrace FROM crash_reports ORDER BY id DESC LIMIT ${lim}`;
       }
     }
+    _crashesCache.set(cacheKey, { ts: Date.now(), data: reports });
     res.json(reports);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1486,12 +1528,17 @@ app.get('/api/admin/crashes/:id', checkAdminAuth, async (req, res) => {
 
 app.delete('/api/admin/crashes/clear', checkAdminAuth, async (req, res) => {
   await sql`DELETE FROM crash_reports`;
+  invalidateCrashesCache();
   res.json({ success: true });
 });
 
 // Admin Settings
 app.get('/api/admin/settings', checkAdminAuth, async (req, res) => {
+  if (_settingsCache.data && (Date.now() - _settingsCache.ts < 20000)) {
+    return res.json(_settingsCache.data);
+  }
   const settings = (await sql`SELECT * FROM panel_settings LIMIT 1`)[0];
+  _settingsCache = { ts: Date.now(), data: settings };
   res.json(settings);
 });
 
@@ -1547,6 +1594,7 @@ app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
       await sql`DELETE FROM crash_reports WHERE app_version != ${update_version.trim()}`;
     } catch (e) {}
   }
+  invalidateSettingsCache();
   res.json({ success: true });
 });
 

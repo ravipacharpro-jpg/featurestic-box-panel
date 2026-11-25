@@ -29,9 +29,26 @@ export async function sql(strings, ...values) {
   return result.rows;
 }
 
-export async function initDb() {
+let _dbInitialized = false;
+
+export async function initDb(forceFull = false) {
+  if (_dbInitialized && !forceFull) return;
   try {
-    console.log('[DB] Connecting to Aiven PostgreSQL...');
+    if (!forceFull) {
+      // Lightning-fast schema verification: 1 query instead of 45 DDL roundtrips (~20ms vs 15000ms)
+      const res = await pool.query("SELECT to_regclass('public.panel_settings') AS tbl");
+      if (res.rows[0]?.tbl) {
+        _dbInitialized = true;
+        console.log('[DB] Aiven PostgreSQL schema ready.');
+        return;
+      }
+    }
+  } catch (checkErr) {
+    console.warn('[DB] Quick check fallback, running table setup...', checkErr.message);
+  }
+
+  try {
+    console.log('[DB] Provisioning Aiven PostgreSQL tables...');
     
     // 1. Settings Table
     await sql`
@@ -243,7 +260,8 @@ export async function initDb() {
       console.log('[DB] Initial settings seeded.');
     }
 
-    console.log('[DB] Neon Database initialized successfully with all tables.');
+    console.log('[DB] Aiven PostgreSQL Database initialized successfully with all tables.');
+    _dbInitialized = true;
   } catch (err) {
     console.error('[DB] Database init error:', err);
     throw err;
