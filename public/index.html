@@ -1476,8 +1476,12 @@
           <div class="card">
             <div class="card-title" style="margin-bottom:8px">Crash Fixer Offsets (libanogs.so)</div>
             <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
-              SDK automatically loads these RET (0xD65F03C0) offsets at game launch, and auto-syncs newly discovered offsets when libanogs.so updates.
+              SDK automatically loads these RET (0xD65F03C0) offsets only when launching the selected Target Game Package, and auto-syncs newly discovered offsets when libanogs.so updates.
             </p>
+            <div class="form-group">
+              <label class="form-label">Target Game Package (Offsets Apply Only To This Game)</label>
+              <input type="text" id="s-anogs-target-pkg" placeholder="com.pubg.imobile">
+            </div>
             <div class="form-group">
               <label class="form-label">libanogs.so RET Offsets (Comma-Separated Hex)</label>
               <input type="text" id="s-anogs-offsets" placeholder="0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4">
@@ -1685,7 +1689,19 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Package Name (Optional)</label>
+          <label class="form-label">Custom SDK Key (Optional)</label>
+          <input type="text" id="m-custom-key" placeholder="Type custom key (e.g. FBVX-X9R2M7K4Q8) or leave empty to auto-generate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Game (Optional)</label>
+          <select id="m-pkg-preset" onchange="onGamePresetChange()" style="margin-bottom:8px">
+            <option value="">Auto-Bind on 1st Run / Any Game</option>
+            <option value="com.pubg.imobile">BGMI (com.pubg.imobile)</option>
+            <option value="com.tencent.ig">PUBG Global (com.tencent.ig)</option>
+            <option value="com.pubg.krmobile">PUBG KR (com.pubg.krmobile)</option>
+            <option value="com.vng.pubgmobile">PUBG VN (com.vng.pubgmobile)</option>
+            <option value="com.rekoo.pubgm">PUBG TW (com.rekoo.pubgm)</option>
+          </select>
           <input type="text" id="m-pkg" placeholder="Auto-binds on 1st loader run if left empty">
         </div>
         <div class="form-group">
@@ -2417,6 +2433,7 @@
       if (document.getElementById('s-update-ver')) document.getElementById('s-update-ver').value = s.update_version || '1.0.1';
       if (document.getElementById('s-update-msg')) document.getElementById('s-update-msg').value = s.update_changelog || '';
       if (document.getElementById('s-so-sha')) document.getElementById('s-so-sha').value = s.so_sha256 || '';
+      if (document.getElementById('s-anogs-target-pkg')) document.getElementById('s-anogs-target-pkg').value = s.anogs_target_package || 'com.pubg.imobile';
       if (document.getElementById('s-anogs-offsets')) document.getElementById('s-anogs-offsets').value = s.anogs_ret_offsets || '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4';
       if (document.getElementById('s-anogs-build-id')) document.getElementById('s-anogs-build-id').value = s.anogs_build_id || '';
       checkSafeModeStatus();
@@ -2434,6 +2451,7 @@
         update_version: (document.getElementById('s-update-ver')?.value || '').trim(),
         update_changelog: (document.getElementById('s-update-msg')?.value || '').trim(),
         so_sha256: (document.getElementById('s-so-sha')?.value || '').trim(),
+        anogs_target_package: (document.getElementById('s-anogs-target-pkg')?.value || '').trim(),
         anogs_ret_offsets: (document.getElementById('s-anogs-offsets')?.value || '').trim(),
         anogs_build_id: (document.getElementById('s-anogs-build-id')?.value || '').trim()
       };
@@ -2512,16 +2530,23 @@
       if (newFields) newFields.style.display = mode === 'new' ? 'grid' : 'none';
     }
 
+    function onGamePresetChange() {
+      const preset = document.getElementById('m-pkg-preset')?.value || '';
+      const pkgInput = document.getElementById('m-pkg');
+      if (pkgInput) pkgInput.value = preset;
+    }
+
     async function createKeys() {
       const btn = document.getElementById('btn-create-submit');
       if (btn) btn.disabled = true;
 
+      const custom_key = (document.getElementById('m-custom-key')?.value || '').trim().toUpperCase();
       const duration_days = parseInt(document.getElementById('m-dur')?.value, 10) || 30;
       const max_loaders = parseInt(document.getElementById('m-loaders')?.value, 10) || 1;
       const package_name = (document.getElementById('m-pkg')?.value || '').trim();
       const note = (document.getElementById('m-note')?.value || '').trim();
 
-      const payload = { account_type: _currentCreateType, duration_days, max_loaders, package_name, note };
+      const payload = { account_type: _currentCreateType, custom_key, duration_days, max_loaders, package_name, note };
       if (_currentCreateType === 'client') {
         const mode = document.getElementById('m-client-mode')?.value || 'new';
         if (mode === 'existing') {
@@ -2562,13 +2587,14 @@
           </div>
         `;
       } else {
+        const issuedKey = res.key?.user_key || (res.keys && res.keys[0]) || '';
         body.innerHTML = `
           <div style="margin-bottom:12px">Internal license key issued:</div>
           <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-family:var(--font-mono)">
-            <span class="key-pill" style="font-size:14px">${res.key?.user_key || ''}</span>
+            <span class="key-pill" style="font-size:14px">${issuedKey}</span>
           </div>
           <div style="margin-top:14px">
-            <button class="btn btn-primary" onclick="copyPlain('${res.key?.user_key || ''}')">Copy Key</button>
+            <button class="btn btn-primary" onclick="copyPlain('${issuedKey}')">Copy Key</button>
           </div>
         `;
       }

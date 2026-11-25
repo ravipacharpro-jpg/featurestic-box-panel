@@ -181,6 +181,7 @@ export async function initDb() {
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS sdk_aar_url TEXT DEFAULT 'https://github.com/ravipacharpro-jpg/Fbox/releases/latest/download/featurestic-box.aar'`;
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS anogs_ret_offsets TEXT DEFAULT '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4'`;
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS anogs_build_id TEXT DEFAULT ''`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS anogs_target_package TEXT DEFAULT 'com.pubg.imobile'`;
 
     // 12. System Audit & Debug Logs Table (Detect bugs & loader failures)
     await sql`

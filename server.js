@@ -433,6 +433,20 @@ async function handleConnect(req, res) {
       pkg, serial, is_beta: isBetaKey, effectivePluginUrl
     }, req, user_key, key.client_username);
 
+    const anogsTargetPkg = (settings?.anogs_target_package || 'com.pubg.imobile').trim();
+    const boundArr = (() => { try { return JSON.parse(key.bound_packages || '[]'); } catch { return []; } })();
+    const anogsGameMismatch = Boolean(
+      anogsTargetPkg &&
+      anogsTargetPkg !== '*' &&
+      Array.isArray(boundArr) &&
+      boundArr.length > 0 &&
+      !boundArr.includes(anogsTargetPkg) &&
+      boundArr.some(b => b && !b.includes('featurestic.loader'))
+    );
+    const effectiveAnogsOffsets = anogsGameMismatch
+      ? ''
+      : (settings?.anogs_ret_offsets || '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4').trim();
+
     return res.json({
       status: true,
       data: {
@@ -451,7 +465,8 @@ async function handleConnect(req, res) {
           protect_source: 'sdk_panel'
         },
         config: devConfig,
-        anogs_ret_offsets: (settings?.anogs_ret_offsets || '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4').trim(),
+        anogs_target_package: anogsTargetPkg,
+        anogs_ret_offsets: effectiveAnogsOffsets,
         anogs_build_id: (settings?.anogs_build_id || '').trim(),
         watermark: watermark,
         is_beta: isBetaKey,
@@ -501,6 +516,7 @@ app.get('/api/public/update-check', async (req, res) => {
       apk_url: apkUrl,
       changelog: changelog,
       force_update: false,
+      anogs_target_package: (settings?.anogs_target_package || 'com.pubg.imobile').trim(),
       anogs_ret_offsets: (settings?.anogs_ret_offsets || '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4').trim(),
       anogs_build_id: (settings?.anogs_build_id || '').trim(),
       broadcast_notice: settings?.broadcast_notice || '',
@@ -518,6 +534,12 @@ app.post('/api/telemetry/anogs-offsets', async (req, res) => {
     const rawOffsets = String(req.body?.offsets || '').trim();
     const buildId = String(req.body?.build_id || '').trim().slice(0, 128);
     const pkg = String(req.body?.pkg || 'com.pubg.imobile').trim().slice(0, 128);
+
+    const settings = (await sql`SELECT anogs_target_package FROM panel_settings LIMIT 1`)[0];
+    const targetPkg = (settings?.anogs_target_package || 'com.pubg.imobile').trim();
+    if (targetPkg && targetPkg !== '*' && pkg && pkg !== targetPkg) {
+      return res.json({ status: true, ignored: true, reason: `pkg=${pkg} does not match target=${targetPkg}` });
+    }
 
     const parsed = rawOffsets
       .split(',')
@@ -1127,8 +1149,15 @@ app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
       }
 
       const cleanPrefix = (prefix || 'FB').trim().toUpperCase();
+      const customKey = (req.body.custom_key || '').trim().toUpperCase();
+      if (customKey) {
+        const dup = (await sql`SELECT id FROM license_keys WHERE user_key = ${customKey} LIMIT 1`)[0];
+        if (dup) {
+          return res.status(400).json({ error: `Key '${customKey}' already exists` });
+        }
+      }
       const rand = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
-      const user_key = `${cleanPrefix}-${rand}`;
+      const user_key = customKey || `${cleanPrefix}-${rand}`;
 
       const initialConfigs = package_name && package_name.trim() ? JSON.stringify([{
         package_name: package_name.trim(),
@@ -1173,10 +1202,18 @@ app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
     }
 
     // Default: 'own' key(s)
+    const customKey = (req.body.custom_key || '').trim().toUpperCase();
+    if (customKey) {
+      const dup = (await sql`SELECT id FROM license_keys WHERE user_key = ${customKey} LIMIT 1`)[0];
+      if (dup) {
+        return res.status(400).json({ error: `Key '${customKey}' already exists` });
+      }
+    }
     const generated = [];
-    for (let i = 0; i < Math.min(count, 50); i++) {
+    const loopCount = customKey ? 1 : Math.min(count, 50);
+    for (let i = 0; i < loopCount; i++) {
       const rand = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
-      const user_key = `${prefix}-${rand}`;
+      const user_key = customKey || `${prefix}-${rand}`;
       await sql`
         INSERT INTO license_keys (
           user_key, duration_days, note, max_loaders, bound_packages, account_type
@@ -1448,15 +1485,18 @@ app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
     telegram_bot_token, telegram_chat_id, telegram_alerts_enabled,
     so_sha256 = '', update_apk_url = '', update_version = '1.0.1', update_changelog = '',
     sdk_aar_url = 'https://github.com/ravipacharpro-jpg/Fbox/releases/latest/download/featurestic-box.aar',
-    anogs_ret_offsets, anogs_build_id
+    anogs_ret_offsets, anogs_build_id, anogs_target_package
   } = req.body;
-  const existingSettings = (await sql`SELECT anogs_ret_offsets, anogs_build_id FROM panel_settings LIMIT 1`)[0] || {};
+  const existingSettings = (await sql`SELECT anogs_ret_offsets, anogs_build_id, anogs_target_package FROM panel_settings LIMIT 1`)[0] || {};
   const nextAnogsOffsets = anogs_ret_offsets !== undefined
     ? String(anogs_ret_offsets).trim()
     : (existingSettings.anogs_ret_offsets || '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4');
   const nextAnogsBuildId = anogs_build_id !== undefined
     ? String(anogs_build_id).trim()
     : (existingSettings.anogs_build_id || '');
+  const nextAnogsTargetPkg = anogs_target_package !== undefined
+    ? String(anogs_target_package).trim()
+    : (existingSettings.anogs_target_package || 'com.pubg.imobile');
   await sql`
     UPDATE panel_settings 
     SET app_name = ${app_name},
@@ -1471,6 +1511,7 @@ app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
         sdk_aar_url = ${sdk_aar_url.trim()},
         anogs_ret_offsets = ${nextAnogsOffsets},
         anogs_build_id = ${nextAnogsBuildId},
+        anogs_target_package = ${nextAnogsTargetPkg},
         free_access_enabled = ${Boolean(free_access_enabled)},
         free_access_duration = ${parseInt(free_access_duration) || 3},
         free_access_max_loaders = ${parseInt(free_access_max_loaders) || 1},
