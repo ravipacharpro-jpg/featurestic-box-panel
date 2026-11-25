@@ -1334,57 +1334,68 @@ app.post('/api/admin/clients/:id/edit', checkAdminAuth, async (req, res) => {
   }
 });
 
-// Admin Crash Reports with Dedicated Categorization (SDK .aar vs Master .so vs Client .so)
+// Admin Crash Reports with Dedicated Categorization (Lightweight list preview; full log on /:id)
 app.get('/api/admin/crashes', checkAdminAuth, async (req, res) => {
   try {
     const { category, client } = req.query;
+    const lim = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 150);
     let reports;
 
     if (category === 'sdk_aar') {
       if (client) {
-        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'sdk_aar' AND client_username = ${client} ORDER BY id DESC LIMIT 150`;
+        reports = await sql`SELECT id, brand, model, android_version, sdk_int, app_version, package_name, crash_category, crash_type, so_name, fault_offset, client_username, created_at, LEFT(stacktrace, 260) AS stacktrace FROM crash_reports WHERE crash_category = 'sdk_aar' AND client_username = ${client} ORDER BY id DESC LIMIT ${lim}`;
       } else {
-        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'sdk_aar' ORDER BY id DESC LIMIT 150`;
+        reports = await sql`SELECT id, brand, model, android_version, sdk_int, app_version, package_name, crash_category, crash_type, so_name, fault_offset, client_username, created_at, LEFT(stacktrace, 260) AS stacktrace FROM crash_reports WHERE crash_category = 'sdk_aar' ORDER BY id DESC LIMIT ${lim}`;
       }
     } else if (category === 'master_so') {
       reports = await sql`
-        SELECT * FROM crash_reports 
+        SELECT id, brand, model, android_version, sdk_int, app_version, package_name, crash_category, crash_type, so_name, fault_offset, client_username, created_at, LEFT(stacktrace, 260) AS stacktrace FROM crash_reports 
         WHERE crash_category = 'master_so' 
            OR (crash_category = 'native_so' AND (client_username IS NULL OR client_username = '' OR client_username = 'admin'))
-        ORDER BY id DESC LIMIT 150
+        ORDER BY id DESC LIMIT ${lim}
       `;
     } else if (category === 'client_so') {
       if (client) {
         reports = await sql`
-          SELECT * FROM crash_reports 
+          SELECT id, brand, model, android_version, sdk_int, app_version, package_name, crash_category, crash_type, so_name, fault_offset, client_username, created_at, LEFT(stacktrace, 260) AS stacktrace FROM crash_reports 
           WHERE (crash_category = 'client_so' OR crash_category = 'native_so') AND client_username = ${client} 
-          ORDER BY id DESC LIMIT 150
+          ORDER BY id DESC LIMIT ${lim}
         `;
       } else {
         reports = await sql`
-          SELECT * FROM crash_reports 
+          SELECT id, brand, model, android_version, sdk_int, app_version, package_name, crash_category, crash_type, so_name, fault_offset, client_username, created_at, LEFT(stacktrace, 260) AS stacktrace FROM crash_reports 
           WHERE crash_category = 'client_so' 
              OR (crash_category = 'native_so' AND client_username IS NOT NULL AND client_username != '' AND client_username != 'admin') 
-          ORDER BY id DESC LIMIT 150
+          ORDER BY id DESC LIMIT ${lim}
         `;
       }
     } else if (category === 'java') {
       if (client) {
-        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'java' AND client_username = ${client} ORDER BY id DESC LIMIT 150`;
+        reports = await sql`SELECT id, brand, model, android_version, sdk_int, app_version, package_name, crash_category, crash_type, so_name, fault_offset, client_username, created_at, LEFT(stacktrace, 260) AS stacktrace FROM crash_reports WHERE crash_category = 'java' AND client_username = ${client} ORDER BY id DESC LIMIT ${lim}`;
       } else {
-        reports = await sql`SELECT * FROM crash_reports WHERE crash_category = 'java' ORDER BY id DESC LIMIT 150`;
+        reports = await sql`SELECT id, brand, model, android_version, sdk_int, app_version, package_name, crash_category, crash_type, so_name, fault_offset, client_username, created_at, LEFT(stacktrace, 260) AS stacktrace FROM crash_reports WHERE crash_category = 'java' ORDER BY id DESC LIMIT ${lim}`;
       }
     } else {
       // Default: ALL
       if (client === '__own__') {
-        reports = await sql`SELECT * FROM crash_reports WHERE (client_username IS NULL OR client_username = '' OR client_username = 'admin') ORDER BY id DESC LIMIT 150`;
+        reports = await sql`SELECT id, brand, model, android_version, sdk_int, app_version, package_name, crash_category, crash_type, so_name, fault_offset, client_username, created_at, LEFT(stacktrace, 260) AS stacktrace FROM crash_reports WHERE (client_username IS NULL OR client_username = '' OR client_username = 'admin') ORDER BY id DESC LIMIT ${lim}`;
       } else if (client) {
-        reports = await sql`SELECT * FROM crash_reports WHERE client_username = ${client} ORDER BY id DESC LIMIT 150`;
+        reports = await sql`SELECT id, brand, model, android_version, sdk_int, app_version, package_name, crash_category, crash_type, so_name, fault_offset, client_username, created_at, LEFT(stacktrace, 260) AS stacktrace FROM crash_reports WHERE client_username = ${client} ORDER BY id DESC LIMIT ${lim}`;
       } else {
-        reports = await sql`SELECT * FROM crash_reports ORDER BY id DESC LIMIT 150`;
+        reports = await sql`SELECT id, brand, model, android_version, sdk_int, app_version, package_name, crash_category, crash_type, so_name, fault_offset, client_username, created_at, LEFT(stacktrace, 260) AS stacktrace FROM crash_reports ORDER BY id DESC LIMIT ${lim}`;
       }
     }
     res.json(reports);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/crashes/:id', checkAdminAuth, async (req, res) => {
+  try {
+    const row = (await sql`SELECT * FROM crash_reports WHERE id = ${req.params.id} LIMIT 1`)[0];
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    res.json(row);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

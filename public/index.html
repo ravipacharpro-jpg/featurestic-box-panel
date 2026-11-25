@@ -386,8 +386,8 @@
     .sidebar {
       width: 250px;
       background: color-mix(in srgb, var(--bg-sidebar) 92%, transparent);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
@@ -506,8 +506,8 @@
       height: 60px;
       padding: 0 28px;
       background: color-mix(in srgb, var(--bg-header) 88%, transparent);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
@@ -546,8 +546,8 @@
       border-radius: var(--radius-lg);
       padding: 22px;
       margin-bottom: 20px;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       box-shadow: var(--shadow-card);
       transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), background-color 0.3s ease;
     }
@@ -661,8 +661,8 @@
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.76);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -728,8 +728,8 @@
     .toast {
       background: var(--card-elevated);
       border: 1px solid var(--border-active);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       border-radius: var(--radius-md);
       padding: 12px 18px;
       color: var(--text-1);
@@ -768,8 +768,8 @@
       padding: 34px 28px;
       box-shadow: var(--shadow-deep), var(--glow-ambient);
       text-align: center;
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
     }
     .login-logo {
       width: 52px;
@@ -834,7 +834,7 @@
       border-radius: var(--radius-xl);
       padding: 26px;
       margin-bottom: 24px;
-      backdrop-filter: blur(28px);
+      backdrop-filter: none;
       box-shadow: var(--shadow-deep), var(--glow-ambient);
     }
     .hero-key-box {
@@ -867,8 +867,8 @@
       right: 0;
       height: 60px;
       background: color-mix(in srgb, var(--bg-sidebar) 94%, transparent);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
       border-top: 1px solid var(--border);
       z-index: 100;
       align-items: center;
@@ -906,7 +906,7 @@
         position: fixed;
         inset: 0;
         background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(8px);
+        backdrop-filter: none;
         z-index: 99;
         display: none;
       }
@@ -946,7 +946,7 @@
       <h1>Featurestic Box</h1>
       <p>Commercial SDK Licensing & Security Control</p>
 
-      <div class="auth-tabs">
+      <div class="auth-tabs" style="display:none">
         <button type="button" class="auth-tab active" id="tab-auth-login" onclick="switchAuthTab('login')">
           <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           Account Login
@@ -1024,10 +1024,6 @@
           <div class="nav-link" data-page="keys" onclick="showPage('keys')">
             <svg class="icon" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>
             License Keys
-          </div>
-          <div class="nav-link" data-page="referrals" onclick="showPage('referrals')">
-            <svg class="icon" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>
-            Referral Codes
           </div>
           <div class="nav-link" data-page="clients" onclick="showPage('clients')">
             <svg class="icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -1617,9 +1613,9 @@
         <svg class="icon" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>
         <span>Keys</span>
       </button>
-      <button class="mob-nav-item" data-mob-page="referrals" onclick="showPage('referrals')">
-        <svg class="icon" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>
-        <span>Referrals</span>
+      <button class="mob-nav-item" data-mob-page="crashes" onclick="showPage('crashes')">
+        <svg class="icon" viewBox="0 0 24 24"><polygon points="12 2 2 22 22 22 12 2"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Crashes</span>
       </button>
       <button class="mob-nav-item" data-mob-page="logs" onclick="showPage('logs')">
         <svg class="icon" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
@@ -2116,7 +2112,7 @@
         </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-3)">No license keys issued yet</td></tr>';
       }
 
-      const crashes = await api('/api/admin/crashes');
+      const crashes = await api('/api/admin/crashes?limit=5');
       const cbody = document.getElementById('d-crash-body');
       const rcrash = (crashes || []).slice(0, 5);
       if (cbody) {
@@ -2282,7 +2278,7 @@
     }
 
     async function loadCrashes() {
-      const list = await api(`/api/admin/crashes?category=${_activeCrashCat}`);
+      const list = await api(`/api/admin/crashes?category=${_activeCrashCat}&limit=50`);
       const tbody = document.getElementById('crashes-body');
       if (!tbody) return;
 
