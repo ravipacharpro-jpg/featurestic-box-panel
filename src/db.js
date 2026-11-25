@@ -173,6 +173,7 @@ export async function initDb() {
     // 10. .so SHA-256 Anti-Tamper Checksum Verification
     await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS so_sha256 TEXT DEFAULT ''`;
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS so_sha256 TEXT DEFAULT ''`;
+    await sql`ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS package_name VARCHAR(128) DEFAULT ''`;
 
     // 11. Global Admin APK Auto-Update Settings
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS update_apk_url TEXT DEFAULT ''`;
