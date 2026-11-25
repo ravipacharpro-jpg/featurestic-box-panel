@@ -1451,6 +1451,22 @@
           </div>
 
           <div class="card">
+            <div class="card-title" style="margin-bottom:8px">Plugin .so Hosting (GitHub Link or Direct Backblaze B2 Upload)</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
+              Paste a GitHub/external .so link OR upload your .so directly to Backblaze B2. Loader loads it purely in RAM (memfd).
+            </p>
+            <div class="form-group">
+              <label class="form-label">Active Plugin .so URL</label>
+              <input type="text" id="s-plugin-url" placeholder="https://github.com/.../libDARK.so">
+            </div>
+            <div class="form-group" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <input type="file" id="s-b2-so-file" accept=".so" style="flex:1;min-width:200px">
+              <button class="btn btn-ghost" type="button" onclick="uploadSoToB2()">Upload .so to Backblaze B2</button>
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()">Save Plugin .so URL</button>
+          </div>
+
+          <div class="card">
             <div class="card-title" style="margin-bottom:16px">Loader APK Auto-Update & Integrity</div>
             <div class="form-group">
               <label class="form-label">Latest APK Download URL</label>
@@ -2429,6 +2445,7 @@
       const s = await api('/api/admin/settings');
       if (!s) return;
       if (document.getElementById('s-broadcast-msg')) document.getElementById('s-broadcast-msg').value = s.broadcast_notice || '';
+      if (document.getElementById('s-plugin-url')) document.getElementById('s-plugin-url').value = s.plugin_url || '';
       if (document.getElementById('s-update-url')) document.getElementById('s-update-url').value = s.update_apk_url || '';
       if (document.getElementById('s-update-ver')) document.getElementById('s-update-ver').value = s.update_version || '1.0.1';
       if (document.getElementById('s-update-msg')) document.getElementById('s-update-msg').value = s.update_changelog || '';
@@ -2447,6 +2464,7 @@
 
     async function saveSettings() {
       const payload = {
+        plugin_url: (document.getElementById('s-plugin-url')?.value || '').trim(),
         update_apk_url: (document.getElementById('s-update-url')?.value || '').trim(),
         update_version: (document.getElementById('s-update-ver')?.value || '').trim(),
         update_changelog: (document.getElementById('s-update-msg')?.value || '').trim(),
@@ -2457,6 +2475,31 @@
       };
       const res = await api('/api/admin/settings', 'POST', payload);
       if (res && res.success) toast('Settings saved');
+    }
+
+    async function uploadSoToB2() {
+      const input = document.getElementById('s-b2-so-file');
+      const file = input?.files?.[0];
+      if (!file) return toast('Select a .so file first', 'error');
+      toast('Uploading to Backblaze B2...');
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const b64 = String(reader.result || '').split(',')[1] || '';
+        const res = await api('/api/admin/b2/upload', 'POST', {
+          file_name: file.name,
+          content_base64: b64,
+          content_type: 'application/octet-stream'
+        });
+        if (res && res.success && res.url) {
+          const urlEl = document.getElementById('s-plugin-url');
+          if (urlEl) urlEl.value = res.url;
+          await saveSettings();
+          toast('Uploaded to Backblaze B2 & saved!');
+        } else {
+          toast(res?.error || 'B2 upload failed', 'error');
+        }
+      };
+      reader.readAsDataURL(file);
     }
 
     /* Client Buyer Dashboard */

@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import { sql, initDb } from './src/db.js';
+import { uploadToB2, getSignedDownloadUrl } from './src/b2.js';
 
 dotenv.config();
 
@@ -678,6 +679,18 @@ app.post('/api/telemetry/crash', async (req, res) => {
         ${device_id || null}
       )
     `;
+
+    // Archive full crash log to Backblaze B2 (non-blocking)
+    try {
+      const b2LogName = `logs/crashes/${Date.now()}_${(crash_category || 'crash').replace(/[^a-zA-Z0-9_-]/g, '')}.json`;
+      const b2Payload = Buffer.from(JSON.stringify({
+        brand, model, android_version, sdk_int, app_version,
+        crash_type, crash_category, so_name, fault_offset,
+        user_key: finalKey, client_username, device_id, stacktrace: st,
+        created_at: new Date().toISOString()
+      }));
+      uploadToB2(b2LogName, b2Payload, 'application/json').catch(() => {});
+    } catch (e) {}
 
     // Auto-prune old crash reports (1-day retention + old version cleanup + max 500)
     await runAutoRetentionCleanup();
@@ -1535,6 +1548,37 @@ app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
     } catch (e) {}
   }
   res.json({ success: true });
+});
+
+app.post('/api/admin/b2/upload', checkAdminAuth, express.json({ limit: '35mb' }), async (req, res) => {
+  try {
+    const rawName = String(req.body?.file_name || 'plugin.so').trim();
+    const safeName = rawName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const b64 = String(req.body?.content_base64 || '').trim();
+    const contentType = String(req.body?.content_type || 'application/octet-stream').trim();
+    if (!b64) return res.status(400).json({ error: 'Missing file content' });
+
+    const buffer = Buffer.from(b64, 'base64');
+    const b2Path = `plugins/${Date.now()}_${safeName}`;
+    await uploadToB2(b2Path, buffer, contentType);
+    const publicUrl = `https://featurestic-box-panel.vercel.app/api/public/b2-file?name=${encodeURIComponent(b2Path)}`;
+    return res.json({ success: true, path: b2Path, url: publicUrl, size: buffer.length });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/public/b2-file', async (req, res) => {
+  try {
+    const fileName = String(req.query.name || '').trim();
+    if (!fileName || !fileName.startsWith('plugins/')) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
+    const signedUrl = await getSignedDownloadUrl(fileName, 3600);
+    return res.redirect(302, signedUrl);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // 1-Click Fast Toggle for Public Free Beta / Trial Access

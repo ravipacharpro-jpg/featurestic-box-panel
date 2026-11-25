@@ -1,14 +1,34 @@
-import { neon } from '@neondatabase/serverless';
+import pg from 'pg';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_ft9EdR7DaPsZ@ep-blue-forest-berzr4o5-pooler.c-9.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+const { Pool } = pg;
+const connectionString = process.env.DATABASE_URL || '';
 
-export const sql = neon(connectionString);
+const pool = new Pool({
+  connectionString,
+  ssl: { rejectUnauthorized: false },
+  max: 5,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000
+});
+
+// Tagged-template SQL helper compatible with existing sql`...` calls
+export async function sql(strings, ...values) {
+  let query = '';
+  for (let i = 0; i < strings.length; i++) {
+    query += strings[i];
+    if (i < values.length) {
+      query += `$${i + 1}`;
+    }
+  }
+  const result = await pool.query(query, values);
+  return result.rows;
+}
 
 export async function initDb() {
   try {
-    console.log('[DB] Connecting to Neon PostgreSQL...');
+    console.log('[DB] Connecting to Aiven PostgreSQL...');
     
     // 1. Settings Table
     await sql`
