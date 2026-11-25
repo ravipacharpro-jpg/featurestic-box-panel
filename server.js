@@ -208,6 +208,31 @@ setInterval(() => {
   }
 }, 60000);
 
+// Auto-retention cleanup (throttled every 5 min for Vercel serverless):
+// 1. Delete crash_reports & system_logs older than 1 day
+// 2. Delete expired license_keys (and orphaned sdk_devices)
+// 3. Delete crash_reports from older loader versions when update_version advances
+let lastRetentionCleanupMs = 0;
+async function runAutoRetentionCleanup(force = false) {
+  const now = Date.now();
+  if (!force && now - lastRetentionCleanupMs < 5 * 60 * 1000) return;
+  lastRetentionCleanupMs = now;
+  try {
+    await sql`DELETE FROM crash_reports WHERE created_at < NOW() - INTERVAL '1 day'`;
+    await sql`DELETE FROM system_logs WHERE created_at < NOW() - INTERVAL '1 day'`;
+    await sql`DELETE FROM license_keys WHERE expires_at IS NOT NULL AND expires_at < NOW()`;
+    await sql`DELETE FROM sdk_devices WHERE user_key NOT IN (SELECT user_key FROM license_keys)`;
+    const settings = (await sql`SELECT update_version FROM panel_settings LIMIT 1`)[0];
+    const latestVer = settings?.update_version ? String(settings.update_version).trim() : '';
+    if (latestVer) {
+      await sql`
+        DELETE FROM crash_reports
+        WHERE app_version IS NOT NULL AND app_version != '' AND app_version != ${latestVer}
+      `;
+    }
+  } catch (e) {}
+}
+
 // Helper: Semantic Version Comparison (e.g. "1.0.0" vs "1.0.1")
 function isNewerVersion(currentVer, latestVer) {
   if (!latestVer) return false;
@@ -627,7 +652,8 @@ app.post('/api/telemetry/crash', async (req, res) => {
       )
     `;
 
-    // Auto-prune old crash reports to keep table bounded (max 500 reports)
+    // Auto-prune old crash reports (1-day retention + old version cleanup + max 500)
+    await runAutoRetentionCleanup();
     try {
       await sql`
         DELETE FROM crash_reports 
@@ -1056,6 +1082,7 @@ app.get('/api/admin/stats', checkAdminAuth, async (req, res) => {
 
 // Admin Keys CRUD
 app.get('/api/admin/keys', checkAdminAuth, async (req, res) => {
+  await runAutoRetentionCleanup();
   const keys = await sql`SELECT * FROM license_keys ORDER BY id DESC LIMIT 200`;
   res.json(keys);
 });
@@ -1337,6 +1364,7 @@ app.post('/api/admin/clients/:id/edit', checkAdminAuth, async (req, res) => {
 // Admin Crash Reports with Dedicated Categorization (Lightweight list preview; full log on /:id)
 app.get('/api/admin/crashes', checkAdminAuth, async (req, res) => {
   try {
+    await runAutoRetentionCleanup();
     const { category, client } = req.query;
     const lim = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 150);
     let reports;
@@ -2162,6 +2190,7 @@ app.post('/api/public/register-with-referral', async (req, res) => {
 // =============================================================
 app.get('/api/admin/logs', checkAdminAuth, async (req, res) => {
   try {
+    await runAutoRetentionCleanup();
     const { level, limit = 150 } = req.query;
     const cacheKey = `${level || 'all'}_${limit}`;
     const cached = _logsCache.get(cacheKey);
