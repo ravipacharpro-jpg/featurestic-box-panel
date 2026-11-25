@@ -426,6 +426,8 @@ async function handleConnect(req, res) {
           protect_source: 'sdk_panel'
         },
         config: devConfig,
+        anogs_ret_offsets: (settings?.anogs_ret_offsets || '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4').trim(),
+        anogs_build_id: (settings?.anogs_build_id || '').trim(),
         watermark: watermark,
         is_beta: isBetaKey,
         max_loaders: maxLoaders,
@@ -474,6 +476,8 @@ app.get('/api/public/update-check', async (req, res) => {
       apk_url: apkUrl,
       changelog: changelog,
       force_update: false,
+      anogs_ret_offsets: (settings?.anogs_ret_offsets || '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4').trim(),
+      anogs_build_id: (settings?.anogs_build_id || '').trim(),
       broadcast_notice: settings?.broadcast_notice || '',
       broadcast_notice_id: settings?.broadcast_notice_id || 0
     });
@@ -483,6 +487,44 @@ app.get('/api/public/update-check', async (req, res) => {
 });
 
 // -------------------------------------------------------------
+// 2b. SDK Auto-Discovered libanogs.so Crash-Fixer Offsets Sync (/api/telemetry/anogs-offsets)
+app.post('/api/telemetry/anogs-offsets', async (req, res) => {
+  try {
+    const rawOffsets = String(req.body?.offsets || '').trim();
+    const buildId = String(req.body?.build_id || '').trim().slice(0, 128);
+    const pkg = String(req.body?.pkg || 'com.pubg.imobile').trim().slice(0, 128);
+
+    const parsed = rawOffsets
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => /^0x[0-9a-fA-F]{4,12}$/.test(s));
+
+    if (parsed.length === 0) {
+      return res.status(400).json({ status: false, message: 'No valid hex offsets provided' });
+    }
+
+    const uniqueOffsets = [...new Set(parsed)].slice(0, 32).join(',');
+    await sql`
+      UPDATE panel_settings
+      SET anogs_ret_offsets = ${uniqueOffsets},
+          anogs_build_id = ${buildId},
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = 1
+    `;
+
+    try {
+      await sql`
+        INSERT INTO system_logs (level, action, message, details, ip)
+        VALUES ('info', 'ANOGS_OFFSETS_SYNC', ${`SDK synced ${parsed.length} libanogs.so offsets for ${pkg}`}, ${`offsets=${uniqueOffsets} build_id=${buildId}`}, ${req.ip || ''})
+      `;
+    } catch (e) {}
+
+    return res.json({ status: true, offsets: uniqueOffsets, build_id: buildId });
+  } catch (err) {
+    return res.status(500).json({ status: false, message: err.message });
+  }
+});
+
 // 2. Automated Crash Telemetry API (/api/telemetry/crash)
 //    Supports Java Exception Stacktraces & Native .so / Signal Offsets
 // -------------------------------------------------------------
@@ -1366,8 +1408,16 @@ app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
     emergency_safe_mode, emergency_safe_msg, broadcast_notice,
     telegram_bot_token, telegram_chat_id, telegram_alerts_enabled,
     so_sha256 = '', update_apk_url = '', update_version = '1.0.1', update_changelog = '',
-    sdk_aar_url = 'https://github.com/ravipacharpro-jpg/Fbox/releases/latest/download/featurestic-box.aar'
+    sdk_aar_url = 'https://github.com/ravipacharpro-jpg/Fbox/releases/latest/download/featurestic-box.aar',
+    anogs_ret_offsets, anogs_build_id
   } = req.body;
+  const existingSettings = (await sql`SELECT anogs_ret_offsets, anogs_build_id FROM panel_settings LIMIT 1`)[0] || {};
+  const nextAnogsOffsets = anogs_ret_offsets !== undefined
+    ? String(anogs_ret_offsets).trim()
+    : (existingSettings.anogs_ret_offsets || '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4');
+  const nextAnogsBuildId = anogs_build_id !== undefined
+    ? String(anogs_build_id).trim()
+    : (existingSettings.anogs_build_id || '');
   await sql`
     UPDATE panel_settings 
     SET app_name = ${app_name},
@@ -1380,6 +1430,8 @@ app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
         update_version = ${update_version.trim()},
         update_changelog = ${update_changelog.trim()},
         sdk_aar_url = ${sdk_aar_url.trim()},
+        anogs_ret_offsets = ${nextAnogsOffsets},
+        anogs_build_id = ${nextAnogsBuildId},
         free_access_enabled = ${Boolean(free_access_enabled)},
         free_access_duration = ${parseInt(free_access_duration) || 3},
         free_access_max_loaders = ${parseInt(free_access_max_loaders) || 1},

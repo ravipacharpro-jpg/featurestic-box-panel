@@ -179,6 +179,8 @@ export async function initDb() {
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS update_version TEXT DEFAULT '1.0.1'`;
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS update_changelog TEXT DEFAULT 'Latest performance updates & bug fixes'`;
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS sdk_aar_url TEXT DEFAULT 'https://github.com/ravipacharpro-jpg/Fbox/releases/latest/download/featurestic-box.aar'`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS anogs_ret_offsets TEXT DEFAULT '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4'`;
+    await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS anogs_build_id TEXT DEFAULT ''`;
 
     // 12. System Audit & Debug Logs Table (Detect bugs & loader failures)
     await sql`

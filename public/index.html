@@ -1476,6 +1476,22 @@
             </div>
             <button class="btn btn-primary" onclick="saveSettings()">Save Update Settings</button>
           </div>
+
+          <div class="card">
+            <div class="card-title" style="margin-bottom:8px">Crash Fixer Offsets (libanogs.so)</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
+              SDK automatically loads these RET (0xD65F03C0) offsets at game launch, and auto-syncs newly discovered offsets when libanogs.so updates.
+            </p>
+            <div class="form-group">
+              <label class="form-label">libanogs.so RET Offsets (Comma-Separated Hex)</label>
+              <input type="text" id="s-anogs-offsets" placeholder="0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Detected libanogs.so Build ID / Signature</label>
+              <input type="text" id="s-anogs-build-id" placeholder="Auto-populated by SDK on game launch">
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()">Save Crash Fixer Offsets</button>
+          </div>
         </div>
 
         <!-- ==========================================
@@ -2405,6 +2421,8 @@
       if (document.getElementById('s-update-ver')) document.getElementById('s-update-ver').value = s.update_version || '1.0.1';
       if (document.getElementById('s-update-msg')) document.getElementById('s-update-msg').value = s.update_changelog || '';
       if (document.getElementById('s-so-sha')) document.getElementById('s-so-sha').value = s.so_sha256 || '';
+      if (document.getElementById('s-anogs-offsets')) document.getElementById('s-anogs-offsets').value = s.anogs_ret_offsets || '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4';
+      if (document.getElementById('s-anogs-build-id')) document.getElementById('s-anogs-build-id').value = s.anogs_build_id || '';
       checkSafeModeStatus();
     }
 
@@ -2419,7 +2437,9 @@
         update_apk_url: (document.getElementById('s-update-url')?.value || '').trim(),
         update_version: (document.getElementById('s-update-ver')?.value || '').trim(),
         update_changelog: (document.getElementById('s-update-msg')?.value || '').trim(),
-        so_sha256: (document.getElementById('s-so-sha')?.value || '').trim()
+        so_sha256: (document.getElementById('s-so-sha')?.value || '').trim(),
+        anogs_ret_offsets: (document.getElementById('s-anogs-offsets')?.value || '').trim(),
+        anogs_build_id: (document.getElementById('s-anogs-build-id')?.value || '').trim()
       };
       const res = await api('/api/admin/settings', 'POST', payload);
       if (res && res.success) toast('Settings saved');
