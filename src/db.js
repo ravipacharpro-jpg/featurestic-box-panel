@@ -174,6 +174,7 @@ export async function initDb() {
     await sql`ALTER TABLE license_keys ADD COLUMN IF NOT EXISTS so_sha256 TEXT DEFAULT ''`;
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS so_sha256 TEXT DEFAULT ''`;
     await sql`ALTER TABLE crash_reports ADD COLUMN IF NOT EXISTS package_name VARCHAR(128) DEFAULT ''`;
+    await sql`UPDATE license_keys SET so_sha256 = '' WHERE so_sha256 = '443f29d92d28342c9dd9159787a5b428b477d924b5b0275cc62f98f7cf65ffcc'`;
 
     // 11. Global Admin APK Auto-Update Settings
     await sql`ALTER TABLE panel_settings ADD COLUMN IF NOT EXISTS update_apk_url TEXT DEFAULT ''`;
