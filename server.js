@@ -347,23 +347,25 @@ async function handleConnect(req, res) {
       update_version: key.update_version || '1.0.0'
     };
 
-    // 3. Track Unique Devices / Live Active Sessions
+    // 3. Track Unique Devices / Live Active Sessions (parallelized with audit log)
     let devCount = key.unique_devices || 0;
-    if (serial) {
-      try {
-        await sql`
-          INSERT INTO sdk_devices (user_key, device_id, package_name, last_seen)
-          VALUES (${user_key}, ${serial}, ${pkg}, NOW())
-          ON CONFLICT (user_key, device_id)
-          DO UPDATE SET last_seen = NOW(), package_name = ${pkg}
-        `;
-        const resCount = await sql`SELECT COUNT(*)::int as c FROM sdk_devices WHERE user_key = ${user_key}`;
-        devCount = resCount[0]?.c || devCount;
-        await sql`UPDATE license_keys SET unique_devices = ${devCount} WHERE id = ${key.id}`;
-      } catch (err) {
-        console.error('[Device Track Error]', err);
-      }
-    }
+    const deviceTrackPromise = serial
+      ? (async () => {
+          try {
+            await sql`
+              INSERT INTO sdk_devices (user_key, device_id, package_name, last_seen)
+              VALUES (${user_key}, ${serial}, ${pkg}, NOW())
+              ON CONFLICT (user_key, device_id)
+              DO UPDATE SET last_seen = NOW(), package_name = ${pkg}
+            `;
+            const resCount = await sql`SELECT COUNT(*)::int as c FROM sdk_devices WHERE user_key = ${user_key}`;
+            devCount = resCount[0]?.c || devCount;
+            await sql`UPDATE license_keys SET unique_devices = ${devCount} WHERE id = ${key.id}`;
+          } catch (err) {
+            console.error('[Device Track Error]', err);
+          }
+        })()
+      : Promise.resolve();
 
     const expStr = key.expires_at 
       ? new Date(key.expires_at).toISOString().slice(0, 19).replace('T', ' ')
@@ -428,10 +430,13 @@ async function handleConnect(req, res) {
       devConfig.watermark_text = 'FEATURESTIC BOX • FREE BETA VERSION';
     }
 
-    // Log connection for audit
-    await logSystem('CONNECT_SUCCESS', `Loader connected for key ${user_key} (${pkg || 'unknown pkg'})`, 'connect', {
-      pkg, serial, is_beta: isBetaKey, effectivePluginUrl
-    }, req, user_key, key.client_username);
+    // Log connection for audit & finish device tracking in parallel
+    await Promise.all([
+      deviceTrackPromise,
+      logSystem('CONNECT_SUCCESS', `Loader connected for key ${user_key} (${pkg || 'unknown pkg'})`, 'connect', {
+        pkg, serial, is_beta: isBetaKey, effectivePluginUrl
+      }, req, user_key, key.client_username)
+    ]);
 
     const anogsTargetPkg = (settings?.anogs_target_package || 'com.pubg.imobile').trim();
     const boundArr = (() => { try { return JSON.parse(key.bound_packages || '[]'); } catch { return []; } })();
