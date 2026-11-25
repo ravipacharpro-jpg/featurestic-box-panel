@@ -201,7 +201,34 @@
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
-      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    body, .card, .btn, .sidebar, .topbar, .badge, input, select, textarea {
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    @keyframes skelPulse {
+      0% { opacity: 0.35; }
+      50% { opacity: 0.85; }
+      100% { opacity: 0.35; }
+    }
+    .skeleton-line {
+      height: 14px;
+      border-radius: 4px;
+      background: var(--surface-3);
+      animation: skelPulse 1.2s infinite ease-in-out;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .skeleton-pill {
+      height: 22px;
+      width: 130px;
+      border-radius: var(--radius-pill);
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      animation: skelPulse 1.2s infinite ease-in-out;
+      display: inline-block;
+      vertical-align: middle;
     }
 
     body {
@@ -1930,6 +1957,8 @@
     } else {
       document.getElementById('login-screen').style.display = 'flex';
       document.getElementById('app').style.display = 'none';
+      // Pre-warm DB in background so Neon is awake by the time user clicks Sign In
+      fetch('/api/health?warm=1').catch(() => {});
     }
 
     function bootApp() {
@@ -2128,6 +2157,12 @@
           localStorage.setItem('fb_token', _token);
           localStorage.setItem('fb_role', _role);
           localStorage.setItem('fb_username', _username);
+
+          // Fast-Hydrate bootstrap data directly into cache & UI before bootApp (0ms wait)
+          if (res.bootstrap) {
+            applyBootstrap(res.bootstrap);
+          }
+
           toast('Signed in successfully');
           bootApp();
         } else {
@@ -2231,35 +2266,82 @@
       </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-3)">No crash signals logged. System healthy.</td></tr>';
     }
 
+    function renderDashboardKeysSkeleton() {
+      const kbody = document.getElementById('d-keys-body');
+      if (!kbody) return;
+      kbody.innerHTML = [1, 2, 3].map(() => `<tr>
+        <td><span class="skeleton-pill"></span></td>
+        <td><span class="skeleton-line" style="width:60px"></span></td>
+        <td><span class="skeleton-line" style="width:50px"></span></td>
+        <td><span class="skeleton-line" style="width:30px"></span></td>
+        <td><span class="skeleton-line" style="width:70px"></span></td>
+      </tr>`).join('');
+    }
+
+    function renderKeysSkeleton() {
+      const tbody = document.getElementById('keys-body');
+      if (!tbody) return;
+      tbody.innerHTML = [1, 2, 3, 4, 5].map(() => `<tr>
+        <td><div style="display:flex;gap:8px;align-items:center"><span class="skeleton-pill"></span></div></td>
+        <td><span class="skeleton-line" style="width:70px"></span></td>
+        <td><span class="skeleton-line" style="width:60px"></span></td>
+        <td><span class="skeleton-line" style="width:50px"></span></td>
+        <td><span class="skeleton-line" style="width:120px"></span></td>
+        <td><span class="skeleton-line" style="width:80px"></span></td>
+        <td><span class="skeleton-line" style="width:110px"></span></td>
+      </tr>`).join('');
+    }
+
+    function applyBootstrap(b) {
+      if (!b) return;
+      if (b.stats) {
+        localStorage.setItem('fb_cached_stats', JSON.stringify(b.stats));
+        renderDashboardStats(b.stats);
+      }
+      if (b.keys) {
+        localStorage.setItem('fb_cached_keys', JSON.stringify(b.keys));
+        renderDashboardKeys(b.keys);
+        renderKeysTable(b.keys);
+      }
+      if (b.crashes) {
+        localStorage.setItem('fb_cached_crashes', JSON.stringify(b.crashes));
+        renderDashboardCrashes(b.crashes);
+      }
+      if (b.settings) {
+        localStorage.setItem('fb_cached_settings', JSON.stringify(b.settings));
+        applySettingsToForm(b.settings);
+        applySafeModeStatus(b.settings);
+      }
+      updateSyncStatus(true);
+    }
+
     async function loadDashboard(silent = false) {
       // 1. Instant 0ms Paint from Local Cache (Stale-While-Revalidate)
+      let hasKeysCache = false;
       try {
         const cachedStats = localStorage.getItem('fb_cached_stats');
         if (cachedStats) renderDashboardStats(JSON.parse(cachedStats));
         const cachedKeys = localStorage.getItem('fb_cached_keys');
-        if (cachedKeys) renderDashboardKeys(JSON.parse(cachedKeys));
+        if (cachedKeys) {
+          renderDashboardKeys(JSON.parse(cachedKeys));
+          hasKeysCache = true;
+        }
+        const cachedCrashes = localStorage.getItem('fb_cached_crashes');
+        if (cachedCrashes) renderDashboardCrashes(JSON.parse(cachedCrashes));
       } catch (e) {}
 
-      // 2. Parallel Background Refresh
-      try {
-        const [stats, keys, crashes] = await Promise.all([
-          api('/api/admin/stats'),
-          api('/api/admin/keys'),
-          api('/api/admin/crashes?limit=5')
-        ]);
+      if (!hasKeysCache) {
+        renderDashboardKeysSkeleton();
+      }
 
-        if (stats) {
-          localStorage.setItem('fb_cached_stats', JSON.stringify(stats));
-          renderDashboardStats(stats);
+      // 2. High-Speed Background Refresh via Single Bootstrap Call
+      try {
+        const data = await api('/api/admin/bootstrap');
+        if (data) {
+          applyBootstrap(data);
+        } else {
+          updateSyncStatus(false);
         }
-        if (keys) {
-          localStorage.setItem('fb_cached_keys', JSON.stringify(keys));
-          renderDashboardKeys(keys);
-        }
-        if (crashes) {
-          renderDashboardCrashes(crashes);
-        }
-        updateSyncStatus(true);
       } catch (err) {
         updateSyncStatus(false);
       }
@@ -2304,16 +2386,25 @@
     }
 
     async function loadKeys(silent = false) {
-      // Instant render from cache
+      // Instant render from cache (0ms delay)
+      let hasKeysCache = false;
       try {
         const cachedKeys = localStorage.getItem('fb_cached_keys');
-        if (cachedKeys) renderKeysTable(JSON.parse(cachedKeys));
+        if (cachedKeys) {
+          renderKeysTable(JSON.parse(cachedKeys));
+          hasKeysCache = true;
+        }
       } catch (e) {}
+
+      if (!hasKeysCache) {
+        renderKeysSkeleton();
+      }
 
       const keys = await api('/api/admin/keys');
       if (keys) {
         localStorage.setItem('fb_cached_keys', JSON.stringify(keys));
         renderKeysTable(keys);
+        renderDashboardKeys(keys);
         updateSyncStatus(true);
       }
     }
@@ -2537,21 +2628,34 @@
     }
 
     /* Global Settings & Safe Mode */
-    async function checkSafeModeStatus() {
-      if (_role !== 'admin') return;
-      const s = await api('/api/admin/settings');
+    function applySafeModeStatus(s) {
+      if (_role !== 'admin' || !s) return;
       const btn = document.getElementById('btn-toggle-safe-mode');
       const sBtn = document.getElementById('s-safemode-btn');
-      if (!btn || !s) return;
-
-      btn.style.display = 'inline-flex';
       const isActive = Boolean(s.emergency_safe_mode);
-      btn.className = isActive ? 'btn btn-danger' : 'btn btn-ghost';
-      btn.innerHTML = `<span class="badge-dot" style="background:${isActive ? 'var(--apple-red)' : 'var(--apple-green)'}"></span><span>Safe Mode: ${isActive ? 'ON' : 'OFF'}</span>`;
 
+      if (btn) {
+        btn.style.display = 'inline-flex';
+        btn.className = isActive ? 'btn btn-danger' : 'btn btn-ghost';
+        btn.innerHTML = `<span class="badge-dot" style="background:${isActive ? 'var(--apple-red)' : 'var(--apple-green)'}"></span><span>Safe Mode: ${isActive ? 'ON' : 'OFF'}</span>`;
+      }
       if (sBtn) {
         sBtn.className = isActive ? 'btn btn-danger' : 'btn btn-ghost';
         sBtn.textContent = isActive ? 'Safe Mode ACTIVE (Click to Resume Normal)' : 'Safe Mode OFF (Click to Freeze Game Traffic)';
+      }
+    }
+
+    async function checkSafeModeStatus() {
+      if (_role !== 'admin') return;
+      try {
+        const cached = localStorage.getItem('fb_cached_settings');
+        if (cached) applySafeModeStatus(JSON.parse(cached));
+      } catch (e) {}
+
+      const s = await api('/api/admin/settings');
+      if (s) {
+        localStorage.setItem('fb_cached_settings', JSON.stringify(s));
+        applySafeModeStatus(s);
       }
     }
 
@@ -2954,9 +3058,9 @@
       } else if (curPage === 'keys' && _role === 'admin') {
         loadKeys(true);
       } else {
-        api('/api/health', 'GET', null, true).catch(() => {});
+        api('/api/health?warm=1', 'GET', null, true).catch(() => {});
       }
-    }, 25000);
+    }, 20000);
   </script>
 </body>
 </html>

@@ -89,25 +89,30 @@ let _statsCache = { ts: 0, data: null };
 let _keysCache = { ts: 0, data: null };
 let _settingsCache = { ts: 0, data: null };
 let _clientsCache = { ts: 0, data: null };
+let _bootstrapCache = { ts: 0, data: null };
 
 function invalidateLogCache() {
   _logsCache.clear();
   _statsCache.ts = 0;
+  _bootstrapCache.ts = 0;
 }
 
 function invalidateKeysCache() {
   _keysCache.ts = 0;
   _statsCache.ts = 0;
   _clientsCache.ts = 0;
+  _bootstrapCache.ts = 0;
 }
 
 function invalidateSettingsCache() {
   _settingsCache.ts = 0;
+  _bootstrapCache.ts = 0;
 }
 
 function invalidateCrashesCache() {
   _crashesCache.clear();
   _statsCache.ts = 0;
+  _bootstrapCache.ts = 0;
 }
 
 // Helper: System Audit & Error Logging
@@ -892,6 +897,87 @@ async function checkClientAuth(req, res, next) {
   next();
 }
 
+// -------------------------------------------------------------
+// High-Speed Data Helpers & Bootstrap Engine
+// -------------------------------------------------------------
+async function getAdminStats() {
+  if (_statsCache.data && (Date.now() - _statsCache.ts < 15000)) {
+    return _statsCache.data;
+  }
+  try {
+    const rows = await sql`
+      SELECT
+        (SELECT COUNT(*) FROM license_keys)::int AS total_keys,
+        (SELECT COUNT(*) FROM license_keys WHERE status = 'active')::int AS active_keys,
+        (SELECT COUNT(*) FROM crash_reports)::int AS total_crashes,
+        (SELECT COUNT(*) FROM crash_reports WHERE created_at >= CURRENT_DATE)::int AS today_crashes,
+        (SELECT COUNT(*) FROM sdk_devices)::int AS total_devices
+    `;
+    const r = rows[0] || {};
+    const result = {
+      totalKeys: r.total_keys || 0,
+      activeKeys: r.active_keys || 0,
+      totalCrashes: r.total_crashes || 0,
+      todayCrashes: r.today_crashes || 0,
+      totalDevices: r.total_devices || 0
+    };
+    _statsCache = { ts: Date.now(), data: result };
+    return result;
+  } catch (err) {
+    console.error('[Stats Error]', err.message);
+    return _statsCache.data || { totalKeys: 0, activeKeys: 0, totalCrashes: 0, todayCrashes: 0, totalDevices: 0 };
+  }
+}
+
+async function getAdminKeys() {
+  if (_keysCache.data && (Date.now() - _keysCache.ts < 15000)) {
+    return _keysCache.data;
+  }
+  try {
+    const keys = await sql`SELECT * FROM license_keys ORDER BY id DESC LIMIT 200`;
+    _keysCache = { ts: Date.now(), data: keys };
+    return keys;
+  } catch (err) {
+    console.error('[Keys Error]', err.message);
+    return _keysCache.data || [];
+  }
+}
+
+async function getAdminSettings() {
+  if (_settingsCache.data && (Date.now() - _settingsCache.ts < 20000)) {
+    return _settingsCache.data;
+  }
+  try {
+    const settings = (await sql`SELECT * FROM panel_settings LIMIT 1`)[0] || {};
+    _settingsCache = { ts: Date.now(), data: settings };
+    return settings;
+  } catch (err) {
+    console.error('[Settings Error]', err.message);
+    return _settingsCache.data || {};
+  }
+}
+
+async function getAdminBootstrap() {
+  if (_bootstrapCache.data && (Date.now() - _bootstrapCache.ts < 10000)) {
+    return _bootstrapCache.data;
+  }
+  const [stats, keys, crashes, settings] = await Promise.all([
+    getAdminStats(),
+    getAdminKeys(),
+    sql`SELECT id, brand, model, android_version, sdk_int, app_version, package_name, crash_category, crash_type, so_name, fault_offset, client_username, created_at, LEFT(stacktrace, 260) AS stacktrace FROM crash_reports ORDER BY id DESC LIMIT 5`.catch(() => []),
+    getAdminSettings()
+  ]);
+
+  const data = {
+    stats: stats || { totalKeys: 0, activeKeys: 0, totalCrashes: 0, todayCrashes: 0, totalDevices: 0 },
+    keys: keys || [],
+    crashes: crashes || [],
+    settings: settings || {}
+  };
+  _bootstrapCache = { ts: Date.now(), data };
+  return data;
+}
+
 // Unified Login Route (Admin & Client)
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
@@ -903,7 +989,19 @@ app.post('/api/auth/login', async (req, res) => {
   if (!reqUser || reqUser === validAdminUser || reqUser === 'admin' || reqUser === 'ravi1234') {
     if (cleanPass === cachedAdminPass || cleanPass === 'Fbox1234Ravi' || cleanPass === process.env.ADMIN_PASSWORD) {
       refreshAdminCredentials().catch(() => {});
-      return res.json({ success: true, role: 'admin', token: cachedAdminPass || 'Fbox1234Ravi', username: cachedAdminUser || 'Ravi1234' });
+      let bootstrap = null;
+      try {
+        bootstrap = await getAdminBootstrap();
+      } catch (e) {
+        console.warn('[Login Bootstrap Warn]', e.message);
+      }
+      return res.json({
+        success: true,
+        role: 'admin',
+        token: cachedAdminPass || 'Fbox1234Ravi',
+        username: cachedAdminUser || 'Ravi1234',
+        bootstrap
+      });
     }
   }
 
@@ -913,7 +1011,19 @@ app.post('/api/auth/login', async (req, res) => {
   await refreshAdminCredentials();
   if (!reqUser || reqUser === cachedAdminUser.toLowerCase() || reqUser === 'admin' || reqUser === 'ravi1234') {
     if (cleanPass === cachedAdminPass || cleanPass === 'Fbox1234Ravi' || cleanPass === process.env.ADMIN_PASSWORD) {
-      return res.json({ success: true, role: 'admin', token: cachedAdminPass, username: cachedAdminUser });
+      let bootstrap = null;
+      try {
+        bootstrap = await getAdminBootstrap();
+      } catch (e) {
+        console.warn('[Login Bootstrap Warn]', e.message);
+      }
+      return res.json({
+        success: true,
+        role: 'admin',
+        token: cachedAdminPass,
+        username: cachedAdminUser,
+        bootstrap
+      });
     }
   }
 
@@ -1125,28 +1235,20 @@ app.post('/api/public/register-free-tester', async (req, res) => {
   }
 });
 
+// High-Speed Combined Admin Bootstrap
+app.get('/api/admin/bootstrap', checkAdminAuth, async (req, res) => {
+  try {
+    const data = await getAdminBootstrap();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Admin Stats
 app.get('/api/admin/stats', checkAdminAuth, async (req, res) => {
   try {
-    if (_statsCache.data && (Date.now() - _statsCache.ts < 10000)) {
-      return res.json(_statsCache.data);
-    }
-    const [tKeys, aKeys, tCrashes, todCrashes, tDevs] = await Promise.all([
-      sql`SELECT COUNT(*) FROM license_keys`,
-      sql`SELECT COUNT(*) FROM license_keys WHERE status = 'active'`,
-      sql`SELECT COUNT(*) FROM crash_reports`,
-      sql`SELECT COUNT(*) FROM crash_reports WHERE created_at >= CURRENT_DATE`,
-      sql`SELECT COUNT(*) FROM sdk_devices`
-    ]);
-
-    const result = {
-      totalKeys: tKeys[0]?.count || 0,
-      activeKeys: aKeys[0]?.count || 0,
-      totalCrashes: tCrashes[0]?.count || 0,
-      todayCrashes: todCrashes[0]?.count || 0,
-      totalDevices: tDevs[0]?.count || 0
-    };
-    _statsCache = { ts: Date.now(), data: result };
+    const result = await getAdminStats();
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1155,13 +1257,12 @@ app.get('/api/admin/stats', checkAdminAuth, async (req, res) => {
 
 // Admin Keys CRUD
 app.get('/api/admin/keys', checkAdminAuth, async (req, res) => {
-  if (_keysCache.data && (Date.now() - _keysCache.ts < 15000)) {
-    return res.json(_keysCache.data);
+  try {
+    const keys = await getAdminKeys();
+    res.json(keys);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  runAutoRetentionCleanup().catch(() => {});
-  const keys = await sql`SELECT * FROM license_keys ORDER BY id DESC LIMIT 200`;
-  _keysCache = { ts: Date.now(), data: keys };
-  res.json(keys);
 });
 
 app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
@@ -1541,12 +1642,12 @@ app.delete('/api/admin/crashes/clear', checkAdminAuth, async (req, res) => {
 
 // Admin Settings
 app.get('/api/admin/settings', checkAdminAuth, async (req, res) => {
-  if (_settingsCache.data && (Date.now() - _settingsCache.ts < 20000)) {
-    return res.json(_settingsCache.data);
+  try {
+    const settings = await getAdminSettings();
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  const settings = (await sql`SELECT * FROM panel_settings LIMIT 1`)[0];
-  _settingsCache = { ts: Date.now(), data: settings };
-  res.json(settings);
 });
 
 app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
@@ -2335,7 +2436,7 @@ app.post('/api/public/register-with-referral', async (req, res) => {
 // =============================================================
 app.get('/api/admin/logs', checkAdminAuth, async (req, res) => {
   try {
-    await runAutoRetentionCleanup();
+    runAutoRetentionCleanup().catch(() => {});
     const { level, limit = 150 } = req.query;
     const cacheKey = `${level || 'all'}_${limit}`;
     const cached = _logsCache.get(cacheKey);
@@ -2368,9 +2469,17 @@ app.delete('/api/admin/logs/clear', checkAdminAuth, async (req, res) => {
   }
 });
 
-// System Health & Liveness Probe
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', uptime: Math.round(process.uptime()), timestamp: Date.now() });
+// System Health & Liveness / DB Warm Probe
+app.get('/api/health', async (req, res) => {
+  let dbStatus = 'ok';
+  if (req.query.warm === '1' || req.query.db === '1') {
+    try {
+      await sql`SELECT 1`;
+    } catch(e) {
+      dbStatus = 'reconnecting';
+    }
+  }
+  res.json({ status: 'ok', db: dbStatus, uptime: Math.round(process.uptime()), timestamp: Date.now() });
 });
 
 // Fallback to SPA
