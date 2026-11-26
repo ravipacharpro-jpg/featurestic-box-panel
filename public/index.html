@@ -475,7 +475,16 @@
       cursor: pointer;
       border: 1px solid transparent;
       user-select: none;
-      transition: all 0.18s var(--ease);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s ease, color 0.12s ease;
+    }
+    .mob-nav-item, .btn, button {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .page {
+      contain: layout style;
     }
     .nav-link:hover {
       background: var(--hover-bg);
@@ -1979,7 +1988,6 @@
       } else {
         document.getElementById('nav-group-admin').style.display = 'block';
         document.getElementById('nav-group-client').style.display = 'none';
-        checkSafeModeStatus();
         showPage('dashboard');
       }
     }
@@ -1996,19 +2004,23 @@
 
     /* API Helper */
     async function api(path, method = 'GET', body = null, noAuth = false) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 7000);
       try {
         const headers = { 'Content-Type': 'application/json' };
         if (!noAuth && _token) headers['Authorization'] = 'Bearer ' + _token;
-        const opts = { method, headers };
+        const opts = { method, headers, signal: controller.signal };
         if (body) opts.body = JSON.stringify(body);
         const r = await fetch(path, opts);
+        clearTimeout(timer);
         if (!noAuth && (r.status === 401 || r.status === 403)) {
           doLogout();
           return null;
         }
         return await r.json();
       } catch (err) {
-        console.error('API error:', err);
+        clearTimeout(timer);
+        console.warn('API warning:', path, err.name === 'AbortError' ? 'Request timeout' : err.message);
         return null;
       }
     }
@@ -2077,38 +2089,39 @@
       if (sb) sb.classList.remove('mobile-open');
       if (bd) bd.classList.remove('show');
 
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.mob-nav-item').forEach(b => b.classList.remove('active'));
+      requestAnimationFrame(() => {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-link').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.mob-nav-item').forEach(b => b.classList.remove('active'));
 
-      const target = document.getElementById('page-' + name);
-      if (target) target.classList.add('active');
+        const target = document.getElementById('page-' + name);
+        if (target) target.classList.add('active');
 
-      document.querySelectorAll(`[data-page="${name}"]`).forEach(b => b.classList.add('active'));
-      document.querySelectorAll(`[data-mob-page="${name}"]`).forEach(b => b.classList.add('active'));
-      document.getElementById('topbar-title').textContent = PAGE_TITLES[name] || 'Control Center';
+        document.querySelectorAll(`[data-page="${name}"]`).forEach(b => b.classList.add('active'));
+        document.querySelectorAll(`[data-mob-page="${name}"]`).forEach(b => b.classList.add('active'));
+        const titleEl = document.getElementById('topbar-title');
+        if (titleEl) titleEl.textContent = PAGE_TITLES[name] || 'Control Center';
 
-      // Topbar button visibility
-      const addKeysBtn = document.getElementById('btn-add-keys');
-      if (addKeysBtn) addKeysBtn.style.display = (name === 'keys' && _role === 'admin') ? 'inline-flex' : 'none';
+        const addKeysBtn = document.getElementById('btn-add-keys');
+        if (addKeysBtn) addKeysBtn.style.display = (name === 'keys' && _role === 'admin') ? 'inline-flex' : 'none';
 
-      const clearCrashesBtn = document.getElementById('btn-clear-crashes');
-      if (clearCrashesBtn) clearCrashesBtn.style.display = (name === 'crashes' && _role === 'admin') ? 'inline-flex' : 'none';
+        const clearCrashesBtn = document.getElementById('btn-clear-crashes');
+        if (clearCrashesBtn) clearCrashesBtn.style.display = (name === 'crashes' && _role === 'admin') ? 'inline-flex' : 'none';
 
-      const clearClientCrashesBtn = document.getElementById('btn-clear-client-crashes');
-      if (clearClientCrashesBtn) clearClientCrashesBtn.style.display = (name === 'client-crashes' && _role === 'client') ? 'inline-flex' : 'none';
+        const clearClientCrashesBtn = document.getElementById('btn-clear-client-crashes');
+        if (clearClientCrashesBtn) clearClientCrashesBtn.style.display = (name === 'client-crashes' && _role === 'client') ? 'inline-flex' : 'none';
 
-      // Load Page Data
-      if (name === 'dashboard') loadDashboard();
-      if (name === 'keys') loadKeys();
-      if (name === 'referrals') loadReferrals();
-      if (name === 'clients') loadClients();
-      if (name === 'crashes') loadCrashes();
-      if (name === 'blacklist') loadBlacklist();
-      if (name === 'logs') loadLogs();
-      if (name === 'settings') loadSettings();
-      if (name === 'client-dashboard') { loadClientDashboard(); loadClientPackages(); }
-      if (name === 'client-crashes') loadClientCrashes();
+        if (name === 'dashboard') loadDashboard();
+        if (name === 'keys') loadKeys();
+        if (name === 'referrals') loadReferrals();
+        if (name === 'clients') loadClients();
+        if (name === 'crashes') loadCrashes();
+        if (name === 'blacklist') loadBlacklist();
+        if (name === 'logs') loadLogs();
+        if (name === 'settings') loadSettings();
+        if (name === 'client-dashboard') { loadClientDashboard(); loadClientPackages(); }
+        if (name === 'client-crashes') loadClientCrashes();
+      });
     }
 
     function toggleMobileSidebar() {
@@ -2489,24 +2502,40 @@
       if (res && res.success) { toast('Referral revoked'); loadReferrals(); }
     }
 
-    /* Client Accounts */
-    async function loadClients() {
-      const list = await api('/api/admin/clients');
-      _cachedClients = list || [];
+    /* Client Accounts (0ms Instant Cache + Silent Sync) */
+    function renderClientsTable(list) {
       const tbody = document.getElementById('clients-body');
       if (!tbody) return;
-
-      tbody.innerHTML = (_cachedClients.length) ? _cachedClients.map(c => `<tr>
+      tbody.innerHTML = (list && list.length) ? list.map(c => `<tr>
         <td><strong style="color:var(--text-1)">@${esc(c.username)}</strong></td>
-        <td><span style="font-family:var(--font-mono);color:var(--apple-orange)">${esc(c.plain_password || '••••••••')}</span></td>
+        <td><span style="font-family:var(--font-mono);color:var(--apple-orange)">${esc(c.password || c.plain_password || '••••••••')}</span></td>
         <td>${c.user_key ? `<span class="key-pill">${esc(c.user_key)}</span>` : '<span style="color:var(--text-4)">No Key</span>'}</td>
-        <td><span style="font-family:var(--font-mono)">${c.boundPackagesCount || 0}</span></td>
+        <td><span style="font-family:var(--font-mono)">${c.boundPackagesCount || (c.bound_packages ? JSON.parse(c.bound_packages).length : 0)}</span></td>
         <td><span class="badge badge-own">${c.max_loaders === 0 ? 'Unlimited' : `${c.max_loaders} Slot(s)`}</span></td>
         <td style="color:var(--text-3);font-size:12px">${fmtDate(c.created_at)}</td>
         <td>
           <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="resetClientPackagesAdmin(${c.id})">Reset Packages</button>
         </td>
       </tr>`).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-3)">No client accounts registered yet</td></tr>';
+    }
+
+    async function loadClients() {
+      try {
+        const cached = localStorage.getItem('fb_cached_clients');
+        if (cached) {
+          _cachedClients = JSON.parse(cached);
+          renderClientsTable(_cachedClients);
+        }
+      } catch (e) {}
+
+      const list = await api('/api/admin/clients');
+      if (list && Array.isArray(list)) {
+        _cachedClients = list;
+        try { localStorage.setItem('fb_cached_clients', JSON.stringify(list)); } catch (e) {}
+        renderClientsTable(_cachedClients);
+      } else if (!_cachedClients || !_cachedClients.length) {
+        renderClientsTable([]);
+      }
     }
 
     async function resetClientPackagesAdmin(clientId) {
