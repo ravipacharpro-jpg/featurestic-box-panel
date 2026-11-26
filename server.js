@@ -374,11 +374,11 @@ async function handleConnect(req, res) {
 
     const PUBG_PACKAGES = ['com.pubg.imobile', 'com.krafton.bgmilite', 'com.tencent.ig', 'com.pubg.krmobile', 'com.vng.pubgmobile', 'com.rekoo.pubgm'];
 
-    function checkPackageMatch(pattern, incoming) {
+    function checkPackageMatch(pattern, incoming, allowWildcard = true) {
       if (!pattern || !incoming) return false;
       const p = pattern.trim().toLowerCase();
       const inc = incoming.trim().toLowerCase();
-      if (p === '*' || p === 'any' || inc === '*' || inc === 'any') return true;
+      if (allowWildcard && (p === '*' || p === 'any' || inc === '*' || inc === 'any')) return true;
       if (p === inc) return true;
       if ((inc === 'pubg' || inc === 'bgmi' || inc === 'pubgm') && PUBG_PACKAGES.includes(p)) return true;
       if ((p === 'pubg' || p === 'bgmi' || p === 'pubgm') && PUBG_PACKAGES.includes(inc)) return true;
@@ -402,33 +402,51 @@ async function handleConnect(req, res) {
     const isBetaKey = false;
     let matchedSlot = null;
     if (Array.isArray(packageConfigs)) {
-      // 1. Precise match on BOTH game AND loader package (allows different loaders for same game)
-      if (incomingGame && incomingLoader && incomingGame !== incomingLoader) {
+      // 1. Exact match on BOTH game AND specific loader package (neither is wildcard)
+      if (incomingGame && incomingLoader) {
         matchedSlot = packageConfigs.find(p => 
           p.is_active !== false &&
-          checkPackageMatch(p.game_pkg || p.package_name, incomingGame) &&
-          checkPackageMatch(p.loader_pkg, incomingLoader)
+          p.loader_pkg && p.loader_pkg !== '*' && p.loader_pkg.toLowerCase() !== 'any' &&
+          checkPackageMatch(p.game_pkg || p.package_name, incomingGame, false) &&
+          checkPackageMatch(p.loader_pkg, incomingLoader, false)
         );
       }
-      // 2. Match game with wildcard loader or matching loader
+      // 2. Match game with matching loader (or with game alias like PUBG/com.pubg.imobile)
+      if (!matchedSlot && incomingGame && incomingLoader) {
+        matchedSlot = packageConfigs.find(p => 
+          p.is_active !== false &&
+          p.loader_pkg && p.loader_pkg !== '*' && p.loader_pkg.toLowerCase() !== 'any' &&
+          checkPackageMatch(p.game_pkg || p.package_name, incomingGame, true) &&
+          checkPackageMatch(p.loader_pkg, incomingLoader, true)
+        );
+      }
+      // 3. Match game with wildcard loader or unspecified loader
       const effectiveGame = incomingGame || incomingLoader;
       if (!matchedSlot && effectiveGame) {
         matchedSlot = packageConfigs.find(p => 
           p.is_active !== false &&
-          checkPackageMatch(p.game_pkg || p.package_name, effectiveGame) &&
-          (!p.loader_pkg || p.loader_pkg === '*' || p.loader_pkg.toLowerCase() === 'any' || (incomingLoader && checkPackageMatch(p.loader_pkg, incomingLoader)))
+          checkPackageMatch(p.game_pkg || p.package_name, effectiveGame, true) &&
+          (!p.loader_pkg || p.loader_pkg === '*' || p.loader_pkg.toLowerCase() === 'any' || (incomingLoader && checkPackageMatch(p.loader_pkg, incomingLoader, true)))
         );
       }
-      // 3. Match loader package or package_name
+      // 4. Match loader package specifically
       if (!matchedSlot && incomingLoader) {
         matchedSlot = packageConfigs.find(p => 
           p.is_active !== false &&
-          (checkPackageMatch(p.loader_pkg, incomingLoader) || 
-           checkPackageMatch(p.package_name, incomingLoader) ||
-           checkPackageMatch(p.game_pkg, incomingLoader))
+          p.loader_pkg && p.loader_pkg !== '*' &&
+          checkPackageMatch(p.loader_pkg, incomingLoader, false)
         );
       }
-      // 4. Wildcard slot
+      // 5. Match loader package or package_name fallback
+      if (!matchedSlot && incomingLoader) {
+        matchedSlot = packageConfigs.find(p => 
+          p.is_active !== false &&
+          (checkPackageMatch(p.loader_pkg, incomingLoader, true) || 
+           checkPackageMatch(p.package_name, incomingLoader, true) ||
+           checkPackageMatch(p.game_pkg, incomingLoader, true))
+        );
+      }
+      // 6. Wildcard slot
       if (!matchedSlot) {
         matchedSlot = packageConfigs.find(p => 
           p.is_active !== false && 
@@ -540,13 +558,10 @@ async function handleConnect(req, res) {
     const anogsTargetPkg = (settings?.anogs_target_package || 'com.pubg.imobile').trim();
     const incomingPkg = (pkg || '').trim().toLowerCase();
 
-    // Check if the launch request is for a different game (e.g. bgmilite, freefire, pubg lite, pubg global)
+    // Check if the launch request is for a different game (e.g. bgmilite, freefire, pubg lite)
     const isExplicitlyOtherGame = Boolean(
-      (incomingGame && incomingGame !== anogsTargetPkg.toLowerCase()) ||
-      (incomingPkg && incomingPkg.includes('freefire')) ||
-      (incomingPkg && incomingPkg.includes('bgmilite')) ||
-      (incomingPkg && incomingPkg.includes('iglite')) ||
-      (incomingPkg && incomingPkg.includes('tencent.ig'))
+      (incomingGame && !checkPackageMatch(anogsTargetPkg, incomingGame, true)) ||
+      (incomingPkg && (incomingPkg.includes('freefire') || incomingPkg.includes('bgmilite') || incomingPkg.includes('iglite')))
     );
 
     const boundArr = (() => { try { return JSON.parse(key.bound_packages || '[]'); } catch { return []; } })();
