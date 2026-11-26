@@ -362,12 +362,38 @@ async function handleConnect(req, res) {
       packageConfigs = [];
     }
 
-    const maxLoaders = 0; // Open package name mode: developers can test any loader package
+    let boundPackages = [];
+    try {
+      boundPackages = JSON.parse(key.bound_packages || "[]");
+    } catch (e) {
+      boundPackages = [];
+    }
+
+    if (Array.isArray(boundPackages) && boundPackages.length > 0 && pkg) {
+      const isAllowed = boundPackages.some(b => b && (b.trim().toLowerCase() === pkg.toLowerCase() || b.trim() === "*" || b.trim().toLowerCase() === "any"));
+      if (!isAllowed) {
+        return res.json({
+          status: false,
+          reason: "PACKAGE_NOT_AUTHORIZED",
+          message: `This SDK license key is locked to authorized package(s): ${boundPackages.join(", ")}`
+        });
+      }
+    }
+
+    const maxLoaders = 0;
     const isBetaKey = false;
-    let activePkgConfig = {
+    let matchedPkg = pkg && Array.isArray(packageConfigs) 
+      ? packageConfigs.find(p => p.package_name && p.package_name.trim().toLowerCase() === pkg.toLowerCase() && p.is_active !== false)
+      : null;
+
+    let activePkgConfig = matchedPkg || {
       package_name: pkg || 'any',
       is_active: true,
       plugin_url: key.plugin_url || '',
+      plugin_url_2: '',
+      soc_url: '',
+      soc_url_2: '',
+      delay_ms: 0,
       so_sha256: key.so_sha256 || '',
       update_apk_url: key.update_apk_url || '',
       update_version: key.update_version || '1.0.0'
@@ -397,9 +423,13 @@ async function handleConnect(req, res) {
       ? new Date(key.expires_at).toISOString().slice(0, 19).replace('T', ' ')
       : '2099-12-31 23:59:59';
 
-    // Determine effective .so plugin URL:
-    // Prioritize package-specific .so plugin URL -> Key plugin URL -> Global Admin (for internal keys only)
+    // Determine effective .so plugin URLs (SO 1 & SO 2) & SOC files (SOC 1 & SOC 2):
     let effectivePluginUrl = '';
+    let effectivePluginUrl2 = (activePkgConfig.plugin_url_2 || '').trim();
+    let effectiveSocUrl = (activePkgConfig.soc_url || '').trim();
+    let effectiveSocUrl2 = (activePkgConfig.soc_url_2 || '').trim();
+    let effectiveDelayMs = Math.max(0, parseInt(activePkgConfig.delay_ms) || 0);
+
     if (activePkgConfig && activePkgConfig.plugin_url && activePkgConfig.plugin_url.trim()) {
       effectivePluginUrl = activePkgConfig.plugin_url.trim();
     } else if (key.plugin_url && key.plugin_url.trim()) {
@@ -487,6 +517,16 @@ async function handleConnect(req, res) {
         mod_name: settings?.app_name || 'Featurestic Box',
         version: settings?.version || '1.0.0',
         plugin_url: effectivePluginUrl,
+        plugin_url_2: effectivePluginUrl2,
+        soc_url: effectiveSocUrl,
+        soc_url_2: effectiveSocUrl2,
+        delay_ms: effectiveDelayMs,
+        plugins: [
+          ...(effectivePluginUrl ? [{ type: 'so', slot: 1, url: effectivePluginUrl, delay_ms: 0 }] : []),
+          ...(effectivePluginUrl2 ? [{ type: 'so', slot: 2, url: effectivePluginUrl2, delay_ms: effectiveDelayMs || 1000 }] : []),
+          ...(effectiveSocUrl ? [{ type: 'soc', slot: 1, url: effectiveSocUrl, delay_ms: 0 }] : []),
+          ...(effectiveSocUrl2 ? [{ type: 'soc', slot: 2, url: effectiveSocUrl2, delay_ms: 0 }] : [])
+        ],
         so_sha256: effectiveSoSha256,
         so_token: `SO_${Buffer.from(user_key).toString('base64')}_${Date.now()}`,
         so_security: {
@@ -682,6 +722,44 @@ app.post('/api/telemetry/crash', async (req, res) => {
       }
     }
 
+    // 1. Client Custom .so Crash -> Direct to Client's Telegram Bot, Zero DB Bloat!
+    if (crash_category === 'client_so') {
+      if (client_username) {
+        try {
+          const clientAcc = (await sql`
+            SELECT telegram_bot_token, telegram_chat_id, telegram_alerts_enabled 
+            FROM client_accounts 
+            WHERE username = ${client_username} LIMIT 1
+          `)[0];
+          if (clientAcc && clientAcc.telegram_alerts_enabled && clientAcc.telegram_bot_token && clientAcc.telegram_chat_id) {
+            sendTelegramAlert(
+              `🚨 <b>Developer .so Crash Alert</b> 🚨\n━━━━━━━━━━━━━━━━━━━━\n` +
+              `📦 <b>Library:</b> <code>${so_name || 'libCustom.so'}</code>\n` +
+              `⚡ <b>Offset:</b> <code>+${fault_offset || 'N/A'}</code> (Press G in IDA/Ghidra)\n` +
+              `🛑 <b>Signal:</b> ${crash_type || 'SIGSEGV'}\n` +
+              `📱 <b>Device:</b> ${brand || ''} ${model || ''} (Android ${android_version || '?'})\n` +
+              `🔑 <b>Key:</b> <code>${finalKey || 'N/A'}</code>\n` +
+              `━━━━━━━━━━━━━━━━━━━━\n` +
+              `<pre>${st.slice(0, 300)}</pre>`,
+              clientAcc.telegram_bot_token,
+              clientAcc.telegram_chat_id
+            );
+          }
+        } catch (err) {
+          console.error('[Developer Telegram Alert Error]', err);
+        }
+      }
+      // Zero DB bloat: return immediately without writing client .so crashes to main database
+      return res.json({ 
+        success: true, 
+        message: 'Client crash dispatched to developer bot',
+        category: crash_category,
+        so_name,
+        fault_offset
+      });
+    }
+
+    // 2. Admin / SDK Container Issues -> Store in DB and alert Master Admin
     await sql`
       INSERT INTO crash_reports (
         brand, model, android_version, sdk_int, app_version, 
@@ -751,32 +829,7 @@ app.post('/api/telemetry/crash', async (req, res) => {
       );
     }
 
-    // 2. Personal Telegram Alert for Developer/Client (Only their own custom .so)
-    if (client_username && crash_category === 'client_so') {
-      try {
-        const clientAcc = (await sql`
-          SELECT telegram_bot_token, telegram_chat_id, telegram_alerts_enabled 
-          FROM client_accounts 
-          WHERE username = ${client_username} LIMIT 1
-        `)[0];
-        if (clientAcc && clientAcc.telegram_alerts_enabled && clientAcc.telegram_bot_token && clientAcc.telegram_chat_id) {
-          sendTelegramAlert(
-            `🚨 <b>Developer .so Crash Alert</b> 🚨\n━━━━━━━━━━━━━━━━━━━━\n` +
-            `📦 <b>Library:</b> <code>${so_name || 'libFeaturesticBox.so'}</code>\n` +
-            `⚡ <b>Offset:</b> <code>+${fault_offset || 'N/A'}</code> (Press G in IDA/Ghidra)\n` +
-            `🛑 <b>Signal:</b> ${crash_type || 'SIGSEGV'}\n` +
-            `📱 <b>Device:</b> ${brand || ''} ${model || ''} (Android ${android_version || '?'})\n` +
-            `🔑 <b>Key:</b> <code>${finalKey || 'N/A'}</code>\n` +
-            `━━━━━━━━━━━━━━━━━━━━\n` +
-            `<pre>${st.slice(0, 300)}</pre>`,
-            clientAcc.telegram_bot_token,
-            clientAcc.telegram_chat_id
-          );
-        }
-      } catch (err) {
-        console.error('[Developer Telegram Alert Error]', err);
-      }
-    }
+
 
     return res.json({ 
       success: true, 
@@ -911,7 +964,8 @@ async function getAdminStats() {
         (SELECT COUNT(*) FROM license_keys WHERE status = 'active')::int AS active_keys,
         (SELECT COUNT(*) FROM crash_reports)::int AS total_crashes,
         (SELECT COUNT(*) FROM crash_reports WHERE created_at >= CURRENT_DATE)::int AS today_crashes,
-        (SELECT COUNT(*) FROM sdk_devices)::int AS total_devices
+        (SELECT COUNT(*) FROM sdk_devices)::int AS total_devices,
+        (SELECT COUNT(DISTINCT device_id) FROM sdk_devices WHERE last_seen >= NOW() - INTERVAL '5 minutes')::int AS online_players
     `;
     const r = rows[0] || {};
     const result = {
@@ -919,7 +973,8 @@ async function getAdminStats() {
       activeKeys: r.active_keys || 0,
       totalCrashes: r.total_crashes || 0,
       todayCrashes: r.today_crashes || 0,
-      totalDevices: r.total_devices || 0
+      totalDevices: r.total_devices || 0,
+      onlinePlayers: r.online_players || 0
     };
     _statsCache = { ts: Date.now(), data: result };
     return result;
@@ -1414,6 +1469,34 @@ app.post('/api/admin/keys/toggle-ban', checkAdminAuth, async (req, res) => {
   await sql`UPDATE license_keys SET status = ${newStatus} WHERE id = ${id}`;
   invalidateKeysCache();
   res.json({ success: true, status: newStatus });
+});
+
+app.post('/api/admin/keys/extend', checkAdminAuth, async (req, res) => {
+  try {
+    const { id, days = 7 } = req.body;
+    if (!id) return res.status(400).json({ error: 'Key ID required' });
+    const numDays = parseInt(days) || 7;
+    const key = (await sql`SELECT id, expires_at FROM license_keys WHERE id = ${id}`)[0];
+    if (!key) return res.status(404).json({ error: 'Key not found' });
+    
+    let baseTime = key.expires_at ? new Date(key.expires_at) : new Date();
+    if (isNaN(baseTime.getTime()) || baseTime < new Date()) {
+      baseTime = new Date();
+    }
+    const newExpires = new Date(baseTime.getTime() + numDays * 86400000);
+    
+    await sql`
+      UPDATE license_keys 
+      SET expires_at = ${newExpires.toISOString()},
+          status = 'active',
+          updated_at = NOW()
+      WHERE id = ${id}
+    `;
+    invalidateKeysCache();
+    res.json({ success: true, new_expires_at: newExpires.toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/admin/keys/:id', checkAdminAuth, async (req, res) => {
@@ -2228,6 +2311,10 @@ app.post('/api/client/packages/save', checkClientAuth, async (req, res) => {
       package_name: (p.package_name || '').trim(),
       is_active: Boolean(p.is_active),
       plugin_url: (p.plugin_url || '').trim(),
+      plugin_url_2: (p.plugin_url_2 || '').trim(),
+      soc_url: (p.soc_url || '').trim(),
+      soc_url_2: (p.soc_url_2 || '').trim(),
+      delay_ms: Math.max(0, Math.min(10000, parseInt(p.delay_ms) || 0)),
       so_sha256: (p.so_sha256 || '').trim(),
       update_apk_url: (p.update_apk_url || '').trim(),
       update_version: (p.update_version || '1.0.0').trim()
@@ -2280,6 +2367,10 @@ app.post('/api/admin/clients/:id/packages', checkAdminAuth, async (req, res) => 
       package_name: (p.package_name || '').trim(),
       is_active: Boolean(p.is_active),
       plugin_url: (p.plugin_url || '').trim(),
+      plugin_url_2: (p.plugin_url_2 || '').trim(),
+      soc_url: (p.soc_url || '').trim(),
+      soc_url_2: (p.soc_url_2 || '').trim(),
+      delay_ms: Math.max(0, Math.min(10000, parseInt(p.delay_ms) || 0)),
       so_sha256: (p.so_sha256 || '').trim(),
       update_apk_url: (p.update_apk_url || '').trim(),
       update_version: (p.update_version || '1.0.0').trim()

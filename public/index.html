@@ -1166,12 +1166,6 @@
             <span>LIVE SYNCED</span>
           </div>
 
-          <!-- TOXIC VENOM THEME TOGGLE -->
-          <button id="btn-theme-toggle" class="btn btn-ghost" onclick="toggleTheme()" title="Toggle Toxic Venom Dark / Light Mode" style="padding: 6px 12px; gap: 6px;">
-            <svg class="icon theme-icon-sun" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-            <svg class="icon theme-icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            <span class="theme-text" style="font-size:12px; font-weight:600">Dark</span>
-          </button>
           <!-- Safe Mode Indicator / Toggle -->
           <button id="btn-toggle-safe-mode" class="btn btn-ghost" style="display:none" onclick="quickToggleSafeMode()">
             <span class="badge-dot" style="background:var(--apple-green)"></span>
@@ -1204,6 +1198,13 @@
              ========================================== -->
         <div id="page-dashboard" class="page active">
           <div class="stats-grid">
+            <div class="stat-card" style="border-color:rgba(0,255,136,0.3)">
+              <div class="stat-head">
+                <span class="stat-label">Live Online Players</span>
+                <div class="stat-icon" style="color:var(--apple-green);background:rgba(0,255,136,0.12)"><span class="live-dot pulse" style="margin:0"></span></div>
+              </div>
+              <div class="stat-val" id="d-online" style="color:var(--apple-green)">0</div>
+            </div>
             <div class="stat-card">
               <div class="stat-head">
                 <span class="stat-label">Active License Keys</span>
@@ -1303,72 +1304,7 @@
           </div>
         </div>
 
-        <!-- ==========================================
-             PAGE 3: REFERRAL CODES (BUYER SELF-REG)
-             ========================================== -->
-        <div id="page-referrals" class="page">
-          <div class="card">
-            <div class="card-head">
-              <div>
-                <div class="card-title">Generate Referral & Buyer Invite Code</div>
-                <div class="card-sub">Create self-service registration codes for buyers. Codes auto-issue keys with set validity.</div>
-              </div>
-            </div>
 
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-              <button type="button" class="btn ref-btn" data-days="1" onclick="selectRefPreset(1)">1 Day Trial</button>
-              <button type="button" class="btn ref-btn" data-days="7" onclick="selectRefPreset(7)">7 Days</button>
-              <button type="button" class="btn ref-btn" data-days="15" onclick="selectRefPreset(15)">15 Days</button>
-              <button type="button" class="btn ref-btn active-preset btn-primary" data-days="30" onclick="selectRefPreset(30)">30 Days (1 Month)</button>
-              <button type="button" class="btn ref-btn" data-days="60" onclick="selectRefPreset(60)">60 Days (2 Months)</button>
-              <button type="button" class="btn ref-btn" data-days="custom" onclick="selectRefPreset('custom')">Custom Duration</button>
-            </div>
-
-            <div id="ref-custom-input-box" style="display:none;margin-bottom:16px">
-              <label class="form-label">Custom Duration in Days</label>
-              <input type="number" id="ref-custom-days" min="1" max="3650" placeholder="e.g. 90" style="max-width:240px">
-            </div>
-
-            <div style="display:grid;grid-template-columns:1fr 2fr;gap:14px;margin-bottom:16px">
-              <div>
-                <label class="form-label">Max Uses</label>
-                <input type="number" id="ref-usage-limit" min="1" max="100" value="1">
-              </div>
-              <div>
-                <label class="form-label">Buyer Memo / Note</label>
-                <input type="text" id="ref-note" placeholder="Buyer telegram or order reference">
-              </div>
-            </div>
-
-            <button class="btn btn-primary" onclick="createReferralCode()">
-              <svg class="icon" viewBox="0 0 24 24"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>
-              Issue Referral Code
-            </button>
-          </div>
-
-          <div class="card">
-            <div class="card-head">
-              <div>
-                <div class="card-title">Active Referral Invite Codes</div>
-                <div class="card-sub">Codes buyers can use to register at panel login</div>
-              </div>
-              <button class="btn btn-ghost" onclick="loadReferrals()">
-                <svg class="icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                Refresh
-              </button>
-            </div>
-            <div class="tbl-wrap">
-              <table>
-                <thead>
-                  <tr><th>Code</th><th>Duration</th><th>Usage</th><th>Status</th><th>Note</th><th>Created</th><th>Actions</th></tr>
-                </thead>
-                <tbody id="referrals-table-body">
-                  <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-3)">Loading referral codes…</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
 
         <!-- ==========================================
              PAGE 4: CLIENT ACCOUNTS
@@ -1518,14 +1454,6 @@
             </button>
           </div>
 
-          <div class="card">
-            <div class="card-title" style="margin-bottom:16px">Remote In-App Broadcast Notice</div>
-            <div class="form-group">
-              <label class="form-label">Notice Message (Displayed inside loader UI)</label>
-              <textarea id="s-broadcast-msg" rows="3" placeholder="Server maintenance scheduled at 02:00 UTC..."></textarea>
-            </div>
-            <button class="btn btn-primary" onclick="saveBroadcastNotice()">Save Broadcast</button>
-          </div>
 
           <div class="card">
             <div class="card-title" style="margin-bottom:8px">Plugin .so Hosting (GitHub Link or Direct Backblaze B2 Upload)</div>
@@ -1646,7 +1574,7 @@
             <div class="tbl-wrap">
               <table>
                 <thead>
-                  <tr><th>Package Name</th><th>Status</th><th>Custom .so URL</th><th>APK Update</th><th>Actions</th></tr>
+                  <tr><th>Package Name</th><th>Status</th><th>.so Payloads</th><th>.soc Files</th><th>Delay</th><th>Actions</th></tr>
                 </thead>
                 <tbody id="cl-packages-body">
                   <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-3)">Loading package slots…</td></tr>
@@ -1836,16 +1764,41 @@
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label class="form-label">Android Package Name</label>
+          <label class="form-label">Android Package Name (Target Loader)</label>
           <input type="text" id="pkg-input-name" placeholder="com.mycustom.loader">
         </div>
-        <div class="form-group">
-          <label class="form-label">Custom .so Download URL</label>
-          <input type="text" id="pkg-input-so" placeholder="https://example.com/libclient.so">
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label">Primary .so (SO Slot 1 / Menu)</label>
+            <input type="text" id="pkg-input-so" placeholder="https://.../libmenu.so">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Secondary .so (SO Slot 2 / Engine)</label>
+            <input type="text" id="pkg-input-so2" placeholder="https://.../libcore.so (Optional)">
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">APK Auto-Update URL</label>
-          <input type="text" id="pkg-input-apk" placeholder="https://example.com/update.apk">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label">Primary SOC (SOC Slot 1 / soc64)</label>
+            <input type="text" id="pkg-input-soc" placeholder="https://.../soc64 (Optional)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Secondary SOC (SOC Slot 2)</label>
+            <input type="text" id="pkg-input-soc2" placeholder="https://.../soc_sub (Optional)">
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label">Load Delay between SO (ms)</label>
+            <input type="number" id="pkg-input-delay" min="0" max="10000" step="100" placeholder="0 (Default)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">APK Auto-Update URL</label>
+            <input type="text" id="pkg-input-apk" placeholder="https://example.com/update.apk (Optional)">
+          </div>
         </div>
       </div>
       <div class="modal-foot">
@@ -2246,6 +2199,7 @@
     /* Admin Dashboard */
     function renderDashboardStats(stats) {
       if (!stats) return;
+      if (document.getElementById('d-online')) document.getElementById('d-online').textContent = stats.onlinePlayers ?? stats.online_players ?? '0';
       if (document.getElementById('d-active')) document.getElementById('d-active').textContent = stats.activeKeys ?? '0';
       if (document.getElementById('d-devices')) document.getElementById('d-devices').textContent = stats.totalDevices ?? '0';
       if (document.getElementById('d-today')) document.getElementById('d-today').textContent = stats.todayCrashes ?? '0';
@@ -2388,7 +2342,9 @@
           <td>${pkgsHtml}</td>
           <td style="color:var(--text-3);font-size:12px">${fmtDate(k.expires_at)}</td>
           <td>
-            <div style="display:flex;gap:6px">
+            <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+              <button class="btn btn-ghost" style="padding:3px 7px;font-size:11px;color:var(--apple-green);border-color:rgba(0,255,136,0.3)" onclick="extendKeyExpiry(${k.id}, 7)" title="Add +7 Days Validity">+7d</button>
+              <button class="btn btn-ghost" style="padding:3px 7px;font-size:11px;color:var(--apple-green);border-color:rgba(0,255,136,0.3)" onclick="extendKeyExpiry(${k.id}, 30)" title="Add +30 Days Validity">+30d</button>
               <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="toggleBan(${k.id})">${k.status === 'active' ? 'Pause' : 'Resume'}</button>
               <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="resetPackages(${k.id})" title="Reset package locks">Reset</button>
               <button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="delKey(${k.id})">Delete</button>
@@ -2437,6 +2393,16 @@
       if (!confirm('Delete this license key permanently?')) return;
       const res = await api('/api/admin/keys/' + id, 'DELETE');
       if (res) { toast('Key deleted'); loadKeys(); }
+    }
+
+    async function extendKeyExpiry(id, days) {
+      const res = await api('/api/admin/keys/extend', 'POST', { id, days });
+      if (res && res.success) {
+        toast(`Key validity extended by +${days} days!`);
+        loadKeys();
+      } else {
+        toast(res?.error || 'Failed to extend key expiry', 'error');
+      }
     }
 
     /* Referral Codes */
@@ -2922,18 +2888,27 @@
       const tbody = document.getElementById('cl-packages-body');
       if (!tbody) return;
 
-      tbody.innerHTML = _clientPackages.length ? _clientPackages.map((p, idx) => `<tr>
-        <td><strong>${esc(p.package_name)}</strong></td>
-        <td><span class="badge ${p.is_active ? 'badge-active' : 'badge-banned'}">${p.is_active ? 'Active' : 'Paused'}</span></td>
-        <td style="font-family:var(--font-mono);font-size:12px">${esc(p.plugin_url || '—')}</td>
-        <td style="font-family:var(--font-mono);font-size:12px">${esc(p.update_apk_url || '—')}</td>
-        <td>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="editPackage(${idx})">Edit</button>
-            <button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="deletePackage(${idx})">Delete</button>
-          </div>
-        </td>
-      </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-3)">No package slots configured yet. Click "Add Package Slot" above.</td></tr>';
+      tbody.innerHTML = _clientPackages.length ? _clientPackages.map((p, idx) => {
+        const so1 = p.plugin_url ? `<span class="key-pill" title="${esc(p.plugin_url)}">SO 1: Active</span>` : '<span style="color:var(--text-4)">SO 1: None</span>';
+        const so2 = p.plugin_url_2 ? `<span class="key-pill" title="${esc(p.plugin_url_2)}" style="color:var(--apple-green)">SO 2: Active</span>` : '';
+        const soc1 = p.soc_url ? `<span class="key-pill" title="${esc(p.soc_url)}">SOC 1</span>` : '<span style="color:var(--text-4)">None</span>';
+        const soc2 = p.soc_url_2 ? `<span class="key-pill" title="${esc(p.soc_url_2)}">SOC 2</span>` : '';
+        const delayStr = p.delay_ms ? `${p.delay_ms}ms` : '0ms';
+
+        return `<tr>
+          <td><strong>${esc(p.package_name)}</strong></td>
+          <td><span class="badge ${p.is_active ? 'badge-active' : 'badge-banned'}">${p.is_active ? 'Active' : 'Paused'}</span></td>
+          <td><div style="display:flex;gap:4px;flex-wrap:wrap">${so1} ${so2}</div></td>
+          <td><div style="display:flex;gap:4px;flex-wrap:wrap">${soc1} ${soc2}</div></td>
+          <td style="color:var(--text-3);font-size:12px">${delayStr}</td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="editPackage(${idx})">Edit</button>
+              <button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="deletePackage(${idx})">Delete</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-3)">No package slots configured yet. Click "Add Package Slot" above.</td></tr>';
     }
 
     function openAddPackageModal(idx = -1) {
@@ -2942,10 +2917,18 @@
         const p = _clientPackages[idx];
         document.getElementById('pkg-input-name').value = p.package_name || '';
         document.getElementById('pkg-input-so').value = p.plugin_url || '';
+        document.getElementById('pkg-input-so2').value = p.plugin_url_2 || '';
+        document.getElementById('pkg-input-soc').value = p.soc_url || '';
+        document.getElementById('pkg-input-soc2').value = p.soc_url_2 || '';
+        document.getElementById('pkg-input-delay').value = p.delay_ms || 0;
         document.getElementById('pkg-input-apk').value = p.update_apk_url || '';
       } else {
         document.getElementById('pkg-input-name').value = '';
         document.getElementById('pkg-input-so').value = '';
+        document.getElementById('pkg-input-so2').value = '';
+        document.getElementById('pkg-input-soc').value = '';
+        document.getElementById('pkg-input-soc2').value = '';
+        document.getElementById('pkg-input-delay').value = 0;
         document.getElementById('pkg-input-apk').value = '';
       }
       document.getElementById('modal-add-package').classList.add('open');
@@ -2960,14 +2943,29 @@
     async function savePackage() {
       const name = (document.getElementById('pkg-input-name')?.value || '').trim();
       const so = (document.getElementById('pkg-input-so')?.value || '').trim();
+      const so2 = (document.getElementById('pkg-input-so2')?.value || '').trim();
+      const soc = (document.getElementById('pkg-input-soc')?.value || '').trim();
+      const soc2 = (document.getElementById('pkg-input-soc2')?.value || '').trim();
+      const delay = parseInt(document.getElementById('pkg-input-delay')?.value) || 0;
       const apk = (document.getElementById('pkg-input-apk')?.value || '').trim();
       if (!name) return toast('Package name is required', 'error');
 
       const pkgs = [..._clientPackages];
+      const pkgObj = {
+        package_name: name,
+        plugin_url: so,
+        plugin_url_2: so2,
+        soc_url: soc,
+        soc_url_2: soc2,
+        delay_ms: delay,
+        update_apk_url: apk,
+        is_active: true
+      };
+
       if (_editingPkgIndex >= 0) {
-        pkgs[_editingPkgIndex] = { ...pkgs[_editingPkgIndex], package_name: name, plugin_url: so, update_apk_url: apk };
+        pkgs[_editingPkgIndex] = { ...pkgs[_editingPkgIndex], ...pkgObj };
       } else {
-        pkgs.push({ package_name: name, plugin_url: so, update_apk_url: apk, is_active: true });
+        pkgs.push(pkgObj);
       }
 
       const res = await api('/api/client/packages', 'POST', { packages: pkgs });
