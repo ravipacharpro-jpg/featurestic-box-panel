@@ -1286,10 +1286,13 @@
                 <div class="card-title">Commercial License Keys</div>
                 <div class="card-sub" id="keys-sub">Manage active, paused, and bound developer keys</div>
               </div>
-              <button class="btn btn-primary" onclick="openCreateModal()">
-                <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Generate Key
-              </button>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <input type="text" id="keys-search-input" placeholder="🔍 Search keys, owner, package..." oninput="filterKeysTable()" style="max-width:240px;padding:6px 12px;font-size:12px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text)">
+                <button class="btn btn-primary" onclick="openCreateModal()">
+                  <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Generate Key
+                </button>
+              </div>
             </div>
             <div class="tbl-wrap">
               <table>
@@ -1316,10 +1319,13 @@
                 <div class="card-title">Client & Buyer Accounts</div>
                 <div class="card-sub">Credentials and active fleet quotas for modders</div>
               </div>
-              <button class="btn btn-ghost" onclick="loadClients()">
-                <svg class="icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                Refresh
-              </button>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <input type="text" id="clients-search-input" placeholder="🔍 Search clients or keys..." oninput="filterClientsTable()" style="max-width:220px;padding:6px 12px;font-size:12px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text)">
+                <button class="btn btn-ghost" onclick="loadClients()">
+                  <svg class="icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  Refresh
+                </button>
+              </div>
             </div>
             <div class="tbl-wrap">
               <table>
@@ -2314,11 +2320,43 @@
       }
     }
 
+    let _allKeys = [];
+    let _allClients = [];
+
+    function copyBuyerDelivery(key, owner, duration, pkgs) {
+      const msg = `✅ YOUR FEATURESTIC SDK LICENSE KEY\n━━━━━━━━━━━━━━━━━━━━\n🔑 Key: ${key}\n👤 Owner: ${owner ? '@' + owner : 'Direct Buyer'}\n📦 Bound Package: ${pkgs || 'Auto-bind on first launch'}\n⏳ Validity: ${duration} Days\n🌐 Client Dashboard: https://featurestic-box-panel.vercel.app\n━━━━━━━━━━━━━━━━━━━━\n⚠️ Keep your license key private.`;
+      copyPlain(msg);
+      toast('Buyer delivery message copied to clipboard!');
+    }
+
+    function filterKeysTable() {
+      const q = (document.getElementById('keys-search-input')?.value || '').toLowerCase().trim();
+      if (!q) return renderKeysTable(_allKeys);
+      const filtered = _allKeys.filter(k => 
+        (k.user_key || '').toLowerCase().includes(q) ||
+        (k.client_username || '').toLowerCase().includes(q) ||
+        (k.bound_packages || '').toLowerCase().includes(q) ||
+        (k.status || '').toLowerCase().includes(q) ||
+        (k.note || '').toLowerCase().includes(q)
+      );
+      renderKeysTable(filtered, true);
+    }
+
+    function filterClientsTable() {
+      const q = (document.getElementById('clients-search-input')?.value || '').toLowerCase().trim();
+      const rows = document.querySelectorAll('#clients-body tr');
+      rows.forEach(tr => {
+        const text = tr.textContent.toLowerCase();
+        tr.style.display = (!q || text.includes(q)) ? '' : 'none';
+      });
+    }
+
     /* Admin License Keys */
-    function renderKeysTable(keys) {
+    function renderKeysTable(keys, isFiltered = false) {
       const list = Array.isArray(keys) ? keys : [];
+      if (!isFiltered) _allKeys = list;
       const sub = document.getElementById('keys-sub');
-      if (sub) sub.textContent = `${list.length} total keys issued`;
+      if (sub) sub.textContent = `${list.length} total keys ${isFiltered ? 'matching' : 'issued'}`;
       const tbody = document.getElementById('keys-body');
       if (!tbody) return;
 
@@ -2343,6 +2381,7 @@
           <td style="color:var(--text-3);font-size:12px">${fmtDate(k.expires_at)}</td>
           <td>
             <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+              <button class="btn btn-ghost" style="padding:3px 7px;font-size:11px;color:var(--primary)" onclick="copyBuyerDelivery('${k.user_key}', '${esc(k.client_username || '')}', '${k.duration_days}', '${esc(pkgs.join(', ') || '')}')" title="Copy ready-to-send Telegram message">📋 Info</button>
               <button class="btn btn-ghost" style="padding:3px 7px;font-size:11px;color:var(--apple-green);border-color:rgba(0,255,136,0.3)" onclick="extendKeyExpiry(${k.id}, 7)" title="Add +7 Days Validity">+7d</button>
               <button class="btn btn-ghost" style="padding:3px 7px;font-size:11px;color:var(--apple-green);border-color:rgba(0,255,136,0.3)" onclick="extendKeyExpiry(${k.id}, 30)" title="Add +30 Days Validity">+30d</button>
               <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="toggleBan(${k.id})">${k.status === 'active' ? 'Pause' : 'Resume'}</button>
@@ -2351,7 +2390,7 @@
             </div>
           </td>
         </tr>`;
-      }).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-3)">No license keys found. Click "Generate Key" above.</td></tr>';
+      }).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-3)">No license keys found.</td></tr>';
     }
 
     async function loadKeys(silent = false) {

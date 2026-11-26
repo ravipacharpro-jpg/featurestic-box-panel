@@ -450,7 +450,7 @@ async function handleConnect(req, res) {
       effectiveApkUrl = key.update_apk_url.trim();
       effectiveApkVer = (key.update_version && key.update_version.trim()) || '1.0.1';
       if (key.update_changelog && key.update_changelog.trim()) effectiveChangelog = key.update_changelog.trim();
-    } else if (settings?.update_apk_url && settings.update_apk_url.trim()) {
+    } else if (key.account_type === 'own' && settings?.update_apk_url && settings.update_apk_url.trim()) {
       effectiveApkUrl = settings.update_apk_url.trim();
       effectiveApkVer = (settings.update_version && settings.update_version.trim()) || '1.0.1';
     }
