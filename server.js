@@ -1373,10 +1373,13 @@ app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
       const user_key = customKey || `${prefix}-${rand}`;
       await sql`
         INSERT INTO license_keys (
-          user_key, duration_days, note, max_loaders, bound_packages, account_type
+          user_key, duration_days, note, max_loaders, bound_packages, account_type, plugin_url, update_apk_url, update_version, update_changelog, so_sha256
         )
         VALUES (
-          ${user_key}, ${duration_days}, ${note}, ${isNaN(loadersQuota) ? 1 : loadersQuota}, ${initialBound}, 'own'
+          ${user_key}, ${duration_days}, ${note}, ${isNaN(loadersQuota) ? 1 : loadersQuota}, ${initialBound}, 'own',
+          ${plugin_url ? plugin_url.trim() : ""}, ${update_apk_url ? update_apk_url.trim() : ""},
+          ${update_version ? update_version.trim() : "1.0.0"}, ${update_changelog ? update_changelog.trim() : ""},
+          ${(req.body.so_sha256 || "").trim()}
         )
       `;
       generated.push(user_key);
@@ -1417,6 +1420,39 @@ app.delete('/api/admin/keys/:id', checkAdminAuth, async (req, res) => {
   await sql`DELETE FROM license_keys WHERE id = ${req.params.id}`;
   invalidateKeysCache();
   res.json({ success: true });
+});
+
+app.post('/api/admin/keys/:id/edit', checkAdminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { plugin_url, note, duration_days, max_loaders, update_apk_url, update_version, so_sha256 } = req.body;
+    const key = (await sql`SELECT * FROM license_keys WHERE id = ${id}`)[0];
+    if (!key) return res.status(404).json({ error: "Key not found" });
+
+    const newPlugin = plugin_url !== undefined ? plugin_url.trim() : (key.plugin_url || "");
+    const newNote = note !== undefined ? note.trim() : (key.note || "");
+    const newDuration = duration_days !== undefined ? parseInt(duration_days) : key.duration_days;
+    const newLoaders = max_loaders !== undefined ? parseInt(max_loaders) : key.max_loaders;
+    const newApk = update_apk_url !== undefined ? update_apk_url.trim() : (key.update_apk_url || "");
+    const newVersion = update_version !== undefined ? update_version.trim() : (key.update_version || "1.0.0");
+    const newSha = so_sha256 !== undefined ? so_sha256.trim() : (key.so_sha256 || "");
+
+    await sql`
+      UPDATE license_keys
+      SET plugin_url = ${newPlugin},
+          note = ${newNote},
+          duration_days = ${isNaN(newDuration) ? 30 : newDuration},
+          max_loaders = ${isNaN(newLoaders) ? 0 : newLoaders},
+          update_apk_url = ${newApk},
+          update_version = ${newVersion},
+          so_sha256 = ${newSha}
+      WHERE id = ${id}
+    `;
+    invalidateKeysCache();
+    res.json({ success: true, message: "Key updated successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Admin Clients Management
