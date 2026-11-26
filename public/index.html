@@ -2126,9 +2126,15 @@
         </button>
       </div>
       <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Android Package Name (Target Loader)</label>
-          <input type="text" id="pkg-input-name" placeholder="com.mycustom.loader">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label">Target Game Package</label>
+            <input type="text" id="pkg-input-game" placeholder="e.g. com.pubg.imobile (or *)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Loader App Package</label>
+            <input type="text" id="pkg-input-loader" placeholder="e.g. com.rdx.loader (or *)">
+          </div>
         </div>
         
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
@@ -3688,8 +3694,14 @@
         const soc2 = p.soc_url_2 ? `<span class="key-pill" title="${esc(p.soc_url_2)}">socu64 2</span>` : '';
         const delayStr = p.delay_ms ? `${p.delay_ms}ms` : '0ms';
 
+        const gameName = p.game_pkg || p.package_name || '*';
+        const loaderName = p.loader_pkg ? p.loader_pkg : '*';
+
         return `<tr>
-          <td><strong>${esc(p.package_name)}</strong></td>
+          <td>
+            <strong>${esc(gameName)}</strong>
+            <div style="font-size:11px;color:var(--text-3);font-family:var(--font-mono)">Loader: ${esc(loaderName)}</div>
+          </td>
           <td><span class="badge ${p.is_active ? 'badge-active' : 'badge-banned'}">${p.is_active ? 'Active' : 'Paused'}</span></td>
           <td><div style="display:flex;gap:4px;flex-wrap:wrap">${so1} ${so2}</div></td>
           <td><div style="display:flex;gap:4px;flex-wrap:wrap">${soc1} ${soc2}</div></td>
@@ -3708,14 +3720,16 @@
       _editingPkgIndex = idx;
       if (idx >= 0 && _clientPackages[idx]) {
         const p = _clientPackages[idx];
-        document.getElementById('pkg-input-name').value = p.package_name || '';
+        document.getElementById('pkg-input-game').value = p.game_pkg || p.package_name || '';
+        document.getElementById('pkg-input-loader').value = p.loader_pkg || '*';
         document.getElementById('pkg-input-so').value = p.plugin_url || '';
         document.getElementById('pkg-input-so2').value = p.plugin_url_2 || '';
         document.getElementById('pkg-input-soc').value = p.soc_url || '';
         document.getElementById('pkg-input-soc2').value = p.soc_url_2 || '';
         document.getElementById('pkg-input-delay').value = p.delay_ms || 0;
       } else {
-        document.getElementById('pkg-input-name').value = '';
+        document.getElementById('pkg-input-game').value = '';
+        document.getElementById('pkg-input-loader').value = '*';
         document.getElementById('pkg-input-so').value = '';
         document.getElementById('pkg-input-so2').value = '';
         document.getElementById('pkg-input-soc').value = '';
@@ -3732,17 +3746,20 @@
     }
 
     async function savePackage() {
-      const name = (document.getElementById('pkg-input-name')?.value || '').trim();
+      const game = (document.getElementById('pkg-input-game')?.value || '').trim();
+      const loader = (document.getElementById('pkg-input-loader')?.value || '*').trim();
       const so = (document.getElementById('pkg-input-so')?.value || '').trim();
       const so2 = (document.getElementById('pkg-input-so2')?.value || '').trim();
       const soc = (document.getElementById('pkg-input-soc')?.value || '').trim();
       const soc2 = (document.getElementById('pkg-input-soc2')?.value || '').trim();
       const delay = parseInt(document.getElementById('pkg-input-delay')?.value) || 0;
-      if (!name) return toast('Package name is required', 'error');
+      if (!game) return toast('Target game package is required', 'error');
 
       const pkgs = [..._clientPackages];
       const pkgObj = {
-        package_name: name,
+        game_pkg: game,
+        loader_pkg: loader || '*',
+        package_name: game,
         plugin_url: so,
         plugin_url_2: so2,
         soc_url: soc,

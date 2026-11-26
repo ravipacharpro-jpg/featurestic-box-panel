@@ -2467,7 +2467,9 @@ const handleClientPackagesSave = async (req, res) => {
     }
 
     const cleaned = packages.map(p => ({
-      package_name: (p.package_name || '').trim(),
+      game_pkg: (p.game_pkg || p.package_name || '').trim(),
+      loader_pkg: (p.loader_pkg || '*').trim(),
+      package_name: (p.game_pkg || p.package_name || '').trim(),
       is_active: Boolean(p.is_active),
       plugin_url: (p.plugin_url || '').trim(),
       plugin_url_2: (p.plugin_url_2 || '').trim(),
@@ -2477,9 +2479,15 @@ const handleClientPackagesSave = async (req, res) => {
       so_sha256: (p.so_sha256 || '').trim(),
       update_apk_url: (p.update_apk_url || '').trim(),
       update_version: (p.update_version || '1.0.0').trim()
-    })).filter(p => p.package_name.length > 0);
+    })).filter(p => (p.game_pkg || p.package_name || '').length > 0);
 
-    const boundNames = cleaned.filter(p => p.is_active).map(p => p.package_name);
+    const boundNames = [];
+    cleaned.filter(p => p.is_active).forEach(p => {
+      const g = p.game_pkg || p.package_name;
+      const l = p.loader_pkg;
+      if (g && g !== '*') boundNames.push(g);
+      if (l && l !== '*') boundNames.push(l);
+    });
 
     await sql`
       UPDATE license_keys 
@@ -2526,7 +2534,9 @@ app.post('/api/admin/clients/:id/packages', checkAdminAuth, async (req, res) => 
     if (!Array.isArray(packages)) return res.status(400).json({ error: 'Packages must be an array' });
 
     const cleaned = packages.map(p => ({
-      package_name: (p.package_name || '').trim(),
+      game_pkg: (p.game_pkg || p.package_name || '').trim(),
+      loader_pkg: (p.loader_pkg || '*').trim(),
+      package_name: (p.game_pkg || p.package_name || '').trim(),
       is_active: Boolean(p.is_active),
       plugin_url: (p.plugin_url || '').trim(),
       plugin_url_2: (p.plugin_url_2 || '').trim(),
@@ -2536,9 +2546,15 @@ app.post('/api/admin/clients/:id/packages', checkAdminAuth, async (req, res) => 
       so_sha256: (p.so_sha256 || '').trim(),
       update_apk_url: (p.update_apk_url || '').trim(),
       update_version: (p.update_version || '1.0.0').trim()
-    })).filter(p => p.package_name.length > 0);
+    })).filter(p => (p.game_pkg || p.package_name || '').length > 0);
 
-    const boundNames = cleaned.filter(p => p.is_active).map(p => p.package_name);
+    const boundNames = [];
+    cleaned.filter(p => p.is_active).forEach(p => {
+      const g = p.game_pkg || p.package_name;
+      const l = p.loader_pkg;
+      if (g && g !== '*') boundNames.push(g);
+      if (l && l !== '*') boundNames.push(l);
+    });
 
     await sql`
       UPDATE license_keys 
