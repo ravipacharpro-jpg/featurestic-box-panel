@@ -1607,11 +1607,33 @@ app.get('/api/admin/clients', checkAdminAuth, async (req, res) => {
 app.delete('/api/admin/clients/:id', checkAdminAuth, async (req, res) => {
   try {
     const client = (await sql`SELECT user_key FROM client_accounts WHERE id = ${req.params.id}`)[0];
-    if (client && client.user_key) {
-      await sql`DELETE FROM license_keys WHERE user_key = ${client.user_key}`;
+    if (client && client.user_key && client.user_key !== 'RDXLOADER01') {
+      await sql`DELETE FROM license_keys WHERE user_key = ${client.user_key} AND account_type = 'client'`;
     }
     await sql`DELETE FROM client_accounts WHERE id = ${req.params.id}`;
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/clean-production', checkAdminAuth, async (req, res) => {
+  try {
+    // 1. Keep ONLY RDXLOADER01 in license_keys
+    await sql`DELETE FROM license_keys WHERE user_key != 'RDXLOADER01'`;
+    // 2. Clear all client accounts
+    await sql`DELETE FROM client_accounts`;
+    // 3. Clear crashes, logs, devices, and referrals
+    await sql`DELETE FROM crash_reports`;
+    await sql`DELETE FROM system_logs`;
+    await sql`DELETE FROM sdk_devices WHERE user_key != 'RDXLOADER01'`;
+    await sql`DELETE FROM referral_codes`;
+
+    invalidateKeysCache();
+    _logsCache.clear();
+    _crashesCache.clear();
+
+    res.json({ success: true, message: 'Production cleanup complete. Only RDXLOADER01 is retained.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2349,7 +2371,7 @@ app.get('/api/client/packages', checkClientAuth, async (req, res) => {
   }
 });
 
-app.post('/api/client/packages/save', checkClientAuth, async (req, res) => {
+const handleClientPackagesSave = async (req, res) => {
   try {
     const client = req.client;
     const key = (await sql`SELECT id, user_key, max_loaders FROM license_keys WHERE user_key = ${client.user_key} LIMIT 1`)[0];
@@ -2409,7 +2431,10 @@ app.post('/api/client/packages/save', checkClientAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+};
+
+app.post('/api/client/packages', checkClientAuth, handleClientPackagesSave);
+app.post('/api/client/packages/save', checkClientAuth, handleClientPackagesSave);
 
 // Admin Client Package Configs
 app.get('/api/admin/clients/:id/packages', checkAdminAuth, async (req, res) => {
