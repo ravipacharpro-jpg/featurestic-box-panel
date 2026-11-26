@@ -989,6 +989,35 @@
       .content { padding: 16px; }
       .stats-grid { grid-template-columns: 1fr 1fr; }
     }
+
+    .pkg-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .pkg-chip {
+      padding: 5px 11px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .pkg-chip:hover {
+      border-color: var(--primary);
+      color: var(--text-1);
+    }
+    .pkg-chip.active {
+      background: rgba(0, 229, 255, 0.15);
+      border-color: var(--primary);
+      color: var(--primary);
+      font-weight: 600;
+      box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
+    }
   </style>
 </head>
 <body>
@@ -1720,29 +1749,34 @@
           <input type="text" id="m-custom-key" placeholder="Type custom key (e.g. FBVX-X9R2M7K4Q8) or leave empty to auto-generate">
         </div>
         <div class="form-group">
-          <label class="form-label">Target Game (Optional)</label>
-          <select id="m-pkg-preset" onchange="onGamePresetChange()" style="margin-bottom:8px">
-            <option value="">Auto-Bind on 1st Run / Any Game</option>
-            <option value="com.pubg.imobile">BGMI (com.pubg.imobile)</option>
-            <option value="com.krafton.bgmilite">BGMI Lite (com.krafton.bgmilite)</option>
-            <option value="com.tencent.ig">PUBG Global (com.tencent.ig)</option>
-            <option value="com.pubg.krmobile">PUBG KR (com.pubg.krmobile)</option>
-            <option value="com.vng.pubgmobile">PUBG VN (com.vng.pubgmobile)</option>
-            <option value="com.rekoo.pubgm">PUBG TW (com.rekoo.pubgm)</option>
-          </select>
-          <input type="text" id="m-pkg" placeholder="Auto-binds on 1st loader run if left empty">
+          <label class="form-label">Authorized Game Packages</label>
+          <div class="pkg-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+            <button type="button" class="pkg-chip" data-pkg="com.pubg.imobile" onclick="togglePkgChip(this, 'm-packages')">BGMI</button>
+            <button type="button" class="pkg-chip" data-pkg="com.krafton.bgmilite" onclick="togglePkgChip(this, 'm-packages')">BGMI Lite</button>
+            <button type="button" class="pkg-chip" data-pkg="com.tencent.ig" onclick="togglePkgChip(this, 'm-packages')">PUBG Global</button>
+            <button type="button" class="pkg-chip" data-pkg="com.pubg.krmobile" onclick="togglePkgChip(this, 'm-packages')">PUBG KR</button>
+            <button type="button" class="pkg-chip" data-pkg="com.vng.pubgmobile" onclick="togglePkgChip(this, 'm-packages')">PUBG VN</button>
+            <button type="button" class="pkg-chip" data-pkg="com.rekoo.pubgm" onclick="togglePkgChip(this, 'm-packages')">PUBG TW</button>
+            <button type="button" class="pkg-chip" data-pkg="com.dts.freefireth" onclick="togglePkgChip(this, 'm-packages')">Free Fire</button>
+            <button type="button" class="pkg-chip" data-pkg="com.dts.freefiremax" onclick="togglePkgChip(this, 'm-packages')">Free Fire MAX</button>
+            <button type="button" class="pkg-chip" data-pkg="com.rdx.loader" onclick="togglePkgChip(this, 'm-packages')">RDX Loader</button>
+            <button type="button" class="pkg-chip" data-pkg="*" onclick="togglePkgChip(this, 'm-packages')">All Games (*)</button>
+          </div>
+          <input type="text" id="m-packages" placeholder="Leave empty for auto-bind on 1st run, or tap games above" oninput="syncPkgChips('m-packages')">
+          <div class="form-hint">Tap preset buttons above to select games or type custom package names.</div>
         </div>
 
+        <!-- SO SLOT 1 -->
         <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <label class="form-label" style="margin:0;font-weight:600">Primary .so (SO Slot 1)</label>
+            <label class="form-label" style="margin:0;font-weight:600">Primary .so (SO Slot 1 / Main Mod)</label>
             <div>
-              <input type="file" id="file-create-so" accept=".so" style="display:none" onchange="handleDirectUpload(this, 'm-plugin-url', 'prog-create-so')">
-              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-create-so').click()">Choose .so</button>
+              <input type="file" id="file-create-so1" accept=".so" style="display:none" onchange="handleDirectUpload(this, 'm-so1', 'prog-create-so1')">
+              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-create-so1').click()">Choose .so</button>
             </div>
           </div>
-          <input type="text" id="m-plugin-url" placeholder="https://github.com/.../libmain.so or uploaded URL">
-          <div id="prog-create-so" style="display:none;margin-top:6px">
+          <input type="text" id="m-so1" placeholder="https://github.com/.../libmain.so or uploaded URL">
+          <div id="prog-create-so1" style="display:none;margin-top:6px">
             <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
               <span class="prog-text">Uploading...</span>
               <span class="prog-pct">0%</span>
@@ -1751,6 +1785,53 @@
               <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
             </div>
           </div>
+        </div>
+
+        <!-- SO SLOT 2 -->
+        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label class="form-label" style="margin:0;font-weight:600">Secondary .so (SO Slot 2 / Engine / Offset)</label>
+            <div>
+              <input type="file" id="file-create-so2" accept=".so" style="display:none" onchange="handleDirectUpload(this, 'm-so2', 'prog-create-so2')">
+              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-create-so2').click()">Choose .so</button>
+            </div>
+          </div>
+          <input type="text" id="m-so2" placeholder="Optional second .so link or upload">
+          <div id="prog-create-so2" style="display:none;margin-top:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
+              <span class="prog-text">Uploading...</span>
+              <span class="prog-pct">0%</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SOC SLOT 1 -->
+        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label class="form-label" style="margin:0;font-weight:600">Primary SOC (SOC Slot 1 / soc64 Daemon)</label>
+            <div>
+              <input type="file" id="file-create-soc1" style="display:none" onchange="handleDirectUpload(this, 'm-soc1', 'prog-create-soc1')">
+              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-create-soc1').click()">Choose .soc</button>
+            </div>
+          </div>
+          <input type="text" id="m-soc1" placeholder="Optional soc64 binary URL or upload">
+          <div id="prog-create-soc1" style="display:none;margin-top:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
+              <span class="prog-text">Uploading...</span>
+              <span class="prog-pct">0%</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">SO Load Delay (ms)</label>
+          <input type="number" id="m-delay" min="0" max="10000" step="100" placeholder="0">
         </div>
 
         <div class="form-group">
@@ -1789,9 +1870,21 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Authorized Game Packages (Comma separated or * for any)</label>
-          <input type="text" id="ek-packages" placeholder="e.g. com.rdx.loader, com.krafton.bgmilite, com.pubg.imobile">
-          <div class="form-hint">Controls which games or loaders are permitted to connect with this key.</div>
+          <label class="form-label">Authorized Game Packages</label>
+          <div class="pkg-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+            <button type="button" class="pkg-chip" data-pkg="com.pubg.imobile" onclick="togglePkgChip(this, 'ek-packages')">BGMI</button>
+            <button type="button" class="pkg-chip" data-pkg="com.krafton.bgmilite" onclick="togglePkgChip(this, 'ek-packages')">BGMI Lite</button>
+            <button type="button" class="pkg-chip" data-pkg="com.tencent.ig" onclick="togglePkgChip(this, 'ek-packages')">PUBG Global</button>
+            <button type="button" class="pkg-chip" data-pkg="com.pubg.krmobile" onclick="togglePkgChip(this, 'ek-packages')">PUBG KR</button>
+            <button type="button" class="pkg-chip" data-pkg="com.vng.pubgmobile" onclick="togglePkgChip(this, 'ek-packages')">PUBG VN</button>
+            <button type="button" class="pkg-chip" data-pkg="com.rekoo.pubgm" onclick="togglePkgChip(this, 'ek-packages')">PUBG TW</button>
+            <button type="button" class="pkg-chip" data-pkg="com.dts.freefireth" onclick="togglePkgChip(this, 'ek-packages')">Free Fire</button>
+            <button type="button" class="pkg-chip" data-pkg="com.dts.freefiremax" onclick="togglePkgChip(this, 'ek-packages')">Free Fire MAX</button>
+            <button type="button" class="pkg-chip" data-pkg="com.rdx.loader" onclick="togglePkgChip(this, 'ek-packages')">RDX Loader</button>
+            <button type="button" class="pkg-chip" data-pkg="*" onclick="togglePkgChip(this, 'ek-packages')">All Games (*)</button>
+          </div>
+          <input type="text" id="ek-packages" placeholder="e.g. com.rdx.loader, com.krafton.bgmilite, com.pubg.imobile" oninput="syncPkgChips('ek-packages')">
+          <div class="form-hint">Tap preset buttons above to select games or type custom package names.</div>
         </div>
 
         <!-- SO SLOT 1 -->
@@ -2593,6 +2686,7 @@
       let bound = [];
       try { bound = JSON.parse(key.bound_packages || '[]'); } catch(e) { bound = []; }
       document.getElementById('ek-packages').value = bound.join(', ');
+      syncPkgChips('ek-packages');
 
       let pkgConfigs = [];
       try { pkgConfigs = JSON.parse(key.package_configs || '[]'); } catch(e) { pkgConfigs = []; }
@@ -3092,10 +3186,55 @@
       }
     }
 
+    function togglePkgChip(btn, targetInputId) {
+      const pkg = btn.getAttribute('data-pkg');
+      const input = document.getElementById(targetInputId);
+      if (!input) return;
+
+      let current = input.value.split(',').map(s => s.trim()).filter(Boolean);
+      if (pkg === '*') {
+        if (current.includes('*')) {
+          current = current.filter(s => s !== '*');
+        } else {
+          current = ['*'];
+        }
+      } else {
+        current = current.filter(s => s !== '*');
+        const lowerList = current.map(s => s.toLowerCase());
+        const idx = lowerList.indexOf(pkg.toLowerCase());
+        if (idx > -1) {
+          current.splice(idx, 1);
+        } else {
+          current.push(pkg);
+        }
+      }
+      input.value = current.join(', ');
+      syncPkgChips(targetInputId);
+    }
+
+    function syncPkgChips(inputId) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const current = input.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      const container = input.parentElement ? input.parentElement.querySelector('.pkg-chips') : null;
+      if (!container) return;
+      container.querySelectorAll('.pkg-chip').forEach(chip => {
+        const pkg = (chip.getAttribute('data-pkg') || '').toLowerCase();
+        const isActive = current.includes(pkg);
+        chip.classList.toggle('active', isActive);
+      });
+    }
+
     /* Key Generation Modals */
     function openCreateModal(type = 'own') {
       _currentCreateType = type;
       switchCreateType(type);
+      const pkgInput = document.getElementById('m-packages');
+      if (pkgInput) { pkgInput.value = ''; syncPkgChips('m-packages'); }
+      const so1 = document.getElementById('m-so1'); if (so1) so1.value = '';
+      const so2 = document.getElementById('m-so2'); if (so2) so2.value = '';
+      const soc1 = document.getElementById('m-soc1'); if (soc1) soc1.value = '';
+      const delay = document.getElementById('m-delay'); if (delay) delay.value = '';
       document.getElementById('modal-create').classList.add('open');
     }
 
@@ -3119,12 +3258,6 @@
       if (newFields) newFields.style.display = mode === 'new' ? 'grid' : 'none';
     }
 
-    function onGamePresetChange() {
-      const preset = document.getElementById('m-pkg-preset')?.value || '';
-      const pkgInput = document.getElementById('m-pkg');
-      if (pkgInput) pkgInput.value = preset;
-    }
-
     async function createKeys() {
       const btn = document.getElementById('btn-create-submit');
       if (btn) btn.disabled = true;
@@ -3132,10 +3265,29 @@
       const custom_key = (document.getElementById('m-custom-key')?.value || '').trim().toUpperCase();
       const duration_days = parseInt(document.getElementById('m-dur')?.value, 10) || 30;
       const max_loaders = parseInt(document.getElementById('m-loaders')?.value, 10) || 1;
-      const package_name = (document.getElementById('m-pkg')?.value || '').trim();
+      const rawPackages = (document.getElementById('m-packages')?.value || '').trim();
+      const boundArr = rawPackages 
+        ? rawPackages.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
+      const so1 = (document.getElementById('m-so1')?.value || '').trim();
+      const so2 = (document.getElementById('m-so2')?.value || '').trim();
+      const soc1 = (document.getElementById('m-soc1')?.value || '').trim();
+      const delay = parseInt(document.getElementById('m-delay')?.value) || 0;
       const note = (document.getElementById('m-note')?.value || '').trim();
 
-      const payload = { account_type: _currentCreateType, custom_key, duration_days, max_loaders, package_name, note };
+      const payload = { 
+        account_type: _currentCreateType, 
+        custom_key, 
+        duration_days, 
+        max_loaders, 
+        bound_packages: boundArr,
+        plugin_url: so1,
+        plugin_url_2: so2,
+        soc_url: soc1,
+        delay_ms: delay,
+        note 
+      };
+
       if (_currentCreateType === 'client') {
         const mode = document.getElementById('m-client-mode')?.value || 'new';
         if (mode === 'existing') {

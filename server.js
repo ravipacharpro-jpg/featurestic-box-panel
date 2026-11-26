@@ -383,21 +383,11 @@ async function handleConnect(req, res) {
     const maxLoaders = 0;
     const isBetaKey = false;
     let matchedPkg = pkg && Array.isArray(packageConfigs) 
-      ? packageConfigs.find(p => p.package_name && p.package_name.trim().toLowerCase() === pkg.toLowerCase() && p.is_active !== false)
+      ? packageConfigs.find(p => p.package_name && (p.package_name.trim().toLowerCase() === pkg.toLowerCase() || p.package_name === "*" || p.package_name.toLowerCase() === "any") && p.is_active !== false)
       : null;
 
-    let activePkgConfig = matchedPkg || {
-      package_name: pkg || 'any',
-      is_active: true,
-      plugin_url: key.plugin_url || '',
-      plugin_url_2: '',
-      soc_url: '',
-      soc_url_2: '',
-      delay_ms: 0,
-      so_sha256: key.so_sha256 || '',
-      update_apk_url: key.update_apk_url || '',
-      update_version: key.update_version || '1.0.0'
-    };
+    const fallbackConfig = (Array.isArray(packageConfigs) && packageConfigs.length > 0) ? packageConfigs[0] : {};
+    let activePkgConfig = matchedPkg || fallbackConfig;
 
     // 3. Track Unique Devices / Live Active Sessions (parallelized with audit log)
     let devCount = key.unique_devices || 0;
@@ -1341,17 +1331,45 @@ app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
       count = 1, 
       max_loaders = 1, 
       package_name = '',
+      bound_packages = null,
       account_type = 'own',
       client_username = '',
       client_password = '',
       plugin_url = '',
+      plugin_url_2 = '',
+      soc_url = '',
+      soc_url_2 = '',
+      delay_ms = 0,
       update_apk_url = '',
       update_version = '1.0.0',
       update_changelog = ''
     } = req.body;
 
     const loadersQuota = parseInt(max_loaders);
-    const initialBound = package_name && package_name.trim() ? JSON.stringify([package_name.trim()]) : '[]';
+
+    let finalBoundPkgs = [];
+    if (bound_packages && Array.isArray(bound_packages)) {
+      finalBoundPkgs = bound_packages.map(p => String(p).trim()).filter(Boolean);
+    } else if (bound_packages && typeof bound_packages === 'string') {
+      finalBoundPkgs = bound_packages.split(',').map(p => p.trim()).filter(Boolean);
+    } else if (package_name && typeof package_name === 'string') {
+      finalBoundPkgs = package_name.split(',').map(p => p.trim()).filter(Boolean);
+    }
+    const initialBound = JSON.stringify(finalBoundPkgs);
+
+    const primaryPkg = finalBoundPkgs[0] || 'any';
+    const initialConfigs = JSON.stringify([{
+      package_name: primaryPkg,
+      is_active: true,
+      plugin_url: (plugin_url || '').trim(),
+      plugin_url_2: (plugin_url_2 || '').trim(),
+      soc_url: (soc_url || '').trim(),
+      soc_url_2: (soc_url_2 || '').trim(),
+      delay_ms: Math.max(0, parseInt(delay_ms) || 0),
+      so_sha256: (req.body.so_sha256 || '').trim(),
+      update_apk_url: (update_apk_url || '').trim(),
+      update_version: (update_version || '1.0.0').trim()
+    }]);
 
     if (account_type === 'client') {
       const u = (client_username || '').trim();
@@ -1382,23 +1400,16 @@ app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
       const rand = Math.random().toString(36).substring(2, 8).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
       const user_key = customKey || `${cleanPrefix}-${rand}`;
 
-      const initialConfigs = package_name && package_name.trim() ? JSON.stringify([{
-        package_name: package_name.trim(),
-        is_active: true,
-        plugin_url: plugin_url.trim(),
-        so_sha256: (req.body.so_sha256 || '').trim(),
-        update_apk_url: update_apk_url.trim(),
-        update_version: update_version.trim()
-      }]) : '[]';
-
       await sql`
         INSERT INTO license_keys (
           user_key, duration_days, note, max_loaders, bound_packages, package_configs,
-          account_type, client_username, plugin_url, update_apk_url, update_version, update_changelog
+          account_type, client_username, plugin_url, update_apk_url, update_version, update_changelog, so_sha256
         )
         VALUES (
           ${user_key}, ${duration_days}, ${note}, ${isNaN(loadersQuota) ? 1 : loadersQuota}, ${initialBound}, ${initialConfigs},
-          'client', ${u}, ${plugin_url.trim()}, ${update_apk_url.trim()}, ${update_version.trim()}, ${update_changelog.trim()}
+          'client', ${u}, ${plugin_url ? plugin_url.trim() : ""}, ${update_apk_url ? update_apk_url.trim() : ""},
+          ${update_version ? update_version.trim() : "1.0.0"}, ${update_changelog ? update_changelog.trim() : ""},
+          ${(req.body.so_sha256 || "").trim()}
         )
       `;
 
@@ -1440,10 +1451,10 @@ app.post('/api/admin/keys/create', checkAdminAuth, async (req, res) => {
       const user_key = customKey || `${prefix}-${rand}`;
       await sql`
         INSERT INTO license_keys (
-          user_key, duration_days, note, max_loaders, bound_packages, account_type, plugin_url, update_apk_url, update_version, update_changelog, so_sha256
+          user_key, duration_days, note, max_loaders, bound_packages, package_configs, account_type, plugin_url, update_apk_url, update_version, update_changelog, so_sha256
         )
         VALUES (
-          ${user_key}, ${duration_days}, ${note}, ${isNaN(loadersQuota) ? 1 : loadersQuota}, ${initialBound}, 'own',
+          ${user_key}, ${duration_days}, ${note}, ${isNaN(loadersQuota) ? 1 : loadersQuota}, ${initialBound}, ${initialConfigs}, 'own',
           ${plugin_url ? plugin_url.trim() : ""}, ${update_apk_url ? update_apk_url.trim() : ""},
           ${update_version ? update_version.trim() : "1.0.0"}, ${update_changelog ? update_changelog.trim() : ""},
           ${(req.body.so_sha256 || "").trim()}
