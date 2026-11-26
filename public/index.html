@@ -990,7 +990,12 @@
       .main { margin-left: 0; padding-bottom: 84px; width: 100%; min-width: 0; }
       .mob-menu-btn { display: inline-flex; }
       .mob-bottom-nav { display: flex; }
-      .topbar { padding: 0 12px; }
+      .topbar { padding: 0 12px; gap: 8px; }
+      .topbar-left { min-width: 0; flex: 1; gap: 8px; }
+      .topbar-title { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .topbar-right { gap: 6px; flex-shrink: 0; }
+      .topbar-right .btn { padding: 7px 10px; font-size: 12px; white-space: nowrap; }
+      .live-status-pill { display: none !important; }
       .content { padding: 14px; }
       .card { padding: 16px; border-radius: 16px; }
       .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
