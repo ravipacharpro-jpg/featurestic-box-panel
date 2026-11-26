@@ -494,19 +494,31 @@ async function handleConnect(req, res) {
       }, req, user_key, key.client_username)
     ]);
 
+    // Strict Target Game Tagging for Crash Fixer Offsets:
+    // anogs_ret_offsets is strictly tagged to BGMI (com.pubg.imobile).
     const anogsTargetPkg = (settings?.anogs_target_package || 'com.pubg.imobile').trim();
-    const boundArr = (() => { try { return JSON.parse(key.bound_packages || '[]'); } catch { return []; } })();
-    const anogsGameMismatch = Boolean(
-      anogsTargetPkg &&
-      anogsTargetPkg !== '*' &&
-      Array.isArray(boundArr) &&
-      boundArr.length > 0 &&
-      !boundArr.includes(anogsTargetPkg) &&
-      boundArr.some(b => b && !b.includes('featurestic.loader'))
+    const incomingGame = (params.game || params.gamename || '').trim().toLowerCase();
+    const incomingPkg = (pkg || '').trim().toLowerCase();
+
+    // Check if the launch request is for a different game (e.g. bgmilite, freefire, pubg lite, pubg global)
+    const isExplicitlyOtherGame = Boolean(
+      (incomingGame && incomingGame !== anogsTargetPkg.toLowerCase()) ||
+      (incomingPkg && incomingPkg.includes('freefire')) ||
+      (incomingPkg && incomingPkg.includes('bgmilite')) ||
+      (incomingPkg && incomingPkg.includes('iglite')) ||
+      (incomingPkg && incomingPkg.includes('tencent.ig'))
     );
-    const effectiveAnogsOffsets = anogsGameMismatch
-      ? ''
-      : (settings?.anogs_ret_offsets || '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4').trim();
+
+    const boundArr = (() => { try { return JSON.parse(key.bound_packages || '[]'); } catch { return []; } })();
+    const isBoundToOtherGameOnly = Array.isArray(boundArr) && boundArr.length > 0 && 
+      !boundArr.some(b => b && (b.toLowerCase().includes('pubg.imobile') || b === '*' || b.includes('loader')));
+
+    const shouldApplyAnogs = !isExplicitlyOtherGame && !isBoundToOtherGameOnly;
+
+    // If not BGMI, keep key intact in JSON as "" so loader never crashes, but never apply to other games
+    const effectiveAnogsOffsets = shouldApplyAnogs
+      ? (settings?.anogs_ret_offsets || '0x2191B0,0x302D18,0x3B6E2C,0x3379F0,0x3251F4').trim()
+      : '';
 
     return res.json({
       status: true,
@@ -1507,9 +1519,9 @@ app.delete('/api/admin/keys/:id', checkAdminAuth, async (req, res) => {
 
 app.post('/api/admin/keys/:id/edit', checkAdminAuth, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { plugin_url, note, duration_days, max_loaders, update_apk_url, update_version, so_sha256 } = req.body;
-    const key = (await sql`SELECT * FROM license_keys WHERE id = ${id}`)[0];
+    const keyId = parseInt(req.params.id, 10);
+    const { plugin_url, plugin_url_2, soc_url, soc_url_2, delay_ms, note, duration_days, max_loaders, update_apk_url, update_version, so_sha256, bound_packages, package_configs } = req.body;
+    const key = (await sql`SELECT * FROM license_keys WHERE id = ${keyId}`)[0];
     if (!key) return res.status(404).json({ error: "Key not found" });
 
     const newPlugin = plugin_url !== undefined ? plugin_url.trim() : (key.plugin_url || "");
@@ -1519,6 +1531,30 @@ app.post('/api/admin/keys/:id/edit', checkAdminAuth, async (req, res) => {
     const newApk = update_apk_url !== undefined ? update_apk_url.trim() : (key.update_apk_url || "");
     const newVersion = update_version !== undefined ? update_version.trim() : (key.update_version || "1.0.0");
     const newSha = so_sha256 !== undefined ? so_sha256.trim() : (key.so_sha256 || "");
+    const newBound = bound_packages !== undefined 
+      ? (Array.isArray(bound_packages) ? JSON.stringify(bound_packages) : String(bound_packages))
+      : key.bound_packages;
+
+    let newConfigs = key.package_configs;
+    if (package_configs !== undefined) {
+      newConfigs = typeof package_configs === 'string' ? package_configs : JSON.stringify(package_configs);
+    } else {
+      let targetPkgs = [];
+      try { targetPkgs = JSON.parse(newBound || '[]'); } catch(e) { targetPkgs = []; }
+      const primaryPkg = targetPkgs[0] || 'any';
+      const updatedSlot = {
+        package_name: primaryPkg,
+        is_active: true,
+        plugin_url: newPlugin,
+        plugin_url_2: plugin_url_2 !== undefined ? String(plugin_url_2).trim() : '',
+        soc_url: soc_url !== undefined ? String(soc_url).trim() : '',
+        soc_url_2: soc_url_2 !== undefined ? String(soc_url_2).trim() : '',
+        delay_ms: Math.max(0, parseInt(delay_ms) || 0),
+        update_apk_url: newApk,
+        update_version: newVersion
+      };
+      newConfigs = JSON.stringify([updatedSlot]);
+    }
 
     await sql`
       UPDATE license_keys
@@ -1528,8 +1564,10 @@ app.post('/api/admin/keys/:id/edit', checkAdminAuth, async (req, res) => {
           max_loaders = ${isNaN(newLoaders) ? 0 : newLoaders},
           update_apk_url = ${newApk},
           update_version = ${newVersion},
-          so_sha256 = ${newSha}
-      WHERE id = ${id}
+          so_sha256 = ${newSha},
+          bound_packages = ${newBound},
+          package_configs = ${newConfigs}
+      WHERE id = ${keyId}
     `;
     invalidateKeysCache();
     res.json({ success: true, message: "Key updated successfully" });
@@ -1823,6 +1861,31 @@ app.post('/api/admin/settings', checkAdminAuth, async (req, res) => {
   }
   invalidateSettingsCache();
   res.json({ success: true });
+});
+
+app.get('/api/admin/b2/get-upload-url', checkAdminAuth, async (req, res) => {
+  try {
+    const auth = await authorizeB2();
+    const upUrlRes = await fetch(`${auth.apiUrl}/b2api/v2/b2_get_upload_url`, {
+      method: 'POST',
+      headers: {
+        Authorization: auth.authorizationToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ bucketId: '9313a270bec3162ba02c0f10' })
+    });
+    if (!upUrlRes.ok) {
+      return res.status(500).json({ error: 'Failed to get upload credentials from B2' });
+    }
+    const upInfo = await upUrlRes.json();
+    res.json({
+      success: true,
+      uploadUrl: upInfo.uploadUrl,
+      authorizationToken: upInfo.authorizationToken
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/admin/b2/upload', checkAdminAuth, express.json({ limit: '35mb' }), async (req, res) => {

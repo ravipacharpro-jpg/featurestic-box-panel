@@ -1724,6 +1724,7 @@
           <select id="m-pkg-preset" onchange="onGamePresetChange()" style="margin-bottom:8px">
             <option value="">Auto-Bind on 1st Run / Any Game</option>
             <option value="com.pubg.imobile">BGMI (com.pubg.imobile)</option>
+            <option value="com.krafton.bgmilite">BGMI Lite (com.krafton.bgmilite)</option>
             <option value="com.tencent.ig">PUBG Global (com.tencent.ig)</option>
             <option value="com.pubg.krmobile">PUBG KR (com.pubg.krmobile)</option>
             <option value="com.vng.pubgmobile">PUBG VN (com.vng.pubgmobile)</option>
@@ -1731,6 +1732,27 @@
           </select>
           <input type="text" id="m-pkg" placeholder="Auto-binds on 1st loader run if left empty">
         </div>
+
+        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label class="form-label" style="margin:0;font-weight:600">Primary .so (SO Slot 1)</label>
+            <div>
+              <input type="file" id="file-create-so" accept=".so" style="display:none" onchange="handleDirectUpload(this, 'm-plugin-url', 'prog-create-so')">
+              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-create-so').click()">Choose .so</button>
+            </div>
+          </div>
+          <input type="text" id="m-plugin-url" placeholder="https://github.com/.../libmain.so or uploaded URL">
+          <div id="prog-create-so" style="display:none;margin-top:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
+              <span class="prog-text">Uploading...</span>
+              <span class="prog-pct">0%</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="form-group">
           <label class="form-label">Note / Reference</label>
           <input type="text" id="m-note" placeholder="Memo for internal records">
@@ -1739,6 +1761,121 @@
       <div class="modal-foot">
         <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
         <button class="btn btn-primary" id="btn-create-submit" onclick="createKeys()">Generate</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Key & Configure Plugins -->
+  <div class="modal-backdrop" id="modal-edit-key">
+    <div class="modal-box" style="max-width:560px">
+      <div class="modal-head">
+        <div class="modal-title">Edit License Key and Plugins</div>
+        <button class="modal-close" onclick="closeEditKeyModal()">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="ek-id">
+        
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label">License Key</label>
+            <input type="text" id="ek-key" readonly style="font-family:var(--font-mono);opacity:0.85">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Loaders Quota</label>
+            <input type="number" id="ek-loaders" min="0" placeholder="0 = Unlimited">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Authorized Game Packages (Comma separated or * for any)</label>
+          <input type="text" id="ek-packages" placeholder="e.g. com.rdx.loader, com.krafton.bgmilite, com.pubg.imobile">
+          <div class="form-hint">Controls which games or loaders are permitted to connect with this key.</div>
+        </div>
+
+        <!-- SO SLOT 1 -->
+        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label class="form-label" style="margin:0;font-weight:600">Primary .so (SO Slot 1 / Main Mod)</label>
+            <div>
+              <input type="file" id="file-ek-so1" accept=".so" style="display:none" onchange="handleDirectUpload(this, 'ek-so1', 'prog-ek-so1')">
+              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-ek-so1').click()">Choose .so</button>
+            </div>
+          </div>
+          <input type="text" id="ek-so1" placeholder="https://github.com/.../libmain.so or uploaded URL">
+          <div id="prog-ek-so1" style="display:none;margin-top:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
+              <span class="prog-text">Uploading...</span>
+              <span class="prog-pct">0%</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SO SLOT 2 -->
+        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label class="form-label" style="margin:0;font-weight:600">Secondary .so (SO Slot 2 / Engine / Offset)</label>
+            <div>
+              <input type="file" id="file-ek-so2" accept=".so" style="display:none" onchange="handleDirectUpload(this, 'ek-so2', 'prog-ek-so2')">
+              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-ek-so2').click()">Choose .so</button>
+            </div>
+          </div>
+          <input type="text" id="ek-so2" placeholder="Optional second .so link or upload">
+          <div id="prog-ek-so2" style="display:none;margin-top:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
+              <span class="prog-text">Uploading...</span>
+              <span class="prog-pct">0%</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SOC SLOT 1 -->
+        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label class="form-label" style="margin:0;font-weight:600">Primary SOC (SOC Slot 1 / soc64 Daemon)</label>
+            <div>
+              <input type="file" id="file-ek-soc1" style="display:none" onchange="handleDirectUpload(this, 'ek-soc1', 'prog-ek-soc1')">
+              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-ek-soc1').click()">Choose .soc</button>
+            </div>
+          </div>
+          <input type="text" id="ek-soc1" placeholder="Optional soc64 binary URL or upload">
+          <div id="prog-ek-soc1" style="display:none;margin-top:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
+              <span class="prog-text">Uploading...</span>
+              <span class="prog-pct">0%</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label">SO Load Delay (ms)</label>
+            <input type="number" id="ek-delay" min="0" max="10000" step="100" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">APK Update URL (Optional)</label>
+            <input type="text" id="ek-apk" placeholder="https://example.com/update.apk">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Note / Buyer Reference</label>
+          <input type="text" id="ek-note" placeholder="Memo for this license key">
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeEditKeyModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveKeyEdits()">Save Changes</button>
       </div>
     </div>
   </div>
@@ -2324,9 +2461,9 @@
     let _allClients = [];
 
     function copyBuyerDelivery(key, owner, duration, pkgs) {
-      const msg = `✅ YOUR FEATURESTIC SDK LICENSE KEY\n━━━━━━━━━━━━━━━━━━━━\n🔑 Key: ${key}\n👤 Owner: ${owner ? '@' + owner : 'Direct Buyer'}\n📦 Bound Package: ${pkgs || 'Auto-bind on first launch'}\n⏳ Validity: ${duration} Days\n🌐 Client Dashboard: https://featurestic-box-panel.vercel.app\n━━━━━━━━━━━━━━━━━━━━\n⚠️ Keep your license key private.`;
+      const msg = `YOUR FEATURESTIC SDK LICENSE KEY\n------------------------------------\nKey: ${key}\nOwner: ${owner ? '@' + owner : 'Direct Buyer'}\nBound Package: ${pkgs || 'Auto-bind on first launch'}\nValidity: ${duration} Days\nClient Dashboard: https://featurestic-box-panel.vercel.app\n------------------------------------\nKeep your license key private.`;
       copyPlain(msg);
-      toast('Buyer delivery message copied to clipboard!');
+      toast('Buyer delivery message copied to clipboard');
     }
 
     function filterKeysTable() {
@@ -2381,7 +2518,8 @@
           <td style="color:var(--text-3);font-size:12px">${fmtDate(k.expires_at)}</td>
           <td>
             <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
-              <button class="btn btn-ghost" style="padding:3px 7px;font-size:11px;color:var(--primary)" onclick="copyBuyerDelivery('${k.user_key}', '${esc(k.client_username || '')}', '${k.duration_days}', '${esc(pkgs.join(', ') || '')}')" title="Copy ready-to-send Telegram message">📋 Info</button>
+              <button class="btn btn-primary" style="padding:4px 8px;font-size:11px" onclick="openEditKeyModal(${k.id})">Edit</button>
+              <button class="btn btn-ghost" style="padding:3px 7px;font-size:11px;color:var(--primary)" onclick="copyBuyerDelivery('${k.user_key}', '${esc(k.client_username || '')}', '${k.duration_days}', '${esc(pkgs.join(', ') || '')}')" title="Copy ready-to-send Telegram message">Info</button>
               <button class="btn btn-ghost" style="padding:3px 7px;font-size:11px;color:var(--apple-green);border-color:rgba(0,255,136,0.3)" onclick="extendKeyExpiry(${k.id}, 7)" title="Add +7 Days Validity">+7d</button>
               <button class="btn btn-ghost" style="padding:3px 7px;font-size:11px;color:var(--apple-green);border-color:rgba(0,255,136,0.3)" onclick="extendKeyExpiry(${k.id}, 30)" title="Add +30 Days Validity">+30d</button>
               <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="toggleBan(${k.id})">${k.status === 'active' ? 'Pause' : 'Resume'}</button>
@@ -2437,10 +2575,147 @@
     async function extendKeyExpiry(id, days) {
       const res = await api('/api/admin/keys/extend', 'POST', { id, days });
       if (res && res.success) {
-        toast(`Key validity extended by +${days} days!`);
+        toast(`Key validity extended by +${days} days`);
         loadKeys();
       } else {
         toast(res?.error || 'Failed to extend key expiry', 'error');
+      }
+    }
+
+    function openEditKeyModal(id) {
+      const key = _allKeys.find(k => k.id === id);
+      if (!key) return toast('Key not found', 'error');
+
+      document.getElementById('ek-id').value = key.id;
+      document.getElementById('ek-key').value = key.user_key;
+      document.getElementById('ek-loaders').value = key.max_loaders === 0 ? 0 : (key.max_loaders || 1);
+      
+      let bound = [];
+      try { bound = JSON.parse(key.bound_packages || '[]'); } catch(e) { bound = []; }
+      document.getElementById('ek-packages').value = bound.join(', ');
+
+      let pkgConfigs = [];
+      try { pkgConfigs = JSON.parse(key.package_configs || '[]'); } catch(e) { pkgConfigs = []; }
+      const primarySlot = pkgConfigs[0] || {};
+
+      document.getElementById('ek-so1').value = primarySlot.plugin_url || key.plugin_url || '';
+      document.getElementById('ek-so2').value = primarySlot.plugin_url_2 || '';
+      document.getElementById('ek-soc1').value = primarySlot.soc_url || '';
+      document.getElementById('ek-delay').value = primarySlot.delay_ms || 0;
+      document.getElementById('ek-apk').value = primarySlot.update_apk_url || key.update_apk_url || '';
+      document.getElementById('ek-note').value = key.note || '';
+
+      document.getElementById('modal-edit-key').classList.add('open');
+    }
+
+    function closeEditKeyModal() {
+      document.getElementById('modal-edit-key').classList.remove('open');
+    }
+
+    async function saveKeyEdits() {
+      const id = document.getElementById('ek-id').value;
+      if (!id) return;
+
+      const loaders = parseInt(document.getElementById('ek-loaders').value) || 0;
+      const rawPackages = (document.getElementById('ek-packages').value || '').trim();
+      const boundArr = rawPackages 
+        ? rawPackages.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
+      
+      const so1 = (document.getElementById('ek-so1').value || '').trim();
+      const so2 = (document.getElementById('ek-so2').value || '').trim();
+      const soc1 = (document.getElementById('ek-soc1').value || '').trim();
+      const delay = parseInt(document.getElementById('ek-delay').value) || 0;
+      const apk = (document.getElementById('ek-apk').value || '').trim();
+      const note = (document.getElementById('ek-note').value || '').trim();
+
+      const payload = {
+        max_loaders: loaders,
+        bound_packages: boundArr,
+        plugin_url: so1,
+        plugin_url_2: so2,
+        soc_url: soc1,
+        delay_ms: delay,
+        update_apk_url: apk,
+        note: note
+      };
+
+      const res = await api(`/api/admin/keys/${id}/edit`, 'POST', payload);
+      if (res && res.success) {
+        toast('Key details and plugins updated successfully');
+        closeEditKeyModal();
+        loadKeys();
+      } else {
+        toast(res?.error || 'Failed to update key', 'error');
+      }
+    }
+
+    async function handleDirectUpload(inputEl, targetInputId, progressContainerId) {
+      const file = inputEl.files && inputEl.files[0];
+      if (!file) return;
+
+      const progContainer = document.getElementById(progressContainerId);
+      const progText = progContainer ? progContainer.querySelector('.prog-text') : null;
+      const progPct = progContainer ? progContainer.querySelector('.prog-pct') : null;
+      const progBar = progContainer ? progContainer.querySelector('.prog-bar') : null;
+
+      if (progContainer) progContainer.style.display = 'block';
+      if (progText) progText.textContent = 'Requesting storage upload...';
+      if (progPct) progPct.textContent = '0%';
+      if (progBar) progBar.style.width = '0%';
+
+      try {
+        const tokenRes = await api('/api/admin/b2/get-upload-url');
+        if (!tokenRes || !tokenRes.uploadUrl || !tokenRes.authorizationToken) {
+          throw new Error('Could not obtain storage upload token');
+        }
+
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const b2FileName = `plugins/${Date.now()}_${safeName}`;
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', tokenRes.uploadUrl, true);
+        xhr.setRequestHeader('Authorization', tokenRes.authorizationToken);
+        xhr.setRequestHeader('X-Bz-File-Name', encodeURIComponent(b2FileName).replace(/%2F/g, '/'));
+        xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+        xhr.setRequestHeader('X-Bz-Content-Sha1', 'do_not_verify');
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            if (progPct) progPct.textContent = percent + '%';
+            if (progBar) progBar.style.width = percent + '%';
+            if (progText) {
+              const loadedMb = (e.loaded / (1024 * 1024)).toFixed(1);
+              const totalMb = (e.total / (1024 * 1024)).toFixed(1);
+              progText.textContent = `Uploading ${file.name} (${loadedMb} / ${totalMb} MB)...`;
+            }
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const publicUrl = `https://featurestic-box-panel.vercel.app/api/public/b2-file?name=${encodeURIComponent(b2FileName)}`;
+            const targetInput = document.getElementById(targetInputId);
+            if (targetInput) targetInput.value = publicUrl;
+            if (progPct) progPct.textContent = '100%';
+            if (progBar) progBar.style.width = '100%';
+            if (progText) progText.textContent = 'Upload complete: ' + file.name;
+            toast('File uploaded successfully: ' + file.name);
+          } else {
+            throw new Error('Upload HTTP status ' + xhr.status);
+          }
+        };
+
+        xhr.onerror = () => {
+          if (progText) progText.textContent = 'Upload failed due to network error';
+          toast('File upload failed', 'error');
+        };
+
+        xhr.send(file);
+      } catch (err) {
+        if (progText) progText.textContent = 'Upload error: ' + err.message;
+        toast('Upload failed: ' + err.message, 'error');
       }
     }
 
