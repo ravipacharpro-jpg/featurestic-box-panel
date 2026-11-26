@@ -2687,6 +2687,7 @@
       const so2 = (document.getElementById('ek-so2').value || '').trim();
       const soc1 = (document.getElementById('ek-soc1').value || '').trim();
       const delay = parseInt(document.getElementById('ek-delay').value) || 0;
+      const note = (document.getElementById('ek-note')?.value || '').trim();
       const payload = {
         max_loaders: loaders,
         bound_packages: boundArr,

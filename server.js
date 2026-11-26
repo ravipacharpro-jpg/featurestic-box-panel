@@ -6,7 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import { sql, initDb } from './src/db.js';
-import { uploadToB2, getSignedDownloadUrl } from './src/b2.js';
+import { uploadToB2, getSignedDownloadUrl, authorizeB2 } from './src/b2.js';
 
 dotenv.config();
 
