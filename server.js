@@ -1698,7 +1698,8 @@ app.post('/api/admin/clean-production', checkAdminAuth, async (req, res) => {
     // 3. Clear crashes, logs, devices, and referrals
     await sql`DELETE FROM crash_reports`;
     await sql`DELETE FROM system_logs`;
-    await sql`DELETE FROM sdk_devices WHERE user_key != 'RDXLOADER01'`;
+    await sql`DELETE FROM sdk_devices`;
+    await sql`UPDATE license_keys SET unique_devices = 0 WHERE user_key = 'RDXLOADER01'`;
     await sql`DELETE FROM referral_codes`;
 
     invalidateKeysCache();
