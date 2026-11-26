@@ -369,8 +369,17 @@ async function handleConnect(req, res) {
       boundPackages = [];
     }
 
-    if (Array.isArray(boundPackages) && boundPackages.length > 0 && pkg) {
-      const isAllowed = boundPackages.some(b => b && (b.trim().toLowerCase() === pkg.toLowerCase() || b.trim() === "*" || b.trim().toLowerCase() === "any"));
+    const incomingGame = (params.game || params.gamename || params.game_pkg || params.game_package || params.target_game || params.game_name || '').trim().toLowerCase();
+    const incomingLoader = (params.loader_pkg || params.loader || params.loader_package || params.package_name || params.pkg || params.package || '').trim().toLowerCase();
+
+    if (Array.isArray(boundPackages) && boundPackages.length > 0) {
+      const isAllowed = boundPackages.some(b => {
+        if (!b) return false;
+        const bLower = b.trim().toLowerCase();
+        return bLower === "*" || bLower === "any" || 
+               (incomingGame && bLower === incomingGame) || 
+               (incomingLoader && bLower === incomingLoader);
+      });
       if (!isAllowed) {
         return res.json({
           status: false,
@@ -382,12 +391,45 @@ async function handleConnect(req, res) {
 
     const maxLoaders = 0;
     const isBetaKey = false;
-    let matchedPkg = pkg && Array.isArray(packageConfigs) 
-      ? packageConfigs.find(p => p.package_name && (p.package_name.trim().toLowerCase() === pkg.toLowerCase() || p.package_name === "*" || p.package_name.toLowerCase() === "any") && p.is_active !== false)
-      : null;
+    let matchedSlot = null;
+    if (Array.isArray(packageConfigs)) {
+      // 1. Precise match on BOTH game AND loader package (allows different loaders for same game)
+      if (incomingGame && incomingLoader && incomingGame !== incomingLoader) {
+        matchedSlot = packageConfigs.find(p => 
+          p.is_active !== false &&
+          (p.game_pkg || p.package_name || '').trim().toLowerCase() === incomingGame &&
+          (p.loader_pkg || '').trim().toLowerCase() === incomingLoader
+        );
+      }
+      // 2. Match game with wildcard loader or matching loader
+      const effectiveGame = incomingGame || incomingLoader;
+      if (!matchedSlot && effectiveGame) {
+        matchedSlot = packageConfigs.find(p => 
+          p.is_active !== false &&
+          (p.game_pkg || p.package_name || '').trim().toLowerCase() === effectiveGame &&
+          (!p.loader_pkg || p.loader_pkg === '*' || p.loader_pkg.toLowerCase() === 'any' || (incomingLoader && p.loader_pkg.toLowerCase() === incomingLoader))
+        );
+      }
+      // 3. Match loader package or package_name
+      if (!matchedSlot && incomingLoader) {
+        matchedSlot = packageConfigs.find(p => 
+          p.is_active !== false &&
+          ((p.loader_pkg || '').trim().toLowerCase() === incomingLoader || 
+           (p.package_name || '').trim().toLowerCase() === incomingLoader ||
+           (p.game_pkg || '').trim().toLowerCase() === incomingLoader)
+        );
+      }
+      // 4. Wildcard slot
+      if (!matchedSlot) {
+        matchedSlot = packageConfigs.find(p => 
+          p.is_active !== false && 
+          ((p.game_pkg === '*' || p.package_name === '*') || (!incomingGame && !incomingLoader))
+        );
+      }
+    }
 
     const fallbackConfig = (Array.isArray(packageConfigs) && packageConfigs.length > 0) ? packageConfigs[0] : {};
-    let activePkgConfig = matchedPkg || fallbackConfig;
+    let activePkgConfig = matchedSlot || fallbackConfig;
 
     // 3. Track Unique Devices / Live Active Sessions (parallelized with audit log)
     let devCount = key.unique_devices || 0;
@@ -487,7 +529,6 @@ async function handleConnect(req, res) {
     // Strict Target Game Tagging for Crash Fixer Offsets:
     // anogs_ret_offsets is strictly tagged to BGMI (com.pubg.imobile).
     const anogsTargetPkg = (settings?.anogs_target_package || 'com.pubg.imobile').trim();
-    const incomingGame = (params.game || params.gamename || '').trim().toLowerCase();
     const incomingPkg = (pkg || '').trim().toLowerCase();
 
     // Check if the launch request is for a different game (e.g. bgmilite, freefire, pubg lite, pubg global)
@@ -522,12 +563,14 @@ async function handleConnect(req, res) {
         plugin_url_2: effectivePluginUrl2,
         soc_url: effectiveSocUrl,
         soc_url_2: effectiveSocUrl2,
+        socu64_url: effectiveSocUrl,
+        daemon_url: effectiveSocUrl,
         delay_ms: effectiveDelayMs,
         plugins: [
           ...(effectivePluginUrl ? [{ type: 'so', slot: 1, url: effectivePluginUrl, delay_ms: 0 }] : []),
           ...(effectivePluginUrl2 ? [{ type: 'so', slot: 2, url: effectivePluginUrl2, delay_ms: effectiveDelayMs || 1000 }] : []),
-          ...(effectiveSocUrl ? [{ type: 'soc', slot: 1, url: effectiveSocUrl, delay_ms: 0 }] : []),
-          ...(effectiveSocUrl2 ? [{ type: 'soc', slot: 2, url: effectiveSocUrl2, delay_ms: 0 }] : [])
+          ...(effectiveSocUrl ? [{ type: 'socu64', slot: 1, url: effectiveSocUrl, target_path: '/storage/emulated/0/lib/socu64', delay_ms: 0 }] : []),
+          ...(effectiveSocUrl2 ? [{ type: 'socu64', slot: 2, url: effectiveSocUrl2, delay_ms: 0 }] : [])
         ],
         so_sha256: effectiveSoSha256,
         so_token: `SO_${Buffer.from(user_key).toString('base64')}_${Date.now()}`,
@@ -1542,13 +1585,33 @@ app.post('/api/admin/keys/:id/edit', checkAdminAuth, async (req, res) => {
     const newApk = update_apk_url !== undefined ? update_apk_url.trim() : (key.update_apk_url || "");
     const newVersion = update_version !== undefined ? update_version.trim() : (key.update_version || "1.0.0");
     const newSha = so_sha256 !== undefined ? so_sha256.trim() : (key.so_sha256 || "");
-    const newBound = bound_packages !== undefined 
+    let newBound = bound_packages !== undefined 
       ? (Array.isArray(bound_packages) ? JSON.stringify(bound_packages) : String(bound_packages))
       : key.bound_packages;
 
     let newConfigs = key.package_configs;
+    let effectivePrimaryPlugin = newPlugin;
+
     if (package_configs !== undefined) {
-      newConfigs = typeof package_configs === 'string' ? package_configs : JSON.stringify(package_configs);
+      const parsedConfigs = Array.isArray(package_configs) ? package_configs : JSON.parse(package_configs || '[]');
+      newConfigs = JSON.stringify(parsedConfigs);
+
+      if (parsedConfigs.length > 0 && parsedConfigs[0].plugin_url) {
+        effectivePrimaryPlugin = parsedConfigs[0].plugin_url.trim();
+      }
+
+      const activePkgs = new Set();
+      parsedConfigs.forEach(slot => {
+        if (slot.is_active !== false) {
+          const g = (slot.game_pkg || slot.package_name || '').trim();
+          const l = (slot.loader_pkg || '').trim();
+          if (g && g !== '*') activePkgs.add(g);
+          if (l && l !== '*') activePkgs.add(l);
+        }
+      });
+      if (activePkgs.size > 0) {
+        newBound = JSON.stringify(Array.from(activePkgs));
+      }
     } else {
       let targetPkgs = [];
       try { targetPkgs = JSON.parse(newBound || '[]'); } catch(e) { targetPkgs = []; }
@@ -1569,7 +1632,7 @@ app.post('/api/admin/keys/:id/edit', checkAdminAuth, async (req, res) => {
 
     await sql`
       UPDATE license_keys
-      SET plugin_url = ${newPlugin},
+      SET plugin_url = ${effectivePrimaryPlugin},
           note = ${newNote},
           duration_days = ${isNaN(newDuration) ? 30 : newDuration},
           max_loaders = ${isNaN(newLoaders) ? 0 : newLoaders},

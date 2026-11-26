@@ -1018,6 +1018,182 @@
       font-weight: 600;
       box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
     }
+
+    /* Apple Action Cluster & Floating Menu */
+    .apple-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+    }
+    .apple-btn-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-1);
+      cursor: pointer;
+      transition: all 0.15s var(--ease);
+      user-select: none;
+      white-space: nowrap;
+    }
+    .apple-btn-action:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+    .apple-btn-action:active {
+      transform: scale(0.96);
+    }
+    .apple-btn-action.edit-btn {
+      color: var(--primary);
+      background: rgba(183, 255, 0, 0.08);
+      border-color: rgba(183, 255, 0, 0.25);
+    }
+    .apple-btn-action.pause-btn {
+      color: var(--apple-orange);
+      background: rgba(250, 204, 21, 0.08);
+      border-color: rgba(250, 204, 21, 0.25);
+    }
+    .apple-btn-action.resume-btn {
+      color: var(--status-success);
+      background: rgba(85, 214, 107, 0.08);
+      border-color: rgba(85, 214, 107, 0.25);
+    }
+    .apple-btn-more {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-2);
+      cursor: pointer;
+      transition: all 0.15s var(--ease);
+    }
+    .apple-btn-more:hover,
+    .apple-btn-more.active {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.25);
+      color: var(--text-1);
+    }
+    .apple-dropdown-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      min-width: 190px;
+      padding: 6px;
+      background: rgba(18, 24, 18, 0.94);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 1px rgba(255, 255, 255, 0.2) inset;
+      z-index: 999;
+      animation: appleMenuIn 0.15s var(--ease);
+    }
+    .apple-dropdown-menu.show {
+      display: block;
+    }
+    @keyframes appleMenuIn {
+      from { opacity: 0; transform: scale(0.94) translateY(-4px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .apple-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+      color: var(--text-1);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.12s ease;
+    }
+    .apple-menu-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #FFFFFF;
+    }
+    .apple-menu-item.danger {
+      color: var(--apple-red);
+    }
+    .apple-menu-item.danger:hover {
+      background: rgba(239, 68, 68, 0.14);
+      color: #FF6B6B;
+    }
+    .apple-menu-icon {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.85;
+      flex-shrink: 0;
+    }
+    .apple-menu-separator {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      margin: 4px 6px;
+    }
+
+    /* Slot Cards in Edit Key Modal */
+    .slot-card {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      transition: all 0.15s var(--ease);
+    }
+    .slot-card:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+    .slot-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .slot-card-title {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .slot-card-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: var(--text-3);
+    }
+    .slot-tag {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+    }
   </style>
 </head>
 <body>
@@ -1595,7 +1771,7 @@
             <div class="tbl-wrap">
               <table>
                 <thead>
-                  <tr><th>Package Name</th><th>Status</th><th>.so Payloads</th><th>.soc Files</th><th>Delay</th><th>Actions</th></tr>
+                  <tr><th>Package Name</th><th>Status</th><th>.so Payloads</th><th>socu64 Daemon</th><th>Delay</th><th>Actions</th></tr>
                 </thead>
                 <tbody id="cl-packages-body">
                   <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-3)">Loading package slots…</td></tr>
@@ -1724,97 +1900,15 @@
             <input type="number" id="m-dur" value="30" min="1" max="3650">
           </div>
           <div class="form-group">
-            <label class="form-label">Max Loaders Quota</label>
+            <label class="form-label">Max Slots Quota</label>
             <input type="number" id="m-loaders" value="1" min="0">
-            <div class="form-hint">0 = Unlimited</div>
+            <div class="form-hint">0 = Unlimited Slots</div>
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label">Custom SDK Key (Optional)</label>
-          <input type="text" id="m-custom-key" placeholder="Type custom key (e.g. FBVX-X9R2M7K4Q8) or leave empty to auto-generate">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Authorized Game Packages</label>
-          <div class="pkg-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-            <button type="button" class="pkg-chip" data-pkg="com.pubg.imobile" onclick="togglePkgChip(this, 'm-packages')">BGMI</button>
-            <button type="button" class="pkg-chip" data-pkg="com.krafton.bgmilite" onclick="togglePkgChip(this, 'm-packages')">BGMI Lite</button>
-            <button type="button" class="pkg-chip" data-pkg="com.tencent.ig" onclick="togglePkgChip(this, 'm-packages')">PUBG Global</button>
-            <button type="button" class="pkg-chip" data-pkg="com.pubg.krmobile" onclick="togglePkgChip(this, 'm-packages')">PUBG KR</button>
-            <button type="button" class="pkg-chip" data-pkg="com.vng.pubgmobile" onclick="togglePkgChip(this, 'm-packages')">PUBG VN</button>
-            <button type="button" class="pkg-chip" data-pkg="com.rekoo.pubgm" onclick="togglePkgChip(this, 'm-packages')">PUBG TW</button>
-            <button type="button" class="pkg-chip" data-pkg="*" onclick="togglePkgChip(this, 'm-packages')">All Games (*)</button>
-          </div>
-          <input type="text" id="m-packages" placeholder="Leave empty for auto-bind on 1st run, or tap games above" oninput="syncPkgChips('m-packages')">
-          <div class="form-hint">Tap preset buttons above to select games or type custom package names.</div>
-        </div>
-
-        <!-- SO SLOT 1 -->
-        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <label class="form-label" style="margin:0;font-weight:600">Primary .so (SO Slot 1 / Main Mod)</label>
-            <div>
-              <input type="file" id="file-create-so1" accept=".so" style="display:none" onchange="handleDirectUpload(this, 'm-so1', 'prog-create-so1')">
-              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-create-so1').click()">Choose .so</button>
-            </div>
-          </div>
-          <input type="text" id="m-so1" placeholder="https://github.com/.../libmain.so or uploaded URL">
-          <div id="prog-create-so1" style="display:none;margin-top:6px">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
-              <span class="prog-text">Uploading...</span>
-              <span class="prog-pct">0%</span>
-            </div>
-            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
-              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SO SLOT 2 -->
-        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <label class="form-label" style="margin:0;font-weight:600">Secondary .so (SO Slot 2 / Engine / Offset)</label>
-            <div>
-              <input type="file" id="file-create-so2" accept=".so" style="display:none" onchange="handleDirectUpload(this, 'm-so2', 'prog-create-so2')">
-              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-create-so2').click()">Choose .so</button>
-            </div>
-          </div>
-          <input type="text" id="m-so2" placeholder="Optional second .so link or upload">
-          <div id="prog-create-so2" style="display:none;margin-top:6px">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
-              <span class="prog-text">Uploading...</span>
-              <span class="prog-pct">0%</span>
-            </div>
-            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
-              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SOC SLOT 1 -->
-        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <label class="form-label" style="margin:0;font-weight:600">Primary SOC (SOC Slot 1 / soc64 Daemon)</label>
-            <div>
-              <input type="file" id="file-create-soc1" style="display:none" onchange="handleDirectUpload(this, 'm-soc1', 'prog-create-soc1')">
-              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-create-soc1').click()">Choose .soc</button>
-            </div>
-          </div>
-          <input type="text" id="m-soc1" placeholder="Optional soc64 binary URL or upload">
-          <div id="prog-create-soc1" style="display:none;margin-top:6px">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
-              <span class="prog-text">Uploading...</span>
-              <span class="prog-pct">0%</span>
-            </div>
-            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
-              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">SO Load Delay (ms)</label>
-          <input type="number" id="m-delay" min="0" max="10000" step="100" placeholder="0">
+          <input type="text" id="m-custom-key" placeholder="Type custom key or leave empty to auto-generate">
         </div>
 
         <div class="form-group">
@@ -1824,16 +1918,16 @@
       </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-primary" id="btn-create-submit" onclick="createKeys()">Generate</button>
+        <button class="btn btn-primary" id="btn-create-submit" onclick="createKeys()">Generate Key</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal: Edit Key & Configure Plugins -->
+  <!-- Modal: Edit Key & Configure Slots -->
   <div class="modal-backdrop" id="modal-edit-key">
-    <div class="modal-box" style="max-width:560px">
+    <div class="modal-box" style="max-width:620px">
       <div class="modal-head">
-        <div class="modal-title">Edit License Key and Plugins</div>
+        <div class="modal-title">Edit License Key and Slots</div>
         <button class="modal-close" onclick="closeEditKeyModal()">
           <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -1841,108 +1935,167 @@
       <div class="modal-body">
         <input type="hidden" id="ek-id">
         
-        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
-          <div class="form-group">
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:14px">
+          <div class="form-group" style="margin-bottom:0">
             <label class="form-label">License Key</label>
-            <input type="text" id="ek-key" readonly style="font-family:var(--font-mono);opacity:0.85">
+            <div style="display:flex;gap:6px;align-items:center">
+              <input type="text" id="ek-key" readonly style="font-family:var(--font-mono);font-weight:600">
+              <button type="button" class="btn btn-ghost" style="padding:7px 10px;font-size:11px" onclick="copyPlain(document.getElementById('ek-key').value)">Copy</button>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Loaders Quota</label>
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Max Slots Quota</label>
             <input type="number" id="ek-loaders" min="0" placeholder="0 = Unlimited">
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Authorized Game Packages</label>
-          <div class="pkg-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-            <button type="button" class="pkg-chip" data-pkg="com.pubg.imobile" onclick="togglePkgChip(this, 'ek-packages')">BGMI</button>
-            <button type="button" class="pkg-chip" data-pkg="com.krafton.bgmilite" onclick="togglePkgChip(this, 'ek-packages')">BGMI Lite</button>
-            <button type="button" class="pkg-chip" data-pkg="com.tencent.ig" onclick="togglePkgChip(this, 'ek-packages')">PUBG Global</button>
-            <button type="button" class="pkg-chip" data-pkg="com.pubg.krmobile" onclick="togglePkgChip(this, 'ek-packages')">PUBG KR</button>
-            <button type="button" class="pkg-chip" data-pkg="com.vng.pubgmobile" onclick="togglePkgChip(this, 'ek-packages')">PUBG VN</button>
-            <button type="button" class="pkg-chip" data-pkg="com.rekoo.pubgm" onclick="togglePkgChip(this, 'ek-packages')">PUBG TW</button>
-            <button type="button" class="pkg-chip" data-pkg="*" onclick="togglePkgChip(this, 'ek-packages')">All Games (*)</button>
-          </div>
-          <input type="text" id="ek-packages" placeholder="e.g. com.pubg.imobile, com.krafton.bgmilite" oninput="syncPkgChips('ek-packages')">
-          <div class="form-hint">Tap preset buttons above to select games or type custom package names.</div>
-        </div>
-
-        <!-- SO SLOT 1 -->
-        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <label class="form-label" style="margin:0;font-weight:600">Primary .so (SO Slot 1 / Main Mod)</label>
-            <div>
-              <input type="file" id="file-ek-so1" accept=".so" style="display:none" onchange="handleDirectUpload(this, 'ek-so1', 'prog-ek-so1')">
-              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-ek-so1').click()">Choose .so</button>
-            </div>
-          </div>
-          <input type="text" id="ek-so1" placeholder="https://github.com/.../libmain.so or uploaded URL">
-          <div id="prog-ek-so1" style="display:none;margin-top:6px">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
-              <span class="prog-text">Uploading...</span>
-              <span class="prog-pct">0%</span>
-            </div>
-            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
-              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SO SLOT 2 -->
-        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <label class="form-label" style="margin:0;font-weight:600">Secondary .so (SO Slot 2 / Engine / Offset)</label>
-            <div>
-              <input type="file" id="file-ek-so2" accept=".so" style="display:none" onchange="handleDirectUpload(this, 'ek-so2', 'prog-ek-so2')">
-              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-ek-so2').click()">Choose .so</button>
-            </div>
-          </div>
-          <input type="text" id="ek-so2" placeholder="Optional second .so link or upload">
-          <div id="prog-ek-so2" style="display:none;margin-top:6px">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
-              <span class="prog-text">Uploading...</span>
-              <span class="prog-pct">0%</span>
-            </div>
-            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
-              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- SOC SLOT 1 -->
-        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <label class="form-label" style="margin:0;font-weight:600">Primary SOC (SOC Slot 1 / soc64 Daemon)</label>
-            <div>
-              <input type="file" id="file-ek-soc1" style="display:none" onchange="handleDirectUpload(this, 'ek-soc1', 'prog-ek-soc1')">
-              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-ek-soc1').click()">Choose .soc</button>
-            </div>
-          </div>
-          <input type="text" id="ek-soc1" placeholder="Optional soc64 binary URL or upload">
-          <div id="prog-ek-soc1" style="display:none;margin-top:6px">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
-              <span class="prog-text">Uploading...</span>
-              <span class="prog-pct">0%</span>
-            </div>
-            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
-              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">SO Load Delay (ms)</label>
-          <input type="number" id="ek-delay" min="0" max="10000" step="100" placeholder="0">
-        </div>
-
-        <div class="form-group">
+        <div class="form-group" style="margin-bottom:16px">
           <label class="form-label">Note / Buyer Reference</label>
           <input type="text" id="ek-note" placeholder="Memo for this license key">
         </div>
+
+        <!-- CONFIGURED SLOTS SECTION -->
+        <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div>
+              <div style="font-weight:600;font-size:14px;color:var(--text-1)">Game & Loader Slots</div>
+              <div style="font-size:11px;color:var(--text-3)">Allows multiple loaders for the same game or different games independently</div>
+            </div>
+            <button type="button" class="btn btn-primary" style="padding:5px 12px;font-size:11px;font-weight:600" onclick="openSlotEditor(-1)">
+              + Create Slot
+            </button>
+          </div>
+
+          <!-- Slots Container -->
+          <div id="ek-slots-container">
+            <!-- Dynamic rendered slot cards -->
+          </div>
+        </div>
+
       </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" onclick="closeEditKeyModal()">Cancel</button>
         <button class="btn btn-primary" onclick="saveKeyEdits()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Create / Edit Slot -->
+  <div class="modal-backdrop" id="modal-slot-editor" style="z-index:1100">
+    <div class="modal-box" style="max-width:540px">
+      <div class="modal-head">
+        <div class="modal-title" id="slot-modal-title">Configure Game & Loader Slot</div>
+        <button class="modal-close" onclick="closeSlotEditor()">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="slot-edit-index" value="-1">
+
+        <!-- 1. Target Game Selection -->
+        <div class="form-group">
+          <label class="form-label">1. Target Game Package</label>
+          <div class="pkg-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+            <button type="button" class="pkg-chip" onclick="setSlotGamePreset('com.pubg.imobile')">BGMI</button>
+            <button type="button" class="pkg-chip" onclick="setSlotGamePreset('com.krafton.bgmilite')">BGMI Lite</button>
+            <button type="button" class="pkg-chip" onclick="setSlotGamePreset('com.tencent.ig')">PUBG Global</button>
+            <button type="button" class="pkg-chip" onclick="setSlotGamePreset('com.pubg.krmobile')">PUBG KR</button>
+            <button type="button" class="pkg-chip" onclick="setSlotGamePreset('com.vng.pubgmobile')">PUBG VN</button>
+            <button type="button" class="pkg-chip" onclick="setSlotGamePreset('com.rekoo.pubgm')">PUBG TW</button>
+            <button type="button" class="pkg-chip" onclick="setSlotGamePreset('*')">Any Game (*)</button>
+          </div>
+          <input type="text" id="slot-game-pkg" placeholder="e.g. com.pubg.imobile" oninput="syncSlotGameChips()">
+          <div class="form-hint">The target game this slot applies to.</div>
+        </div>
+
+        <!-- 2. Loader Package Name -->
+        <div class="form-group">
+          <label class="form-label">2. Loader App Package Name</label>
+          <input type="text" id="slot-loader-pkg" placeholder="e.g. com.rdx.loader (or * for any loader)">
+          <div class="form-hint">Allows different loaders for the same game to have their own separate .so and offsets.</div>
+        </div>
+
+        <!-- 3. Primary .so -->
+        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label class="form-label" style="margin:0;font-weight:600">Primary .so (SO Slot 1 / Main Mod)</label>
+            <div>
+              <input type="file" id="file-slot-so1" accept=".so" style="display:none" onchange="handleDirectUpload(this, 'slot-so1', 'prog-slot-so1')">
+              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-slot-so1').click()">Choose .so</button>
+            </div>
+          </div>
+          <input type="text" id="slot-so1" placeholder="https://github.com/.../libmain.so or uploaded URL">
+          <div id="prog-slot-so1" style="display:none;margin-top:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
+              <span class="prog-text">Uploading...</span>
+              <span class="prog-pct">0%</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Secondary .so -->
+        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label class="form-label" style="margin:0;font-weight:600">Secondary .so (SO Slot 2 / Engine / Offset)</label>
+            <div>
+              <input type="file" id="file-slot-so2" accept=".so" style="display:none" onchange="handleDirectUpload(this, 'slot-so2', 'prog-slot-so2')">
+              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-slot-so2').click()">Choose .so</button>
+            </div>
+          </div>
+          <input type="text" id="slot-so2" placeholder="Optional second .so link or upload">
+          <div id="prog-slot-so2" style="display:none;margin-top:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
+              <span class="prog-text">Uploading...</span>
+              <span class="prog-pct">0%</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Primary Daemon (socu64) -->
+        <div class="form-group" style="background:rgba(255,255,255,0.02);padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label class="form-label" style="margin:0;font-weight:600">socu64 Binary / Daemon</label>
+            <div>
+              <input type="file" id="file-slot-soc1" style="display:none" onchange="handleDirectUpload(this, 'slot-soc1', 'prog-slot-soc1')">
+              <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="document.getElementById('file-slot-soc1').click()">Choose socu64</button>
+            </div>
+          </div>
+          <input type="text" id="slot-soc1" placeholder="/storage/emulated/0/lib/socu64 or Direct Download URL">
+          <div id="prog-slot-soc1" style="display:none;margin-top:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:3px">
+              <span class="prog-text">Uploading...</span>
+              <span class="prog-pct">0%</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+              <div class="prog-bar" style="height:100%;width:0%;background:var(--primary);transition:width 0.15s"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group">
+            <label class="form-label">SO Load Delay (ms)</label>
+            <input type="number" id="slot-delay" min="0" max="10000" step="100" placeholder="0">
+          </div>
+          <div class="form-group" style="display:flex;flex-direction:column;justify-content:center">
+            <label class="form-label">Slot Status</label>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-1)">
+              <input type="checkbox" id="slot-active" checked style="width:16px;height:16px;accent-color:var(--primary)">
+              Active & Enabled
+            </label>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeSlotEditor()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSlotToKey()">Save Slot</button>
       </div>
     </div>
   </div>
@@ -1991,12 +2144,12 @@
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div class="form-group">
-            <label class="form-label">Primary SOC (SOC Slot 1 / soc64)</label>
-            <input type="text" id="pkg-input-soc" placeholder="https://.../soc64 (Optional)">
+            <label class="form-label">Primary Daemon (socu64 Binary)</label>
+            <input type="text" id="pkg-input-soc" placeholder="/storage/emulated/0/lib/socu64 or URL (Optional)">
           </div>
           <div class="form-group">
-            <label class="form-label">Secondary SOC (SOC Slot 2)</label>
-            <input type="text" id="pkg-input-soc2" placeholder="https://.../soc_sub (Optional)">
+            <label class="form-label">Secondary Daemon (Executable Binary)</label>
+            <input type="text" id="pkg-input-soc2" placeholder="/storage/emulated/0/lib/socu64_sub or URL (Optional)">
           </div>
         </div>
 
@@ -2561,9 +2714,22 @@
       tbody.innerHTML = list.length ? list.map(k => {
         let pkgs = [];
         try { pkgs = JSON.parse(k.bound_packages || '[]'); } catch(e) { pkgs = []; }
-        const pkgsHtml = pkgs.length
-          ? pkgs.map(p => `<span class="key-pill" style="margin-right:4px">${p}</span>`).join('')
-          : '<span style="color:var(--text-4)">Auto-bind on 1st run</span>';
+
+        let slots = [];
+        try { slots = JSON.parse(k.package_configs || '[]'); } catch(e) { slots = []; }
+
+        let pkgsHtml = '';
+        if (slots.length > 0) {
+          pkgsHtml = slots.map(s => {
+            const g = s.game_pkg || s.package_name || 'Game';
+            const l = s.loader_pkg && s.loader_pkg !== '*' ? ` (${s.loader_pkg})` : '';
+            return `<span class="slot-tag" style="margin:2px 3px 2px 0;display:inline-block">${esc(g)}${esc(l)}</span>`;
+          }).join('');
+        } else if (pkgs.length > 0) {
+          pkgsHtml = pkgs.map(p => `<span class="slot-tag" style="margin:2px 3px 2px 0;display:inline-block">${esc(p)}</span>`).join('');
+        } else {
+          pkgsHtml = '<span style="color:var(--text-4)">Auto-bind on 1st run</span>';
+        }
 
         return `<tr>
           <td>
@@ -2578,19 +2744,67 @@
           <td>${pkgsHtml}</td>
           <td style="color:var(--text-3);font-size:12px">${fmtDate(k.expires_at)}</td>
           <td>
-            <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
-              <button class="btn btn-primary" style="padding:4px 8px;font-size:11px" onclick="openEditKeyModal(${k.id})">Edit</button>
-              <button class="btn btn-ghost" style="padding:3px 7px;font-size:11px;color:var(--primary)" onclick="copyBuyerDelivery('${k.user_key}', '${esc(k.client_username || '')}', '${k.duration_days}', '${esc(pkgs.join(', ') || '')}')" title="Copy ready-to-send Telegram message">Info</button>
-              <button class="btn btn-ghost" style="padding:3px 7px;font-size:11px;color:var(--apple-green);border-color:rgba(0,255,136,0.3)" onclick="extendKeyExpiry(${k.id}, 7)" title="Add +7 Days Validity">+7d</button>
-              <button class="btn btn-ghost" style="padding:3px 7px;font-size:11px;color:var(--apple-green);border-color:rgba(0,255,136,0.3)" onclick="extendKeyExpiry(${k.id}, 30)" title="Add +30 Days Validity">+30d</button>
-              <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="toggleBan(${k.id})">${k.status === 'active' ? 'Pause' : 'Resume'}</button>
-              <button class="btn btn-ghost" style="padding:4px 8px;font-size:11px" onclick="resetPackages(${k.id})" title="Reset package locks">Reset</button>
-              <button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="delKey(${k.id})">Delete</button>
+            <div class="apple-actions">
+              <button class="apple-btn-action edit-btn" onclick="openEditKeyModal(${k.id})">Edit</button>
+              <button class="apple-btn-action ${k.status === 'active' ? 'pause-btn' : 'resume-btn'}" onclick="toggleBan(${k.id})">
+                ${k.status === 'active' ? 'Pause' : 'Resume'}
+              </button>
+              <div class="apple-menu-wrap" style="position:relative">
+                <button class="apple-btn-more" onclick="toggleRowMenu(event, ${k.id})" title="More Actions">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="5" cy="12" r="2.2"/>
+                    <circle cx="12" cy="12" r="2.2"/>
+                    <circle cx="19" cy="12" r="2.2"/>
+                  </svg>
+                </button>
+                <div class="apple-dropdown-menu" id="menu-${k.id}">
+                  <button class="apple-menu-item" onclick="closeAllRowMenus(); copyBuyerDelivery('${k.user_key}', '${esc(k.client_username || '')}', '${k.duration_days}', '${esc(pkgs.join(', ') || '')}')">
+                    <svg class="apple-menu-icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <span>Copy Delivery Info</span>
+                  </button>
+                  <button class="apple-menu-item" onclick="closeAllRowMenus(); extendKeyExpiry(${k.id}, 7)">
+                    <svg class="apple-menu-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Add +7 Days</span>
+                  </button>
+                  <button class="apple-menu-item" onclick="closeAllRowMenus(); extendKeyExpiry(${k.id}, 30)">
+                    <svg class="apple-menu-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Add +30 Days</span>
+                  </button>
+                  <button class="apple-menu-item" onclick="closeAllRowMenus(); resetPackages(${k.id})">
+                    <svg class="apple-menu-icon" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    <span>Reset Locks</span>
+                  </button>
+                  <div class="apple-menu-separator"></div>
+                  <button class="apple-menu-item danger" onclick="closeAllRowMenus(); delKey(${k.id})">
+                    <svg class="apple-menu-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <span>Delete Key</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </td>
         </tr>`;
       }).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-3)">No license keys found.</td></tr>';
     }
+
+    function toggleRowMenu(e, id) {
+      e.stopPropagation();
+      const menu = document.getElementById(`menu-${id}`);
+      const isShowing = menu && menu.classList.contains('show');
+      closeAllRowMenus();
+      if (menu && !isShowing) {
+        menu.classList.add('show');
+        const btn = e.currentTarget;
+        if (btn) btn.classList.add('active');
+      }
+    }
+
+    function closeAllRowMenus() {
+      document.querySelectorAll('.apple-dropdown-menu.show').forEach(m => m.classList.remove('show'));
+      document.querySelectorAll('.apple-btn-more.active').forEach(b => b.classList.remove('active'));
+    }
+
+    document.addEventListener('click', () => closeAllRowMenus());
 
     async function loadKeys(silent = false) {
       // Instant render from cache (0ms delay)
@@ -2643,6 +2857,8 @@
       }
     }
 
+    let _currentEditingSlots = [];
+
     function openEditKeyModal(id) {
       const key = _allKeys.find(k => k.id === id);
       if (!key) return toast('Key not found', 'error');
@@ -2650,23 +2866,176 @@
       document.getElementById('ek-id').value = key.id;
       document.getElementById('ek-key').value = key.user_key;
       document.getElementById('ek-loaders').value = key.max_loaders === 0 ? 0 : (key.max_loaders || 1);
-      
-      let bound = [];
-      try { bound = JSON.parse(key.bound_packages || '[]'); } catch(e) { bound = []; }
-      document.getElementById('ek-packages').value = bound.join(', ');
-      syncPkgChips('ek-packages');
-
-      let pkgConfigs = [];
-      try { pkgConfigs = JSON.parse(key.package_configs || '[]'); } catch(e) { pkgConfigs = []; }
-      const primarySlot = pkgConfigs[0] || {};
-
-      document.getElementById('ek-so1').value = primarySlot.plugin_url || key.plugin_url || '';
-      document.getElementById('ek-so2').value = primarySlot.plugin_url_2 || '';
-      document.getElementById('ek-soc1').value = primarySlot.soc_url || '';
-      document.getElementById('ek-delay').value = primarySlot.delay_ms || 0;
       document.getElementById('ek-note').value = key.note || '';
 
+      try {
+        _currentEditingSlots = JSON.parse(key.package_configs || '[]');
+        if (!Array.isArray(_currentEditingSlots)) _currentEditingSlots = [];
+      } catch(e) {
+        _currentEditingSlots = [];
+      }
+
+      // If legacy bound packages exist but slots is empty, synthesize initial slot
+      if (_currentEditingSlots.length === 0 && key.bound_packages) {
+        try {
+          const bound = JSON.parse(key.bound_packages || '[]');
+          if (Array.isArray(bound) && bound.length > 0) {
+            _currentEditingSlots = bound.map(p => ({
+              game_pkg: p,
+              loader_pkg: '*',
+              plugin_url: key.plugin_url || '',
+              plugin_url_2: '',
+              soc_url: '',
+              soc_url_2: '',
+              delay_ms: 0,
+              is_active: true
+            }));
+          }
+        } catch(e) {}
+      }
+
+      renderEditingSlots();
       document.getElementById('modal-edit-key').classList.add('open');
+    }
+
+    function renderEditingSlots() {
+      const container = document.getElementById('ek-slots-container');
+      if (!container) return;
+
+      if (_currentEditingSlots.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center;padding:24px;border:1px dashed rgba(255,255,255,0.12);border-radius:var(--radius-md);color:var(--text-3);font-size:12px">
+            No game & loader slots configured yet.<br>
+            <button type="button" class="btn btn-ghost" style="margin-top:10px;padding:5px 14px;font-size:11px;color:var(--primary)" onclick="openSlotEditor(-1)">+ Create First Slot</button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = _currentEditingSlots.map((slot, idx) => {
+        const game = slot.game_pkg || slot.package_name || 'All Games (*)';
+        const loader = slot.loader_pkg ? slot.loader_pkg : '*';
+        const so1Name = slot.plugin_url ? slot.plugin_url.split('/').pop() : 'None';
+        const so2Name = slot.plugin_url_2 ? slot.plugin_url_2.split('/').pop() : '';
+        const socName = slot.soc_url ? slot.soc_url.split('/').pop() : '';
+        const isActive = slot.is_active !== false;
+
+        return `
+          <div class="slot-card">
+            <div class="slot-card-head">
+              <div class="slot-card-title">
+                <span>${esc(game)}</span>
+                <span class="badge ${isActive ? 'badge-active' : 'badge-banned'}" style="font-size:10px;padding:2px 6px">
+                  ${isActive ? 'Active' : 'Disabled'}
+                </span>
+              </div>
+              <div style="display:flex;gap:5px">
+                <button type="button" class="btn btn-ghost" style="padding:3px 8px;font-size:11px" onclick="openSlotEditor(${idx})">Edit</button>
+                <button type="button" class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="removeEditingSlot(${idx})">Delete</button>
+              </div>
+            </div>
+            <div class="slot-card-tags">
+              <span class="slot-tag">Loader: ${esc(loader)}</span>
+              <span class="slot-tag">SO 1: ${esc(so1Name)}</span>
+              ${so2Name ? `<span class="slot-tag">SO 2: ${esc(so2Name)}</span>` : ''}
+              ${socName ? `<span class="slot-tag">socu64: ${esc(socName)}</span>` : ''}
+              ${slot.delay_ms ? `<span class="slot-tag">Delay: ${slot.delay_ms}ms</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openSlotEditor(idx) {
+      document.getElementById('slot-edit-index').value = idx;
+      const isNew = idx < 0;
+      document.getElementById('slot-modal-title').textContent = isNew ? 'Create New Slot' : `Edit Slot #${idx + 1}`;
+
+      const slot = !isNew ? _currentEditingSlots[idx] : {
+        game_pkg: 'com.pubg.imobile',
+        loader_pkg: 'com.rdx.loader',
+        plugin_url: '',
+        plugin_url_2: '',
+        soc_url: '',
+        delay_ms: 0,
+        is_active: true
+      };
+
+      document.getElementById('slot-game-pkg').value = slot.game_pkg || slot.package_name || '';
+      document.getElementById('slot-loader-pkg').value = slot.loader_pkg || '';
+      document.getElementById('slot-so1').value = slot.plugin_url || '';
+      document.getElementById('slot-so2').value = slot.plugin_url_2 || '';
+      document.getElementById('slot-soc1').value = slot.soc_url || '';
+      document.getElementById('slot-delay').value = slot.delay_ms || 0;
+      document.getElementById('slot-active').checked = slot.is_active !== false;
+
+      syncSlotGameChips();
+      document.getElementById('modal-slot-editor').classList.add('open');
+    }
+
+    function closeSlotEditor() {
+      document.getElementById('modal-slot-editor').classList.remove('open');
+    }
+
+    function setSlotGamePreset(pkg) {
+      document.getElementById('slot-game-pkg').value = pkg;
+      syncSlotGameChips();
+    }
+
+    function syncSlotGameChips() {
+      const current = (document.getElementById('slot-game-pkg')?.value || '').trim().toLowerCase();
+      document.querySelectorAll('#modal-slot-editor .pkg-chip').forEach(btn => {
+        const text = btn.textContent.toLowerCase();
+        const isMatch = (text === 'bgmi' && current === 'com.pubg.imobile') ||
+                        (text.includes('lite') && current === 'com.krafton.bgmilite') ||
+                        (text.includes('global') && current === 'com.tencent.ig') ||
+                        (text.includes('kr') && current === 'com.pubg.krmobile') ||
+                        (text.includes('vn') && current === 'com.vng.pubgmobile') ||
+                        (text.includes('tw') && current === 'com.rekoo.pubgm') ||
+                        (text.includes('any') && current === '*');
+        btn.classList.toggle('active', isMatch);
+      });
+    }
+
+    function saveSlotToKey() {
+      const game = (document.getElementById('slot-game-pkg').value || '').trim();
+      const loader = (document.getElementById('slot-loader-pkg').value || '').trim();
+      const so1 = (document.getElementById('slot-so1').value || '').trim();
+      const so2 = (document.getElementById('slot-so2').value || '').trim();
+      const soc1 = (document.getElementById('slot-soc1').value || '').trim();
+      const delay = parseInt(document.getElementById('slot-delay').value) || 0;
+      const isActive = document.getElementById('slot-active').checked;
+      const idx = parseInt(document.getElementById('slot-edit-index').value);
+
+      if (!game) return toast('Please specify Target Game Package', 'error');
+
+      const slotData = {
+        game_pkg: game,
+        package_name: game,
+        loader_pkg: loader || '*',
+        plugin_url: so1,
+        plugin_url_2: so2,
+        soc_url: soc1,
+        delay_ms: delay,
+        is_active: isActive
+      };
+
+      if (idx >= 0) {
+        _currentEditingSlots[idx] = slotData;
+      } else {
+        _currentEditingSlots.push(slotData);
+      }
+
+      closeSlotEditor();
+      renderEditingSlots();
+      toast(idx >= 0 ? 'Slot updated' : 'Slot added');
+    }
+
+    function removeEditingSlot(idx) {
+      if (!confirm('Remove this game & loader slot?')) return;
+      _currentEditingSlots.splice(idx, 1);
+      renderEditingSlots();
+      toast('Slot removed');
     }
 
     function closeEditKeyModal() {
@@ -2678,29 +3047,17 @@
       if (!id) return;
 
       const loaders = parseInt(document.getElementById('ek-loaders').value) || 0;
-      const rawPackages = (document.getElementById('ek-packages').value || '').trim();
-      const boundArr = rawPackages 
-        ? rawPackages.split(',').map(s => s.trim()).filter(Boolean)
-        : [];
-      
-      const so1 = (document.getElementById('ek-so1').value || '').trim();
-      const so2 = (document.getElementById('ek-so2').value || '').trim();
-      const soc1 = (document.getElementById('ek-soc1').value || '').trim();
-      const delay = parseInt(document.getElementById('ek-delay').value) || 0;
       const note = (document.getElementById('ek-note')?.value || '').trim();
+
       const payload = {
         max_loaders: loaders,
-        bound_packages: boundArr,
-        plugin_url: so1,
-        plugin_url_2: so2,
-        soc_url: soc1,
-        delay_ms: delay,
+        package_configs: _currentEditingSlots,
         note: note
       };
 
       const res = await api(`/api/admin/keys/${id}/edit`, 'POST', payload);
       if (res && res.success) {
-        toast('Key details and plugins updated successfully');
+        toast('Key details and slots updated successfully');
         closeEditKeyModal();
         loadKeys();
       } else {
@@ -3206,6 +3563,18 @@
       document.getElementById('btn-type-client').className = type === 'client' ? 'btn btn-primary' : 'btn btn-ghost';
       document.getElementById('fields-client').style.display = type === 'client' ? 'block' : 'none';
       document.getElementById('modal-create-title').textContent = type === 'own' ? 'Generate Internal Key' : 'Create Client / Buyer Key';
+      if (type === 'client') {
+        api('/api/admin/clients').then(clients => {
+          const select = document.getElementById('m-client-existing-select');
+          if (select && Array.isArray(clients)) {
+            if (clients.length === 0) {
+              select.innerHTML = '<option value="">No existing buyers found</option>';
+            } else {
+              select.innerHTML = clients.map(c => `<option value="${esc(c.username)}">@${esc(c.username)} (${c.user_key || 'No key'})</option>`).join('');
+            }
+          }
+        });
+      }
     }
 
     function onClientModeChange() {
@@ -3315,8 +3684,8 @@
       tbody.innerHTML = _clientPackages.length ? _clientPackages.map((p, idx) => {
         const so1 = p.plugin_url ? `<span class="key-pill" title="${esc(p.plugin_url)}">SO 1: Active</span>` : '<span style="color:var(--text-4)">SO 1: None</span>';
         const so2 = p.plugin_url_2 ? `<span class="key-pill" title="${esc(p.plugin_url_2)}" style="color:var(--apple-green)">SO 2: Active</span>` : '';
-        const soc1 = p.soc_url ? `<span class="key-pill" title="${esc(p.soc_url)}">SOC 1</span>` : '<span style="color:var(--text-4)">None</span>';
-        const soc2 = p.soc_url_2 ? `<span class="key-pill" title="${esc(p.soc_url_2)}">SOC 2</span>` : '';
+        const soc1 = p.soc_url ? `<span class="key-pill" title="${esc(p.soc_url)}">socu64 1</span>` : '<span style="color:var(--text-4)">None</span>';
+        const soc2 = p.soc_url_2 ? `<span class="key-pill" title="${esc(p.soc_url_2)}">socu64 2</span>` : '';
         const delayStr = p.delay_ms ? `${p.delay_ms}ms` : '0ms';
 
         return `<tr>
