@@ -372,13 +372,22 @@ async function handleConnect(req, res) {
     const incomingGame = (params.game || params.gamename || params.game_pkg || params.game_package || params.target_game || params.game_name || '').trim().toLowerCase();
     const incomingLoader = (params.loader_pkg || params.loader || params.loader_package || params.package_name || params.pkg || params.package || '').trim().toLowerCase();
 
+    const PUBG_PACKAGES = ['com.pubg.imobile', 'com.krafton.bgmilite', 'com.tencent.ig', 'com.pubg.krmobile', 'com.vng.pubgmobile', 'com.rekoo.pubgm'];
+
+    function checkPackageMatch(pattern, incoming) {
+      if (!pattern || !incoming) return false;
+      const p = pattern.trim().toLowerCase();
+      const inc = incoming.trim().toLowerCase();
+      if (p === '*' || p === 'any' || inc === '*' || inc === 'any') return true;
+      if (p === inc) return true;
+      if ((inc === 'pubg' || inc === 'bgmi' || inc === 'pubgm') && PUBG_PACKAGES.includes(p)) return true;
+      if ((p === 'pubg' || p === 'bgmi' || p === 'pubgm') && PUBG_PACKAGES.includes(inc)) return true;
+      return false;
+    }
+
     if (Array.isArray(boundPackages) && boundPackages.length > 0) {
       const isAllowed = boundPackages.some(b => {
-        if (!b) return false;
-        const bLower = b.trim().toLowerCase();
-        return bLower === "*" || bLower === "any" || 
-               (incomingGame && bLower === incomingGame) || 
-               (incomingLoader && bLower === incomingLoader);
+        return checkPackageMatch(b, incomingGame) || checkPackageMatch(b, incomingLoader);
       });
       if (!isAllowed) {
         return res.json({
@@ -397,8 +406,8 @@ async function handleConnect(req, res) {
       if (incomingGame && incomingLoader && incomingGame !== incomingLoader) {
         matchedSlot = packageConfigs.find(p => 
           p.is_active !== false &&
-          (p.game_pkg || p.package_name || '').trim().toLowerCase() === incomingGame &&
-          (p.loader_pkg || '').trim().toLowerCase() === incomingLoader
+          checkPackageMatch(p.game_pkg || p.package_name, incomingGame) &&
+          checkPackageMatch(p.loader_pkg, incomingLoader)
         );
       }
       // 2. Match game with wildcard loader or matching loader
@@ -406,17 +415,17 @@ async function handleConnect(req, res) {
       if (!matchedSlot && effectiveGame) {
         matchedSlot = packageConfigs.find(p => 
           p.is_active !== false &&
-          (p.game_pkg || p.package_name || '').trim().toLowerCase() === effectiveGame &&
-          (!p.loader_pkg || p.loader_pkg === '*' || p.loader_pkg.toLowerCase() === 'any' || (incomingLoader && p.loader_pkg.toLowerCase() === incomingLoader))
+          checkPackageMatch(p.game_pkg || p.package_name, effectiveGame) &&
+          (!p.loader_pkg || p.loader_pkg === '*' || p.loader_pkg.toLowerCase() === 'any' || (incomingLoader && checkPackageMatch(p.loader_pkg, incomingLoader)))
         );
       }
       // 3. Match loader package or package_name
       if (!matchedSlot && incomingLoader) {
         matchedSlot = packageConfigs.find(p => 
           p.is_active !== false &&
-          ((p.loader_pkg || '').trim().toLowerCase() === incomingLoader || 
-           (p.package_name || '').trim().toLowerCase() === incomingLoader ||
-           (p.game_pkg || '').trim().toLowerCase() === incomingLoader)
+          (checkPackageMatch(p.loader_pkg, incomingLoader) || 
+           checkPackageMatch(p.package_name, incomingLoader) ||
+           checkPackageMatch(p.game_pkg, incomingLoader))
         );
       }
       // 4. Wildcard slot
